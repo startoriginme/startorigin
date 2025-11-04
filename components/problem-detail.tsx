@@ -195,14 +195,14 @@ export function ProblemDetail({ problem, userId, initialHasUpvoted }: ProblemDet
                 <Link href={`/problems/${problem.id}/edit`}>
                   <Button variant="outline" size="sm" className="gap-2 bg-transparent">
                     <Edit className="h-4 w-4" />
-                    Edit
+                    
                   </Button>
                 </Link>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="outline" size="sm" className="gap-2 bg-transparent">
                       <Trash2 className="h-4 w-4" />
-                      Delete
+                      
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
