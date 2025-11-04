@@ -79,8 +79,8 @@ export default async function ProblemsPage() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="mb-2 text-3xl font-bold text-foreground">Explore Problems</h1>
-          <p className="text-muted-foreground">Discover challenges shared by innovators and entrepreneurs</p>
+          <h1 className="mb-2 text-3xl font-bold text-foreground">Share Problems, Create Solutions</h1>
+          <p className="text-muted-foreground">StartOrigin is a place where you can share your problem and create a solution with other users.</p>
         </div>
 
         <ProblemsFeed initialProblems={problems || []} userId={user?.id} />
