@@ -6,13 +6,18 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { Lightbulb, Plus, LogOut, Calendar, MessageSquare, ArrowBigUp, Edit } from "lucide-react"
-import { HeaderClient } from "@/components/HeaderClient"
+import { ProfileMobileMenu } from "@/components/profile-mobile-menu"
 
 export default async function ProfilePage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user) redirect("/auth/login")
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect("/auth/login")
+  }
 
   // Fetch user profile
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
@@ -52,7 +57,37 @@ export default async function ProfilePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <HeaderClient user={user} onSignOut={handleSignOut} />
+      <header className="border-b border-border bg-card">
+        <div className="container mx-auto px-4 py-4">
+          <nav className="flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-2">
+              <Lightbulb className="h-6 w-6 text-primary" />
+              <span className="text-xl font-bold text-foreground">StartOrigin</span>
+            </Link>
+            
+            {/* Desktop Navigation - hidden on mobile */}
+            <div className="hidden md:flex items-center gap-4">
+              <Link href="/problems/new">
+                <Button className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Share Problem
+                </Button>
+              </Link>
+              <form action={handleSignOut}>
+                <Button variant="outline" type="submit" className="gap-2 bg-transparent">
+                  <LogOut className="h-4 w-4" />
+                  Sign Out
+                </Button>
+              </form>
+            </div>
+
+            {/* Mobile Menu Button - hidden on desktop */}
+            <div className="md:hidden">
+              <ProfileMobileMenu user={user} onSignOut={handleSignOut} />
+            </div>
+          </nav>
+        </div>
+      </header>
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
