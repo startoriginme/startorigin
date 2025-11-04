@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { Lightbulb, Plus, LogOut, Calendar, MessageSquare, ArrowBigUp, Edit } from "lucide-react"
+import { MobileMenu } from "@/components/mobile-menu"
 
 export default async function ProfilePage() {
   const supabase = await createClient()
@@ -63,10 +64,9 @@ export default async function ProfilePage() {
               <Lightbulb className="h-6 w-6 text-primary" />
               <span className="text-xl font-bold text-foreground">StartOrigin</span>
             </Link>
-            <div className="flex items-center gap-4">
-              <Link href="/about">
-                <Button variant="ghost">About</Button>
-              </Link>
+            
+            {/* Desktop Navigation - hidden on mobile */}
+            <div className="hidden md:flex items-center gap-4">
               <Link href="/problems/new">
                 <Button className="gap-2">
                   <Plus className="h-4 w-4" />
@@ -79,6 +79,11 @@ export default async function ProfilePage() {
                   Sign Out
                 </Button>
               </form>
+            </div>
+
+            {/* Mobile Menu Button - hidden on desktop */}
+            <div className="md:hidden">
+              <MobileMenu user={user} />
             </div>
           </nav>
         </div>
