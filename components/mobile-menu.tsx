@@ -2,13 +2,13 @@
 "use client"
 
 import { useState } from "react"
-import { Menu, X } from "lucide-react"
+import { Menu, X, Plus, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { User } from "@supabase/supabase-js"
+import { User as SupabaseUser } from "@supabase/supabase-js"
 
 interface MobileMenuProps {
-  user: User | null
+  user: SupabaseUser | null
 }
 
 export function MobileMenu({ user }: MobileMenuProps) {
@@ -42,16 +42,23 @@ export function MobileMenu({ user }: MobileMenuProps) {
             <div className="p-4 space-y-4">
               {user ? (
                 <>
+                  {/* Share Problem */}
                   <Link href="/problems/new" onClick={closeMenu}>
                     <Button className="w-full gap-2 justify-start">
+                      <Plus className="h-4 w-4" />
                       Share Problem
                     </Button>
                   </Link>
+
+                  {/* Profile */}
                   <Link href="/profile" onClick={closeMenu}>
-                    <Button variant="outline" className="w-full justify-start">
+                    <Button variant="outline" className="w-full gap-2 justify-start">
+                      <User className="h-4 w-4" />
                       Profile
                     </Button>
                   </Link>
+
+                  {/* User Info */}
                   <div className="pt-2 border-t border-border">
                     <p className="text-sm text-muted-foreground px-2">
                       Signed in as {user.email}
@@ -60,11 +67,14 @@ export function MobileMenu({ user }: MobileMenuProps) {
                 </>
               ) : (
                 <>
+                  {/* Sign In */}
                   <Link href="/auth/login" onClick={closeMenu}>
                     <Button variant="outline" className="w-full justify-start">
                       Sign In
                     </Button>
                   </Link>
+
+                  {/* Get Started */}
                   <Link href="/auth/sign-up" onClick={closeMenu}>
                     <Button className="w-full justify-start">
                       Get Started
