@@ -1,8 +1,9 @@
 import { createClient } from "@/lib/supabase/server"
 import { ProblemsFeed } from "@/components/problems-feed"
 import { Button } from "@/components/ui/button"
-import { Lightbulb, Plus } from "lucide-react"
+import { Lightbulb, Plus, Menu, X } from "lucide-react"
 import Link from "next/link"
+import { MobileMenu } from "@/components/mobile-menu"
 
 export default async function ProblemsPage() {
   const supabase = await createClient()
@@ -40,7 +41,9 @@ export default async function ProblemsPage() {
               <Lightbulb className="h-6 w-6 text-primary" />
               <span className="text-xl font-bold text-foreground">StartOrigin</span>
             </Link>
-            <div className="flex items-center gap-4">
+            
+            {/* Desktop Navigation - hidden on mobile */}
+            <div className="hidden md:flex items-center gap-4">
               {user ? (
                 <>
                   <Link href="/problems/new">
@@ -63,6 +66,11 @@ export default async function ProblemsPage() {
                   </Link>
                 </>
               )}
+            </div>
+
+            {/* Mobile Menu Button - hidden on desktop */}
+            <div className="md:hidden">
+              <MobileMenu user={user} />
             </div>
           </nav>
         </div>
