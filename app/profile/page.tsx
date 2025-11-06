@@ -198,6 +198,16 @@ export default async function ProfilePage() {
           </Card>
         </div>
       </main>
+        <footer className="border-t border-border bg-card/50 py-6 mt-auto">
+        <div className="container mx-auto px-4">
+          <div className="text-center text-muted-foreground text-sm">
+            © 2025 StartOrigin. All rights reserved.
+          </div>
+        </div>
+      </footer>
+    </div>
+  )
+}
     </div>
   )
 }
