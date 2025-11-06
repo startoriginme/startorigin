@@ -81,10 +81,10 @@ export default async function ProblemsPage() {
         <div className="container mx-auto px-4 py-12">
           <div className="mx-auto max-w-2xl text-center">
             <h1 className="mb-4 text-3xl font-bold text-foreground">
-              Share Problems, Find Solutions
+              Share Problems, Create Solutions
             </h1>
             <p className="mb-6 text-muted-foreground">
-              A platform for innovators to collaborate on meaningful challenges
+              A platform for innovators to collaborate on meaningful problems
             </p>
             <Link href="https://startorigin.netlify.app/problems/00d8dd35-a4e8-49b5-bc0a-18b15c75c52d">
               <Button variant="outline" className="gap-2">
@@ -100,7 +100,7 @@ export default async function ProblemsPage() {
       <main className="container mx-auto px-4 py-8 flex-1">
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-foreground">Explore Problems</h2>
-          <p className="text-muted-foreground">Discover challenges from the community</p>
+          <p className="text-muted-foreground">Discover problems from the community</p>
         </div>
 
         <ProblemsFeed initialProblems={problems || []} userId={user?.id} />
