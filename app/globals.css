@@ -40,7 +40,13 @@
   --sidebar-border: oklch(0.92 0 0);
   --sidebar-ring: oklch(0.15 0 0);
   
-  /* Дополнительные переменные для анимаций (оставляем как было) */
+  /* Ховер-цвета - холодный зеленый */
+  --hover-primary: oklch(0.52 0.24 165);
+  --hover-secondary: oklch(0.52 0.24 165);
+  --hover-accent: oklch(0.52 0.24 165);
+  --hover-border: oklch(0.52 0.24 165);
+  
+  /* Дополнительные переменные для анимаций */
   --shadow-sm: 0 2px 8px -2px oklch(0.1 0 0 / 0.1);
   --shadow-md: 0 8px 30px -6px oklch(0.1 0 0 / 0.15);
   --shadow-lg: 0 20px 50px -12px oklch(0.1 0 0 / 0.2);
@@ -82,7 +88,13 @@
   --sidebar-border: oklch(0.3 0 0);
   --sidebar-ring: oklch(1 0 0);
   
-  /* Темные версии теней (оставляем как было) */
+  /* Ховер-цвета для темной темы */
+  --hover-primary: oklch(0.62 0.20 165);
+  --hover-secondary: oklch(0.62 0.20 165);
+  --hover-accent: oklch(0.62 0.20 165);
+  --hover-border: oklch(0.62 0.20 165);
+  
+  /* Темные версии теней */
   --shadow-sm: 0 2px 12px -2px oklch(0 0 0 / 0.3);
   --shadow-md: 0 8px 35px -6px oklch(0 0 0 / 0.4);
   --shadow-lg: 0 20px 55px -12px oklch(0 0 0 / 0.5);
@@ -132,7 +144,7 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
   
-  /* Кастомные тени (оставляем как было) */
+  /* Кастомные тени */
   --shadow-sm: var(--shadow-sm);
   --shadow-md: var(--shadow-md);
   --shadow-lg: var(--shadow-lg);
@@ -203,19 +215,38 @@
 }
 
 @layer components {
-  /* Оставляем ховер-эффекты как были */
+  /* Ховер-эффекты с холодным зеленым */
   .btn-primary {
-    @apply bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 shadow-sm hover:shadow-md transform hover:-translate-y-0.5 font-medium px-6 py-2.5 rounded-lg;
+    @apply bg-primary text-primary-foreground transition-all duration-300 shadow-sm font-medium px-6 py-2.5 rounded-lg;
     font-family: 'Montserrat', sans-serif;
+  }
+  
+  .btn-primary:hover {
+    background-color: var(--hover-primary);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
   }
   
   .btn-secondary {
-    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-all duration-300 border border-border hover:border-primary/30 font-medium px-6 py-2.5 rounded-lg;
+    @apply bg-secondary text-secondary-foreground transition-all duration-300 border border-border font-medium px-6 py-2.5 rounded-lg;
     font-family: 'Montserrat', sans-serif;
   }
   
+  .btn-secondary:hover {
+    background-color: var(--hover-primary);
+    color: white;
+    border-color: var(--hover-border);
+    transform: translateY(-2px);
+  }
+  
   .card-hover {
-    @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1 cursor-pointer border border-border/50 hover:border-primary/20 rounded-xl;
+    @apply transition-all duration-300 cursor-pointer border border-border/50 rounded-xl;
+  }
+  
+  .card-hover:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-3px);
+    border-color: var(--hover-border);
   }
   
   .gradient-text {
@@ -252,6 +283,7 @@
   .hover-lift:hover {
     transform: translateY(-3px);
     box-shadow: var(--shadow-lg);
+    border-color: var(--hover-border);
   }
 }
 
@@ -269,7 +301,7 @@
   }
   
   .border-glow {
-    box-shadow: 0 0 25px -5px var(--primary);
+    box-shadow: 0 0 25px -5px var(--hover-primary);
   }
 
   .glass-effect {
@@ -289,7 +321,7 @@
   }
 }
 
-/* Стили для скроллбара (оставляем как было) */
+/* Стили для скроллбара */
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -306,12 +338,11 @@
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--primary);
-  opacity: 0.8;
+  background: var(--hover-primary);
   transform: scale(1.1);
 }
 
-/* Анимации для появления элементов (оставляем как было) */
+/* Анимации для появления элементов */
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -327,10 +358,15 @@
   animation: fadeInUp 0.6s ease-out;
 }
 
-/* Улучшенные стили для интерактивных элементов (оставляем как было) */
+/* Улучшенные стили для интерактивных элементов */
 input, textarea, select {
-  @apply transition-all duration-200 focus:ring-2 focus:ring-primary/20 focus:border-primary;
+  @apply transition-all duration-200 focus:ring-2 focus:border-primary;
   font-family: 'Montserrat', sans-serif;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: var(--hover-border);
+  box-shadow: 0 0 0 2px var(--hover-primary) / 0.2;
 }
 
 button {
@@ -338,7 +374,7 @@ button {
   font-family: 'Montserrat', sans-serif;
 }
 
-/* Градиентные границы (оставляем как было) */
+/* Градиентные границы */
 .gradient-border {
   position: relative;
   background: var(--background);
@@ -389,4 +425,21 @@ body {
 /* Принудительно применяем Montserrat ко всем элементам */
 * {
   font-family: 'Montserrat', sans-serif !important;
+}
+
+/* Дополнительные ховер-эффекты */
+a:hover {
+  color: var(--hover-primary);
+}
+
+.hover-green:hover {
+  color: var(--hover-primary);
+  border-color: var(--hover-border);
+}
+
+/* Ховер для кнопок outline */
+button[class*="outline"]:hover {
+  background-color: var(--hover-primary);
+  color: white;
+  border-color: var(--hover-primary);
 }
