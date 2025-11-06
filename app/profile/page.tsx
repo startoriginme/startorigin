@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import { Lightbulb, Plus, LogOut, Calendar, MessageSquare, ArrowBigUp, Edit } from "lucide-react"
+import { BriefcaseBusiness, Plus, LogOut, Calendar, MessageSquare, ArrowBigUp, Edit } from "lucide-react"
 import { ProfileMobileMenu } from "@/components/profile-mobile-menu"
 
 export default async function ProfilePage() {
@@ -61,7 +61,7 @@ export default async function ProfilePage() {
         <div className="container mx-auto px-4 py-4">
           <nav className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
-              <Lightbulb className="h-6 w-6 text-primary" />
+              <BriefcaseBusiness className="h-6 w-6 text-primary" />
               <span className="text-xl font-bold text-foreground">StartOrigin</span>
             </Link>
             
