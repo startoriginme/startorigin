@@ -40,11 +40,11 @@
   --sidebar-border: oklch(0.92 0 0);
   --sidebar-ring: oklch(0.15 0 0);
   
-  /* Ховер-цвета - холодный зеленый */
-  --hover-primary: oklch(0.52 0.24 165);
-  --hover-secondary: oklch(0.52 0.24 165);
-  --hover-accent: oklch(0.52 0.24 165);
-  --hover-border: oklch(0.52 0.24 165);
+  /* Ховер-цвета - мятный */
+  --hover-primary: oklch(0.85 0.12 165);
+  --hover-secondary: oklch(0.85 0.12 165);
+  --hover-accent: oklch(0.85 0.12 165);
+  --hover-border: oklch(0.85 0.12 165);
   
   /* Дополнительные переменные для анимаций */
   --shadow-sm: 0 2px 8px -2px oklch(0.1 0 0 / 0.1);
@@ -88,11 +88,11 @@
   --sidebar-border: oklch(0.3 0 0);
   --sidebar-ring: oklch(1 0 0);
   
-  /* Ховер-цвета для темной темы */
-  --hover-primary: oklch(0.62 0.20 165);
-  --hover-secondary: oklch(0.62 0.20 165);
-  --hover-accent: oklch(0.62 0.20 165);
-  --hover-border: oklch(0.62 0.20 165);
+  /* Ховер-цвета для темной темы - мятный */
+  --hover-primary: oklch(0.75 0.15 165);
+  --hover-secondary: oklch(0.75 0.15 165);
+  --hover-accent: oklch(0.75 0.15 165);
+  --hover-border: oklch(0.75 0.15 165);
   
   /* Темные версии теней */
   --shadow-sm: 0 2px 12px -2px oklch(0 0 0 / 0.3);
@@ -215,7 +215,7 @@
 }
 
 @layer components {
-  /* Ховер-эффекты с холодным зеленым */
+  /* Ховер-эффекты с мятным цветом */
   .btn-primary {
     @apply bg-primary text-primary-foreground transition-all duration-300 shadow-sm font-medium px-6 py-2.5 rounded-lg;
     font-family: 'Montserrat', sans-serif;
@@ -432,7 +432,7 @@ a:hover {
   color: var(--hover-primary);
 }
 
-.hover-green:hover {
+.hover-mint:hover {
   color: var(--hover-primary);
   border-color: var(--hover-border);
 }
@@ -442,4 +442,14 @@ button[class*="outline"]:hover {
   background-color: var(--hover-primary);
   color: white;
   border-color: var(--hover-primary);
+}
+
+/* Ховер для ссылок в навигации */
+nav a:hover {
+  color: var(--hover-primary);
+}
+
+/* Ховер для иконок */
+svg:hover {
+  color: var(--hover-primary);
 }
