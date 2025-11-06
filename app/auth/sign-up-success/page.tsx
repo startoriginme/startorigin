@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { Lightbulb, Mail } from "lucide-react"
+import { BriefcaseBusiness, Mail } from "lucide-react"
 
 export default function SignUpSuccessPage() {
   return (
@@ -9,7 +9,7 @@ export default function SignUpSuccessPage() {
       <div className="w-full max-w-sm">
         <div className="mb-6 flex justify-center">
           <Link href="/" className="flex items-center gap-2">
-            <Lightbulb className="h-8 w-8 text-primary" />
+            <BriefcaseBusiness className="h-8 w-8 text-primary" />
             <span className="text-2xl font-bold text-foreground">StartOrigin</span>
           </Link>
         </div>
