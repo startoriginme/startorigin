@@ -215,7 +215,7 @@
 }
 
 @layer components {
-  /* Ховер-эффекты с мятным цветом */
+  /* Ховер-эффекты с мятным цветом, но текст остается черным */
   .btn-primary {
     @apply bg-primary text-primary-foreground transition-all duration-300 shadow-sm font-medium px-6 py-2.5 rounded-lg;
     font-family: 'Montserrat', sans-serif;
@@ -225,6 +225,8 @@
     background-color: var(--hover-primary);
     box-shadow: var(--shadow-md);
     transform: translateY(-2px);
+    /* Текст остается черным */
+    color: oklch(0.15 0 0) !important;
   }
   
   .btn-secondary {
@@ -234,7 +236,8 @@
   
   .btn-secondary:hover {
     background-color: var(--hover-primary);
-    color: white;
+    /* Текст остается черным */
+    color: oklch(0.15 0 0) !important;
     border-color: var(--hover-border);
     transform: translateY(-2px);
   }
@@ -437,10 +440,11 @@ a:hover {
   border-color: var(--hover-border);
 }
 
-/* Ховер для кнопок outline */
+/* Ховер для кнопок outline - текст остается черным */
 button[class*="outline"]:hover {
   background-color: var(--hover-primary);
-  color: white;
+  /* Текст остается черным */
+  color: oklch(0.15 0 0) !important;
   border-color: var(--hover-primary);
 }
 
@@ -452,4 +456,11 @@ nav a:hover {
 /* Ховер для иконок */
 svg:hover {
   color: var(--hover-primary);
+}
+
+/* Для темной темы - текст кнопок остается белым при ховере */
+.dark .btn-primary:hover,
+.dark .btn-secondary:hover,
+.dark button[class*="outline"]:hover {
+  color: oklch(1 0 0) !important;
 }
