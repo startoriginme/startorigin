@@ -32,7 +32,7 @@ export default async function ProblemsPage() {
   } = await supabase.auth.getUser()
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4">
@@ -97,7 +97,7 @@ export default async function ProblemsPage() {
       </section>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 flex-1">
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-foreground">Explore Problems</h2>
           <p className="text-muted-foreground">Discover challenges from the community</p>
@@ -105,6 +105,15 @@ export default async function ProblemsPage() {
 
         <ProblemsFeed initialProblems={problems || []} userId={user?.id} />
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-border bg-card/50 py-6 mt-auto">
+        <div className="container mx-auto px-4">
+          <div className="text-center text-muted-foreground text-sm">
+            © 2025 StartOrigin. All rights reserved.
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }
