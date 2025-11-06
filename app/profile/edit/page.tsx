@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import Link from "next/link"
-import { Lightbulb, ArrowLeft } from "lucide-react"
+import { BriefcaseBusiness, ArrowLeft } from "lucide-react"
 import { updateProfile } from "./actions"
 
 export default async function EditProfilePage() {
@@ -30,7 +30,7 @@ export default async function EditProfilePage() {
         <div className="container mx-auto px-4 py-4">
           <nav className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
-              <Lightbulb className="h-6 w-6 text-primary" />
+              <BriefcaseBusiness className="h-6 w-6 text-primary" />
               <span className="text-xl font-bold text-foreground">StartOrigin</span>
             </Link>
             <Link href="/profile">
