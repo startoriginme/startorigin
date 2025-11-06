@@ -1,99 +1,99 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
 
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Основные зеленые цвета - более холодные тона */
-  --background: oklch(0.98 0.01 160);
-  --foreground: oklch(0.18 0.04 160);
+  /* Черная цветовая схема */
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.15 0 0);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.04 160);
+  --card-foreground: oklch(0.15 0 0);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.04 160);
-  --primary: oklch(0.52 0.24 165);
-  --primary-foreground: oklch(0.98 0.01 160);
-  --secondary: oklch(0.96 0.02 160);
-  --secondary-foreground: oklch(0.28 0.04 160);
-  --muted: oklch(0.96 0.01 160);
-  --muted-foreground: oklch(0.58 0.06 160);
-  --accent: oklch(0.85 0.16 165);
-  --accent-foreground: oklch(0.28 0.04 160);
+  --popover-foreground: oklch(0.15 0 0);
+  --primary: oklch(0.15 0 0);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.15 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.55 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.15 0 0);
   --destructive: oklch(0.65 0.25 25);
-  --destructive-foreground: oklch(0.98 0.01 160);
-  --border: oklch(0.88 0.02 160);
-  --input: oklch(0.95 0.01 160);
-  --ring: oklch(0.52 0.24 165);
-  --chart-1: oklch(0.52 0.24 165);
-  --chart-2: oklch(0.45 0.18 180);
-  --chart-3: oklch(0.65 0.15 220);
-  --chart-4: oklch(0.75 0.12 280);
-  --chart-5: oklch(0.85 0.1 320);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.92 0 0);
+  --input: oklch(0.92 0 0);
+  --ring: oklch(0.15 0 0);
+  --chart-1: oklch(0.15 0 0);
+  --chart-2: oklch(0.4 0 0);
+  --chart-3: oklch(0.6 0 0);
+  --chart-4: oklch(0.7 0 0);
+  --chart-5: oklch(0.8 0 0);
   --radius: 0.75rem;
-  --sidebar: oklch(0.98 0.01 160);
-  --sidebar-foreground: oklch(0.18 0.04 160);
-  --sidebar-primary: oklch(0.52 0.24 165);
-  --sidebar-primary-foreground: oklch(0.98 0.01 160);
-  --sidebar-accent: oklch(0.95 0.02 160);
-  --sidebar-accent-foreground: oklch(0.28 0.04 160);
-  --sidebar-border: oklch(0.88 0.02 160);
-  --sidebar-ring: oklch(0.52 0.24 165);
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.15 0 0);
+  --sidebar-primary: oklch(0.15 0 0);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.15 0 0);
+  --sidebar-border: oklch(0.92 0 0);
+  --sidebar-ring: oklch(0.15 0 0);
   
-  /* Дополнительные переменные для анимаций */
-  --shadow-sm: 0 2px 8px -2px oklch(0.1 0.02 160 / 0.1);
-  --shadow-md: 0 8px 30px -6px oklch(0.1 0.02 160 / 0.15);
-  --shadow-lg: 0 20px 50px -12px oklch(0.1 0.02 160 / 0.2);
-  --gradient-primary: linear-gradient(135deg, oklch(0.52 0.24 165), oklch(0.48 0.26 170));
-  --gradient-card: linear-gradient(135deg, oklch(1 0 0), oklch(0.98 0.01 160));
+  /* Дополнительные переменные для анимаций (оставляем как было) */
+  --shadow-sm: 0 2px 8px -2px oklch(0.1 0 0 / 0.1);
+  --shadow-md: 0 8px 30px -6px oklch(0.1 0 0 / 0.15);
+  --shadow-lg: 0 20px 50px -12px oklch(0.1 0 0 / 0.2);
+  --gradient-primary: linear-gradient(135deg, oklch(0.15 0 0), oklch(0.3 0 0));
+  --gradient-card: linear-gradient(135deg, oklch(1 0 0), oklch(0.98 0 0));
 }
 
 .dark {
-  --background: oklch(0.12 0.02 160);
-  --foreground: oklch(0.98 0.01 160);
-  --card: oklch(0.16 0.03 160);
-  --card-foreground: oklch(0.98 0.01 160);
-  --popover: oklch(0.16 0.03 160);
-  --popover-foreground: oklch(0.98 0.01 160);
-  --primary: oklch(0.62 0.20 165);
-  --primary-foreground: oklch(0.12 0.02 160);
-  --secondary: oklch(0.20 0.03 160);
-  --secondary-foreground: oklch(0.98 0.01 160);
-  --muted: oklch(0.20 0.03 160);
-  --muted-foreground: oklch(0.72 0.06 160);
-  --accent: oklch(0.25 0.06 165);
-  --accent-foreground: oklch(0.98 0.01 160);
+  --background: oklch(0.15 0 0);
+  --foreground: oklch(1 0 0);
+  --card: oklch(0.2 0 0);
+  --card-foreground: oklch(1 0 0);
+  --popover: oklch(0.2 0 0);
+  --popover-foreground: oklch(1 0 0);
+  --primary: oklch(1 0 0);
+  --primary-foreground: oklch(0.15 0 0);
+  --secondary: oklch(0.25 0 0);
+  --secondary-foreground: oklch(1 0 0);
+  --muted: oklch(0.25 0 0);
+  --muted-foreground: oklch(0.8 0 0);
+  --accent: oklch(0.25 0 0);
+  --accent-foreground: oklch(1 0 0);
   --destructive: oklch(0.6 0.2 25);
-  --destructive-foreground: oklch(0.98 0.01 160);
-  --border: oklch(0.25 0.03 160);
-  --input: oklch(0.20 0.03 160);
-  --ring: oklch(0.62 0.20 165);
-  --chart-1: oklch(0.62 0.20 165);
-  --chart-2: oklch(0.55 0.16 180);
-  --chart-3: oklch(0.75 0.12 220);
-  --chart-4: oklch(0.8 0.1 280);
-  --chart-5: oklch(0.7 0.08 320);
-  --sidebar: oklch(0.16 0.03 160);
-  --sidebar-foreground: oklch(0.98 0.01 160);
-  --sidebar-primary: oklch(0.62 0.20 165);
-  --sidebar-primary-foreground: oklch(0.16 0.03 160);
-  --sidebar-accent: oklch(0.20 0.03 160);
-  --sidebar-accent-foreground: oklch(0.98 0.01 160);
-  --sidebar-border: oklch(0.25 0.03 160);
-  --sidebar-ring: oklch(0.62 0.20 165);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.3 0 0);
+  --input: oklch(0.25 0 0);
+  --ring: oklch(1 0 0);
+  --chart-1: oklch(1 0 0);
+  --chart-2: oklch(0.8 0 0);
+  --chart-3: oklch(0.6 0 0);
+  --chart-4: oklch(0.7 0 0);
+  --chart-5: oklch(0.9 0 0);
+  --sidebar: oklch(0.2 0 0);
+  --sidebar-foreground: oklch(1 0 0);
+  --sidebar-primary: oklch(1 0 0);
+  --sidebar-primary-foreground: oklch(0.2 0 0);
+  --sidebar-accent: oklch(0.25 0 0);
+  --sidebar-accent-foreground: oklch(1 0 0);
+  --sidebar-border: oklch(0.3 0 0);
+  --sidebar-ring: oklch(1 0 0);
   
-  /* Темные версии теней */
+  /* Темные версии теней (оставляем как было) */
   --shadow-sm: 0 2px 12px -2px oklch(0 0 0 / 0.3);
   --shadow-md: 0 8px 35px -6px oklch(0 0 0 / 0.4);
   --shadow-lg: 0 20px 55px -12px oklch(0 0 0 / 0.5);
-  --gradient-primary: linear-gradient(135deg, oklch(0.62 0.20 165), oklch(0.58 0.22 170));
-  --gradient-card: linear-gradient(135deg, oklch(0.16 0.03 160), oklch(0.19 0.04 160));
+  --gradient-primary: linear-gradient(135deg, oklch(1 0 0), oklch(0.8 0 0));
+  --gradient-card: linear-gradient(135deg, oklch(0.2 0 0), oklch(0.25 0 0));
 }
 
 @theme inline {
-  --font-sans: 'Nunito Sans', sans-serif;
-  --font-mono: 'Nunito Sans', monospace;
-  --font-serif: 'Nunito Sans', serif;
+  --font-sans: 'Montserrat', sans-serif;
+  --font-mono: 'Montserrat', monospace;
+  --font-serif: 'Montserrat', serif;
   
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -132,7 +132,7 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
   
-  /* Кастомные тени */
+  /* Кастомные тени (оставляем как было) */
   --shadow-sm: var(--shadow-sm);
   --shadow-md: var(--shadow-md);
   --shadow-lg: var(--shadow-lg);
@@ -142,75 +142,76 @@
   * {
     @apply border-border outline-ring/50;
     box-sizing: border-box;
-    font-family: 'Nunito Sans', sans-serif;
+    font-family: 'Montserrat', sans-serif;
   }
   
   html {
     scroll-behavior: smooth;
-    font-family: 'Nunito Sans', sans-serif;
+    font-family: 'Montserrat', sans-serif;
   }
   
   body {
     @apply bg-background text-foreground;
-    font-family: 'Nunito Sans', sans-serif;
+    font-family: 'Montserrat', sans-serif;
     font-weight: 400;
     line-height: 1.6;
     scroll-behavior: smooth;
   }
 
-  /* Применяем Nunito Sans ко всем текстовым элементам */
+  /* Применяем Montserrat ко всем текстовым элементам */
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Nunito Sans', sans-serif;
+    font-family: 'Montserrat', sans-serif;
     @apply font-semibold text-foreground;
   }
 
   p {
     @apply text-foreground/90;
-    font-family: 'Nunito Sans', sans-serif;
+    font-family: 'Montserrat', sans-serif;
     font-weight: 400;
     line-height: 1.7;
   }
 
   a {
-    font-family: 'Nunito Sans', sans-serif;
+    font-family: 'Montserrat', sans-serif;
   }
 
   button {
-    font-family: 'Nunito Sans', sans-serif;
+    font-family: 'Montserrat', sans-serif;
   }
 
   input, textarea, select {
-    font-family: 'Nunito Sans', sans-serif;
+    font-family: 'Montserrat', sans-serif;
   }
 
   span, div {
-    font-family: 'Nunito Sans', sans-serif;
+    font-family: 'Montserrat', sans-serif;
   }
 
   li {
-    font-family: 'Nunito Sans', sans-serif;
+    font-family: 'Montserrat', sans-serif;
   }
 
   label {
-    font-family: 'Nunito Sans', sans-serif;
+    font-family: 'Montserrat', sans-serif;
   }
 
   /* Улучшить читаемость текста */
   .text-muted-foreground {
     @apply text-foreground/70;
-    font-family: 'Nunito Sans', sans-serif;
+    font-family: 'Montserrat', sans-serif;
   }
 }
 
 @layer components {
+  /* Оставляем ховер-эффекты как были */
   .btn-primary {
     @apply bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 shadow-sm hover:shadow-md transform hover:-translate-y-0.5 font-medium px-6 py-2.5 rounded-lg;
-    font-family: 'Nunito Sans', sans-serif;
+    font-family: 'Montserrat', sans-serif;
   }
   
   .btn-secondary {
     @apply bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-all duration-300 border border-border hover:border-primary/30 font-medium px-6 py-2.5 rounded-lg;
-    font-family: 'Nunito Sans', sans-serif;
+    font-family: 'Montserrat', sans-serif;
   }
   
   .card-hover {
@@ -223,7 +224,7 @@
     -webkit-text-fill-color: transparent;
     background-clip: text;
     font-weight: 600;
-    font-family: 'Nunito Sans', sans-serif;
+    font-family: 'Montserrat', sans-serif;
   }
   
   .gradient-bg {
@@ -240,12 +241,12 @@
   }
   
   .text-shadow {
-    text-shadow: 0 2px 8px oklch(0.1 0.02 160 / 0.2);
+    text-shadow: 0 2px 8px oklch(0.1 0 0 / 0.2);
   }
 
   .hover-lift {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    font-family: 'Nunito Sans', sans-serif;
+    font-family: 'Montserrat', sans-serif;
   }
 
   .hover-lift:hover {
@@ -257,7 +258,7 @@
 @layer utilities {
   .text-balance {
     text-wrap: balance;
-    font-family: 'Nunito Sans', sans-serif;
+    font-family: 'Montserrat', sans-serif;
   }
   
   .bg-grid {
@@ -280,15 +281,15 @@
   /* Утилиты для лучшей читаемости текста */
   .text-enhanced {
     @apply text-foreground/95 font-medium;
-    font-family: 'Nunito Sans', sans-serif;
+    font-family: 'Montserrat', sans-serif;
   }
 
-  .font-nunito {
-    font-family: 'Nunito Sans', sans-serif;
+  .font-montserrat {
+    font-family: 'Montserrat', sans-serif;
   }
 }
 
-/* Стили для скроллбара */
+/* Стили для скроллбара (оставляем как было) */
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -310,7 +311,7 @@
   transform: scale(1.1);
 }
 
-/* Анимации для появления элементов */
+/* Анимации для появления элементов (оставляем как было) */
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -326,18 +327,18 @@
   animation: fadeInUp 0.6s ease-out;
 }
 
-/* Улучшенные стили для интерактивных элементов */
+/* Улучшенные стили для интерактивных элементов (оставляем как было) */
 input, textarea, select {
   @apply transition-all duration-200 focus:ring-2 focus:ring-primary/20 focus:border-primary;
-  font-family: 'Nunito Sans', sans-serif;
+  font-family: 'Montserrat', sans-serif;
 }
 
 button {
   @apply transition-all duration-200 active:scale-95;
-  font-family: 'Nunito Sans', sans-serif;
+  font-family: 'Montserrat', sans-serif;
 }
 
-/* Градиентные границы */
+/* Градиентные границы (оставляем как было) */
 .gradient-border {
   position: relative;
   background: var(--background);
@@ -360,32 +361,32 @@ button {
 
 * {
   border-color: var(--border);
-  font-family: 'Nunito Sans', sans-serif;
+  font-family: 'Montserrat', sans-serif;
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
   font-feature-settings: "rlig" 1, "calt" 1;
-  font-family: 'Nunito Sans', sans-serif;
+  font-family: 'Montserrat', sans-serif;
 }
 
 /* Улучшенные стили для типографики */
 .prose {
-  font-family: 'Nunito Sans', sans-serif;
+  font-family: 'Montserrat', sans-serif;
 }
 
 .prose p {
   @apply text-foreground/90 mb-4;
-  font-family: 'Nunito Sans', sans-serif;
+  font-family: 'Montserrat', sans-serif;
 }
 
 .prose strong {
   @apply text-foreground font-semibold;
-  font-family: 'Nunito Sans', sans-serif;
+  font-family: 'Montserrat', sans-serif;
 }
 
-/* Принудительно применяем Nunito Sans ко всем элементам */
+/* Принудительно применяем Montserrat ко всем элементам */
 * {
-  font-family: 'Nunito Sans', sans-serif !important;
+  font-family: 'Montserrat', sans-serif !important;
 }
