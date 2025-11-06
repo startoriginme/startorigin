@@ -5,89 +5,89 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Основные зеленые цвета */
-  --background: oklch(0.98 0.01 120);
-  --foreground: oklch(0.15 0.03 120);
+  /* Основные зеленые цвета - более холодные тона */
+  --background: oklch(0.98 0.01 160);
+  --foreground: oklch(0.18 0.04 160);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.15 0.03 120);
+  --card-foreground: oklch(0.18 0.04 160);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.15 0.03 120);
-  --primary: oklch(0.55 0.22 145);
-  --primary-foreground: oklch(0.98 0.01 120);
-  --secondary: oklch(0.96 0.02 120);
-  --secondary-foreground: oklch(0.25 0.03 120);
-  --muted: oklch(0.96 0.01 120);
-  --muted-foreground: oklch(0.55 0.05 120);
-  --accent: oklch(0.85 0.15 145);
-  --accent-foreground: oklch(0.25 0.03 120);
+  --popover-foreground: oklch(0.18 0.04 160);
+  --primary: oklch(0.52 0.24 165);
+  --primary-foreground: oklch(0.98 0.01 160);
+  --secondary: oklch(0.96 0.02 160);
+  --secondary-foreground: oklch(0.28 0.04 160);
+  --muted: oklch(0.96 0.01 160);
+  --muted-foreground: oklch(0.58 0.06 160);
+  --accent: oklch(0.85 0.16 165);
+  --accent-foreground: oklch(0.28 0.04 160);
   --destructive: oklch(0.65 0.25 25);
-  --destructive-foreground: oklch(0.98 0.01 120);
-  --border: oklch(0.88 0.02 120);
-  --input: oklch(0.95 0.01 120);
-  --ring: oklch(0.55 0.22 145);
-  --chart-1: oklch(0.55 0.22 145);
+  --destructive-foreground: oklch(0.98 0.01 160);
+  --border: oklch(0.88 0.02 160);
+  --input: oklch(0.95 0.01 160);
+  --ring: oklch(0.52 0.24 165);
+  --chart-1: oklch(0.52 0.24 165);
   --chart-2: oklch(0.45 0.18 180);
   --chart-3: oklch(0.65 0.15 220);
   --chart-4: oklch(0.75 0.12 280);
   --chart-5: oklch(0.85 0.1 320);
   --radius: 0.75rem;
-  --sidebar: oklch(0.98 0.01 120);
-  --sidebar-foreground: oklch(0.15 0.03 120);
-  --sidebar-primary: oklch(0.55 0.22 145);
-  --sidebar-primary-foreground: oklch(0.98 0.01 120);
-  --sidebar-accent: oklch(0.95 0.02 120);
-  --sidebar-accent-foreground: oklch(0.25 0.03 120);
-  --sidebar-border: oklch(0.88 0.02 120);
-  --sidebar-ring: oklch(0.55 0.22 145);
+  --sidebar: oklch(0.98 0.01 160);
+  --sidebar-foreground: oklch(0.18 0.04 160);
+  --sidebar-primary: oklch(0.52 0.24 165);
+  --sidebar-primary-foreground: oklch(0.98 0.01 160);
+  --sidebar-accent: oklch(0.95 0.02 160);
+  --sidebar-accent-foreground: oklch(0.28 0.04 160);
+  --sidebar-border: oklch(0.88 0.02 160);
+  --sidebar-ring: oklch(0.52 0.24 165);
   
   /* Дополнительные переменные для анимаций */
-  --shadow-sm: 0 2px 8px -2px oklch(0.1 0.02 120 / 0.1);
-  --shadow-md: 0 8px 30px -6px oklch(0.1 0.02 120 / 0.15);
-  --shadow-lg: 0 20px 50px -12px oklch(0.1 0.02 120 / 0.2);
-  --gradient-primary: linear-gradient(135deg, oklch(0.55 0.22 145), oklch(0.5 0.25 150));
-  --gradient-card: linear-gradient(135deg, oklch(1 0 0), oklch(0.98 0.01 120));
+  --shadow-sm: 0 2px 8px -2px oklch(0.1 0.02 160 / 0.1);
+  --shadow-md: 0 8px 30px -6px oklch(0.1 0.02 160 / 0.15);
+  --shadow-lg: 0 20px 50px -12px oklch(0.1 0.02 160 / 0.2);
+  --gradient-primary: linear-gradient(135deg, oklch(0.52 0.24 165), oklch(0.48 0.26 170));
+  --gradient-card: linear-gradient(135deg, oklch(1 0 0), oklch(0.98 0.01 160));
 }
 
 .dark {
-  --background: oklch(0.12 0.02 120);
-  --foreground: oklch(0.98 0.01 120);
-  --card: oklch(0.15 0.03 120);
-  --card-foreground: oklch(0.98 0.01 120);
-  --popover: oklch(0.15 0.03 120);
-  --popover-foreground: oklch(0.98 0.01 120);
-  --primary: oklch(0.65 0.18 145);
-  --primary-foreground: oklch(0.12 0.02 120);
-  --secondary: oklch(0.2 0.03 120);
-  --secondary-foreground: oklch(0.98 0.01 120);
-  --muted: oklch(0.2 0.03 120);
-  --muted-foreground: oklch(0.7 0.05 120);
-  --accent: oklch(0.25 0.05 145);
-  --accent-foreground: oklch(0.98 0.01 120);
+  --background: oklch(0.12 0.02 160);
+  --foreground: oklch(0.98 0.01 160);
+  --card: oklch(0.16 0.03 160);
+  --card-foreground: oklch(0.98 0.01 160);
+  --popover: oklch(0.16 0.03 160);
+  --popover-foreground: oklch(0.98 0.01 160);
+  --primary: oklch(0.62 0.20 165);
+  --primary-foreground: oklch(0.12 0.02 160);
+  --secondary: oklch(0.20 0.03 160);
+  --secondary-foreground: oklch(0.98 0.01 160);
+  --muted: oklch(0.20 0.03 160);
+  --muted-foreground: oklch(0.72 0.06 160);
+  --accent: oklch(0.25 0.06 165);
+  --accent-foreground: oklch(0.98 0.01 160);
   --destructive: oklch(0.6 0.2 25);
-  --destructive-foreground: oklch(0.98 0.01 120);
-  --border: oklch(0.25 0.03 120);
-  --input: oklch(0.2 0.03 120);
-  --ring: oklch(0.65 0.18 145);
-  --chart-1: oklch(0.65 0.18 145);
+  --destructive-foreground: oklch(0.98 0.01 160);
+  --border: oklch(0.25 0.03 160);
+  --input: oklch(0.20 0.03 160);
+  --ring: oklch(0.62 0.20 165);
+  --chart-1: oklch(0.62 0.20 165);
   --chart-2: oklch(0.55 0.16 180);
   --chart-3: oklch(0.75 0.12 220);
   --chart-4: oklch(0.8 0.1 280);
   --chart-5: oklch(0.7 0.08 320);
-  --sidebar: oklch(0.15 0.03 120);
-  --sidebar-foreground: oklch(0.98 0.01 120);
-  --sidebar-primary: oklch(0.65 0.18 145);
-  --sidebar-primary-foreground: oklch(0.15 0.03 120);
-  --sidebar-accent: oklch(0.2 0.03 120);
-  --sidebar-accent-foreground: oklch(0.98 0.01 120);
-  --sidebar-border: oklch(0.25 0.03 120);
-  --sidebar-ring: oklch(0.65 0.18 145);
+  --sidebar: oklch(0.16 0.03 160);
+  --sidebar-foreground: oklch(0.98 0.01 160);
+  --sidebar-primary: oklch(0.62 0.20 165);
+  --sidebar-primary-foreground: oklch(0.16 0.03 160);
+  --sidebar-accent: oklch(0.20 0.03 160);
+  --sidebar-accent-foreground: oklch(0.98 0.01 160);
+  --sidebar-border: oklch(0.25 0.03 160);
+  --sidebar-ring: oklch(0.62 0.20 165);
   
   /* Темные версии теней */
   --shadow-sm: 0 2px 12px -2px oklch(0 0 0 / 0.3);
   --shadow-md: 0 8px 35px -6px oklch(0 0 0 / 0.4);
   --shadow-lg: 0 20px 55px -12px oklch(0 0 0 / 0.5);
-  --gradient-primary: linear-gradient(135deg, oklch(0.65 0.18 145), oklch(0.6 0.22 150));
-  --gradient-card: linear-gradient(135deg, oklch(0.15 0.03 120), oklch(0.18 0.04 120));
+  --gradient-primary: linear-gradient(135deg, oklch(0.62 0.20 165), oklch(0.58 0.22 170));
+  --gradient-card: linear-gradient(135deg, oklch(0.16 0.03 160), oklch(0.19 0.04 160));
 }
 
 @theme inline {
@@ -153,15 +153,28 @@
   html {
     scroll-behavior: smooth;
   }
+
+  /* Сделать параграфы ярче и контрастнее */
+  p {
+    @apply text-foreground/90;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 450;
+    line-height: 1.7;
+  }
+
+  /* Улучшить читаемость текста */
+  .text-muted-foreground {
+    @apply text-foreground/70;
+  }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 shadow-sm hover:shadow-md transform hover:-translate-y-0.5 font-medium px-6 py-2.5 rounded-lg;
+    @apply bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 shadow-sm hover:shadow-md transform hover:-translate-y-0.5 font-medium px-6 py-2.5 rounded-lg font-sans;
   }
   
   .btn-secondary {
-    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-all duration-300 border border-border hover:border-primary/30 font-medium px-6 py-2.5 rounded-lg;
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-all duration-300 border border-border hover:border-primary/30 font-medium px-6 py-2.5 rounded-lg font-sans;
   }
   
   .card-hover {
@@ -174,6 +187,7 @@
     -webkit-text-fill-color: transparent;
     background-clip: text;
     font-weight: 600;
+    font-family: 'Montserrat', sans-serif;
   }
   
   .gradient-bg {
@@ -190,7 +204,7 @@
   }
   
   .text-shadow {
-    text-shadow: 0 2px 8px oklch(0.1 0.02 120 / 0.2);
+    text-shadow: 0 2px 8px oklch(0.1 0.02 160 / 0.2);
   }
 
   .hover-lift {
@@ -223,6 +237,11 @@
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  /* Утилиты для лучшей читаемости текста */
+  .text-enhanced {
+    @apply text-foreground/95 font-medium;
   }
 }
 
@@ -266,11 +285,11 @@
 
 /* Улучшенные стили для интерактивных элементов */
 input, textarea, select {
-  @apply transition-all duration-200 focus:ring-2 focus:ring-primary/20 focus:border-primary;
+  @apply transition-all duration-200 focus:ring-2 focus:ring-primary/20 focus:border-primary font-sans;
 }
 
 button {
-  @apply transition-all duration-200 active:scale-95;
+  @apply transition-all duration-200 active:scale-95 font-sans;
 }
 
 /* Градиентные границы */
@@ -302,4 +321,23 @@ body {
   background-color: var(--background);
   color: var(--foreground);
   font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+/* Улучшенные стили для типографики */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Montserrat', sans-serif;
+  @apply font-semibold text-foreground;
+}
+
+/* Улучшенная читаемость для длинных текстов */
+.prose {
+  font-family: 'Montserrat', sans-serif;
+}
+
+.prose p {
+  @apply text-foreground/90 mb-4;
+}
+
+.prose strong {
+  @apply text-foreground font-semibold;
 }
