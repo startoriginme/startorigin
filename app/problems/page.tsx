@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { ProblemsFeed } from "@/components/problems-feed"
 import { Button } from "@/components/ui/button"
-import { BriefcaseBusiness, Plus, ArrowRight } from "lucide-react"
+import { Lightbulb, Plus, ArrowRight } from "lucide-react"
 import Link from "next/link"
 import { MobileMenu } from "@/components/mobile-menu"
 
@@ -38,7 +38,7 @@ export default async function ProblemsPage() {
         <div className="container mx-auto px-4 py-4">
           <nav className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
-              <BriefcaseBusiness className="h-6 w-6 text-primary" />
+              <Lightbulb className="h-6 w-6 text-primary" />
               <span className="text-xl font-bold text-foreground">StartOrigin</span>
             </Link>
             
