@@ -6,9 +6,13 @@ import "./globals.css"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "StartOrigin - Share Problems, Find Solutions",
+  title: "StartOrigin - Share Problems, Create Solutions",
   description: "A platform for innovators to share problems and collaborate on solutions",
-    generator: 'v0.app'
+  generator: 'v0.app',
+  icons: {
+    icon: "/lightbulb.png",
+    shortcut: "/lightbulb.png",
+  },
 }
 
 export default function RootLayout({
