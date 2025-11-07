@@ -2,7 +2,7 @@ import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { ProblemForm } from "@/components/problem-form"
 import { Button } from "@/components/ui/button"
-import { BriefcaseBusiness, ArrowLeft } from "lucide-react"
+import { Lightbulb, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 
 export default async function NewProblemPage() {
@@ -22,7 +22,7 @@ export default async function NewProblemPage() {
         <div className="container mx-auto px-4 py-4">
           <nav className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
-              <BriefcaseBusiness className="h-6 w-6 text-primary" />
+              <Lightbulb className="h-6 w-6 text-primary" />
               <span className="text-xl font-bold text-foreground">StartOrigin</span>
             </Link>
             <Link href="/problems">
