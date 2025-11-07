@@ -16,7 +16,7 @@ export default async function NewProblemPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4">
@@ -36,7 +36,7 @@ export default async function NewProblemPage() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 flex-1">
         <div className="mx-auto max-w-3xl">
           <div className="mb-8">
             <h1 className="mb-2 text-3xl font-bold text-foreground">Share a Problem</h1>
@@ -49,10 +49,8 @@ export default async function NewProblemPage() {
           <ProblemForm userId={user.id} />
         </div>
       </main>
-    </div>
-  )
-}
-   {/* Footer */}
+
+      {/* Footer */}
       <footer className="border-t border-border bg-card/50 py-6 mt-auto">
         <div className="container mx-auto px-4">
           <div className="text-center text-muted-foreground text-sm">
