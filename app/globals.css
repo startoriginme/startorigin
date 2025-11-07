@@ -4,31 +4,31 @@
 
 :root {
   /* Черная цветовая схема */
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.15 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.15 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.15 0 0);
-  --primary: oklch(0.15 0 0);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.15 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.55 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.15 0 0);
-  --destructive: oklch(0.65 0.25 25);
-  --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.92 0 0);
-  --input: oklch(0.92 0 0);
-  --ring: oklch(0.15 0 0);
+  --color-background: oklch(1 0 0);
+  --color-foreground: oklch(0.15 0 0);
+  --color-card: oklch(1 0 0);
+  --color-card-foreground: oklch(0.15 0 0);
+  --color-popover: oklch(1 0 0);
+  --color-popover-foreground: oklch(0.15 0 0);
+  --color-primary: oklch(0.15 0 0);
+  --color-primary-foreground: oklch(1 0 0);
+  --color-secondary: oklch(0.97 0 0);
+  --color-secondary-foreground: oklch(0.15 0 0);
+  --color-muted: oklch(0.97 0 0);
+  --color-muted-foreground: oklch(0.55 0 0);
+  --color-accent: oklch(0.97 0 0);
+  --color-accent-foreground: oklch(0.15 0 0);
+  --color-destructive: oklch(0.65 0.25 25);
+  --color-destructive-foreground: oklch(1 0 0);
+  --color-border: oklch(0.92 0 0);
+  --color-input: oklch(0.92 0 0);
+  --color-ring: oklch(0.15 0 0);
   
   /* Ховер-цвета - мятный */
-  --hover-primary: oklch(0.85 0.12 165);
-  --hover-secondary: oklch(0.85 0.12 165);
-  --hover-accent: oklch(0.85 0.12 165);
-  --hover-border: oklch(0.85 0.12 165);
+  --color-hover-primary: oklch(0.85 0.12 165);
+  --color-hover-secondary: oklch(0.85 0.12 165);
+  --color-hover-accent: oklch(0.85 0.12 165);
+  --color-hover-border: oklch(0.85 0.12 165);
   
   /* Дополнительные переменные для анимаций */
   --shadow-sm: 0 2px 8px -2px oklch(0.1 0 0 / 0.1);
@@ -39,36 +39,37 @@
 }
 
 .dark {
-  --background: oklch(0.15 0 0);
-  --foreground: oklch(1 0 0);
-  --card: oklch(0.2 0 0);
-  --card-foreground: oklch(1 0 0);
-  --popover: oklch(0.2 0 0);
-  --popover-foreground: oklch(1 0 0);
-  --primary: oklch(1 0 0);
-  --primary-foreground: oklch(0.15 0 0);
-  --secondary: oklch(0.25 0 0);
-  --secondary-foreground: oklch(1 0 0);
-  --muted: oklch(0.25 0 0);
-  --muted-foreground: oklch(0.8 0 0);
-  --accent: oklch(0.25 0 0);
-  --accent-foreground: oklch(1 0 0);
-  --destructive: oklch(0.6 0.2 25);
-  --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.3 0 0);
-  --input: oklch(0.25 0 0);
-  --ring: oklch(1 0 0);
+  --color-background: oklch(0.15 0 0);
+  --color-foreground: oklch(1 0 0);
+  --color-card: oklch(0.2 0 0);
+  --color-card-foreground: oklch(1 0 0);
+  --color-popover: oklch(0.2 0 0);
+  --color-popover-foreground: oklch(1 0 0);
+  --color-primary: oklch(1 0 0);
+  --color-primary-foreground: oklch(0.15 0 0);
+  --color-secondary: oklch(0.25 0 0);
+  --color-secondary-foreground: oklch(1 0 0);
+  --color-muted: oklch(0.25 0 0);
+  --color-muted-foreground: oklch(0.8 0 0);
+  --color-accent: oklch(0.25 0 0);
+  --color-accent-foreground: oklch(1 0 0);
+  --color-destructive: oklch(0.6 0.2 25);
+  --color-destructive-foreground: oklch(1 0 0);
+  --color-border: oklch(0.3 0 0);
+  --color-input: oklch(0.25 0 0);
+  --color-ring: oklch(1 0 0);
   
   /* Ховер-цвета для темной темы - мятный */
-  --hover-primary: oklch(0.75 0.15 165);
-  --hover-secondary: oklch(0.75 0.15 165);
-  --hover-accent: oklch(0.75 0.15 165);
-  --hover-border: oklch(0.75 0.15 165);
+  --color-hover-primary: oklch(0.75 0.15 165);
+  --color-hover-secondary: oklch(0.75 0.15 165);
+  --color-hover-accent: oklch(0.75 0.15 165);
+  --color-hover-border: oklch(0.75 0.15 165);
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    border-color: var(--color-border);
+    outline-color: var(--color-ring) / 0.5;
     box-sizing: border-box;
     font-family: 'Montserrat', sans-serif;
   }
@@ -79,21 +80,22 @@
   }
   
   body {
-    @apply bg-background text-foreground;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
     font-family: 'Montserrat', sans-serif;
     font-weight: 400;
     line-height: 1.6;
     scroll-behavior: smooth;
   }
 
-  /* Применяем Montserrat ко всем текстовым элементам */
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Montserrat', sans-serif;
-    @apply font-semibold text-foreground;
+    font-weight: 600;
+    color: var(--color-foreground);
   }
 
   p {
-    @apply text-foreground/90;
+    color: color-mix(in oklch, var(--color-foreground) 90%);
     font-family: 'Montserrat', sans-serif;
     font-weight: 400;
     line-height: 1.7;
@@ -123,49 +125,60 @@
     font-family: 'Montserrat', sans-serif;
   }
 
-  /* Улучшить читаемость текста */
   .text-muted-foreground {
-    @apply text-foreground/70;
+    color: color-mix(in oklch, var(--color-foreground) 70%);
     font-family: 'Montserrat', sans-serif;
   }
 }
 
 @layer components {
-  /* Ховер-эффекты с мятным цветом, но текст остается черным */
   .btn-primary {
-    @apply bg-primary text-primary-foreground transition-all duration-300 shadow-sm font-medium px-6 py-2.5 rounded-lg;
+    background-color: var(--color-primary);
+    color: var(--color-primary-foreground);
+    transition: all 0.3s;
+    box-shadow: var(--shadow-sm);
+    font-weight: 500;
+    padding: 0.625rem 1.5rem;
+    border-radius: 0.5rem;
     font-family: 'Montserrat', sans-serif;
   }
   
   .btn-primary:hover {
-    background-color: var(--hover-primary);
+    background-color: var(--color-hover-primary);
     box-shadow: var(--shadow-md);
     transform: translateY(-2px);
-    /* Текст остается черным */
     color: oklch(0.15 0 0);
   }
   
   .btn-secondary {
-    @apply bg-secondary text-secondary-foreground transition-all duration-300 border border-border font-medium px-6 py-2.5 rounded-lg;
+    background-color: var(--color-secondary);
+    color: var(--color-secondary-foreground);
+    transition: all 0.3s;
+    border: 1px solid var(--color-border);
+    font-weight: 500;
+    padding: 0.625rem 1.5rem;
+    border-radius: 0.5rem;
     font-family: 'Montserrat', sans-serif;
   }
   
   .btn-secondary:hover {
-    background-color: var(--hover-primary);
-    /* Текст остается черным */
+    background-color: var(--color-hover-primary);
     color: oklch(0.15 0 0);
-    border-color: var(--hover-border);
+    border-color: var(--color-hover-border);
     transform: translateY(-2px);
   }
   
   .card-hover {
-    @apply transition-all duration-300 cursor-pointer border border-border/50 rounded-xl;
+    transition: all 0.3s;
+    cursor: pointer;
+    border: 1px solid color-mix(in oklch, var(--color-border) 50%);
+    border-radius: 0.75rem;
   }
   
   .card-hover:hover {
     box-shadow: var(--shadow-lg);
     transform: translateY(-3px);
-    border-color: var(--hover-border);
+    border-color: var(--color-hover-border);
   }
   
   .gradient-text {
@@ -202,7 +215,7 @@
   .hover-lift:hover {
     transform: translateY(-3px);
     box-shadow: var(--shadow-lg);
-    border-color: var(--hover-border);
+    border-color: var(--color-hover-border);
   }
 }
 
@@ -214,13 +227,13 @@
   
   .bg-grid {
     background-image: 
-      linear-gradient(to right, var(--border) 1px, transparent 1px),
-      linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+      linear-gradient(to right, var(--color-border) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--color-border) 1px, transparent 1px);
     background-size: 24px 24px;
   }
   
   .border-glow {
-    box-shadow: 0 0 25px -5px var(--hover-primary);
+    box-shadow: 0 0 25px -5px var(--color-hover-primary);
   }
 
   .glass-effect {
@@ -229,9 +242,9 @@
     border: 1px solid rgba(255, 255, 255, 0.2);
   }
 
-  /* Утилиты для лучшей читаемости текста */
   .text-enhanced {
-    @apply text-foreground/95 font-medium;
+    color: color-mix(in oklch, var(--color-foreground) 95%);
+    font-weight: 500;
     font-family: 'Montserrat', sans-serif;
   }
 
@@ -246,18 +259,18 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--muted);
+  background: var(--color-muted);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--primary);
+  background: var(--color-primary);
   border-radius: 4px;
   transition: all 0.3s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--hover-primary);
+  background: var(--color-hover-primary);
   transform: scale(1.1);
 }
 
@@ -279,24 +292,28 @@
 
 /* Улучшенные стили для интерактивных элементов */
 input, textarea, select {
-  @apply transition-all duration-200 focus:ring-2 focus:border-primary;
+  transition: all 0.2s;
   font-family: 'Montserrat', sans-serif;
 }
 
 input:focus, textarea:focus, select:focus {
-  border-color: var(--hover-border);
+  border-color: var(--color-hover-border);
   box-shadow: 0 0 0 2px oklch(0.85 0.12 165 / 0.2);
 }
 
 button {
-  @apply transition-all duration-200 active:scale-95;
+  transition: all 0.2s;
   font-family: 'Montserrat', sans-serif;
+}
+
+button:active {
+  transform: scale(0.95);
 }
 
 /* Градиентные границы */
 .gradient-border {
   position: relative;
-  background: var(--background);
+  background: var(--color-background);
   border-radius: 0.75rem;
 }
 
@@ -314,64 +331,31 @@ button {
   pointer-events: none;
 }
 
-* {
-  border-color: var(--border);
-  font-family: 'Montserrat', sans-serif;
-}
-
-body {
-  background-color: var(--background);
-  color: var(--foreground);
-  font-feature-settings: "rlig" 1, "calt" 1;
-  font-family: 'Montserrat', sans-serif;
-}
-
-/* Улучшенные стили для типографики */
-.prose {
-  font-family: 'Montserrat', sans-serif;
-}
-
-.prose p {
-  @apply text-foreground/90 mb-4;
-  font-family: 'Montserrat', sans-serif;
-}
-
-.prose strong {
-  @apply text-foreground font-semibold;
-  font-family: 'Montserrat', sans-serif;
-}
-
-/* Принудительно применяем Montserrat ко всем элементам */
-* {
-  font-family: 'Montserrat', sans-serif;
-}
-
 /* Дополнительные ховер-эффекты */
 a:hover {
-  color: var(--hover-primary);
+  color: var(--color-hover-primary);
 }
 
 .hover-mint:hover {
-  color: var(--hover-primary);
-  border-color: var(--hover-border);
+  color: var(--color-hover-primary);
+  border-color: var(--color-hover-border);
 }
 
 /* Ховер для кнопок outline - текст остается черным */
 button[class*="outline"]:hover {
-  background-color: var(--hover-primary);
-  /* Текст остается черным */
+  background-color: var(--color-hover-primary);
   color: oklch(0.15 0 0);
-  border-color: var(--hover-primary);
+  border-color: var(--color-hover-primary);
 }
 
 /* Ховер для ссылок в навигации */
 nav a:hover {
-  color: var(--hover-primary);
+  color: var(--color-hover-primary);
 }
 
 /* Ховер для иконок */
 svg:hover {
-  color: var(--hover-primary);
+  color: var(--color-hover-primary);
 }
 
 /* Для темной темы - текст кнопок остается белым при ховере */
