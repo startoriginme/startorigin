@@ -1,366 +1,182 @@
-@import "tailwindcss";
-@import "tw-animate-css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
 
+@custom-variant dark (&:is(.dark *));
+
 :root {
-  /* Черная цветовая схема */
-  --color-background: oklch(1 0 0);
-  --color-foreground: oklch(0.15 0 0);
-  --color-card: oklch(1 0 0);
-  --color-card-foreground: oklch(0.15 0 0);
-  --color-popover: oklch(1 0 0);
-  --color-popover-foreground: oklch(0.15 0 0);
-  --color-primary: oklch(0.15 0 0);
-  --color-primary-foreground: oklch(1 0 0);
-  --color-secondary: oklch(0.97 0 0);
-  --color-secondary-foreground: oklch(0.15 0 0);
-  --color-muted: oklch(0.97 0 0);
-  --color-muted-foreground: oklch(0.55 0 0);
-  --color-accent: oklch(0.97 0 0);
-  --color-accent-foreground: oklch(0.15 0 0);
-  --color-destructive: oklch(0.65 0.25 25);
-  --color-destructive-foreground: oklch(1 0 0);
-  --color-border: oklch(0.92 0 0);
-  --color-input: oklch(0.92 0 0);
-  --color-ring: oklch(0.15 0 0);
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
   
-  /* Ховер-цвета - мятный */
-  --color-hover-primary: oklch(0.85 0.12 165);
-  --color-hover-secondary: oklch(0.85 0.12 165);
-  --color-hover-accent: oklch(0.85 0.12 165);
-  --color-hover-border: oklch(0.85 0.12 165);
-  
-  /* Дополнительные переменные для анимаций */
-  --shadow-sm: 0 2px 8px -2px oklch(0.1 0 0 / 0.1);
-  --shadow-md: 0 8px 30px -6px oklch(0.1 0 0 / 0.15);
-  --shadow-lg: 0 20px 50px -12px oklch(0.1 0 0 / 0.2);
-  --gradient-primary: linear-gradient(135deg, oklch(0.15 0 0), oklch(0.3 0 0));
-  --gradient-card: linear-gradient(135deg, oklch(1 0 0), oklch(0.98 0 0));
+  /* Mint color for button hover */
+  --mint: oklch(0.85 0.1 180);
+  --mint-foreground: oklch(0.2 0.05 180);
 }
 
 .dark {
-  --color-background: oklch(0.15 0 0);
-  --color-foreground: oklch(1 0 0);
-  --color-card: oklch(0.2 0 0);
-  --color-card-foreground: oklch(1 0 0);
-  --color-popover: oklch(0.2 0 0);
-  --color-popover-foreground: oklch(1 0 0);
-  --color-primary: oklch(1 0 0);
-  --color-primary-foreground: oklch(0.15 0 0);
-  --color-secondary: oklch(0.25 0 0);
-  --color-secondary-foreground: oklch(1 0 0);
-  --color-muted: oklch(0.25 0 0);
-  --color-muted-foreground: oklch(0.8 0 0);
-  --color-accent: oklch(0.25 0 0);
-  --color-accent-foreground: oklch(1 0 0);
-  --color-destructive: oklch(0.6 0.2 25);
-  --color-destructive-foreground: oklch(1 0 0);
-  --color-border: oklch(0.3 0 0);
-  --color-input: oklch(0.25 0 0);
-  --color-ring: oklch(1 0 0);
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.145 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.145 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.396 0.141 25.723);
+  --destructive-foreground: oklch(0.637 0.237 25.331);
+  --border: oklch(0.269 0 0);
+  --input: oklch(0.269 0 0);
+  --ring: oklch(0.439 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.269 0 0);
+  --sidebar-ring: oklch(0.439 0 0);
   
-  /* Ховер-цвета для темной темы - мятный */
-  --color-hover-primary: oklch(0.75 0.15 165);
-  --color-hover-secondary: oklch(0.75 0.15 165);
-  --color-hover-accent: oklch(0.75 0.15 165);
-  --color-hover-border: oklch(0.75 0.15 165);
+  /* Mint color for dark mode */
+  --mint: oklch(0.7 0.15 180);
+  --mint-foreground: oklch(0.95 0.02 180);
+}
+
+@theme inline {
+  --font-sans: 'Montserrat', sans-serif;
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-mint: var(--mint);
+  --color-mint-foreground: var(--mint-foreground);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 }
 
 @layer base {
   * {
-    border-color: var(--color-border);
-    outline-color: var(--color-ring) / 0.5;
-    box-sizing: border-box;
-    font-family: 'Montserrat', sans-serif;
+    @apply border-border outline-ring/50;
   }
-  
-  html {
-    scroll-behavior: smooth;
-    font-family: 'Montserrat', sans-serif;
-  }
-  
   body {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 400;
-    line-height: 1.6;
-    scroll-behavior: smooth;
-  }
-
-  h1, h2, h3, h4, h5, h6 {
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 600;
-    color: var(--color-foreground);
-  }
-
-  p {
-    color: color-mix(in oklch, var(--color-foreground) 90%);
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 400;
-    line-height: 1.7;
-  }
-
-  a {
-    font-family: 'Montserrat', sans-serif;
-  }
-
-  button {
-    font-family: 'Montserrat', sans-serif;
-  }
-
-  input, textarea, select {
-    font-family: 'Montserrat', sans-serif;
-  }
-
-  span, div {
-    font-family: 'Montserrat', sans-serif;
-  }
-
-  li {
-    font-family: 'Montserrat', sans-serif;
-  }
-
-  label {
-    font-family: 'Montserrat', sans-serif;
-  }
-
-  .text-muted-foreground {
-    color: color-mix(in oklch, var(--color-foreground) 70%);
+    @apply bg-background text-foreground;
     font-family: 'Montserrat', sans-serif;
   }
 }
 
 @layer components {
-  .btn-primary {
-    background-color: var(--color-primary);
-    color: var(--color-primary-foreground);
-    transition: all 0.3s;
-    box-shadow: var(--shadow-sm);
-    font-weight: 500;
-    padding: 0.625rem 1.5rem;
-    border-radius: 0.5rem;
-    font-family: 'Montserrat', sans-serif;
+  /* Button hover effects with mint color */
+  .btn-hover-mint {
+    @apply transition-colors duration-200;
   }
   
-  .btn-primary:hover {
-    background-color: var(--color-hover-primary);
-    box-shadow: var(--shadow-md);
-    transform: translateY(-2px);
-    color: oklch(0.15 0 0);
+  .btn-hover-mint:hover {
+    background-color: var(--mint) !important;
+    color: var(--mint-foreground) !important;
+    border-color: var(--mint) !important;
   }
   
-  .btn-secondary {
-    background-color: var(--color-secondary);
-    color: var(--color-secondary-foreground);
-    transition: all 0.3s;
-    border: 1px solid var(--color-border);
-    font-weight: 500;
-    padding: 0.625rem 1.5rem;
-    border-radius: 0.5rem;
-    font-family: 'Montserrat', sans-serif;
-  }
-  
-  .btn-secondary:hover {
-    background-color: var(--color-hover-primary);
-    color: oklch(0.15 0 0);
-    border-color: var(--color-hover-border);
-    transform: translateY(-2px);
-  }
-  
-  .card-hover {
-    transition: all 0.3s;
-    cursor: pointer;
-    border: 1px solid color-mix(in oklch, var(--color-border) 50%);
-    border-radius: 0.75rem;
-  }
-  
-  .card-hover:hover {
-    box-shadow: var(--shadow-lg);
-    transform: translateY(-3px);
-    border-color: var(--color-hover-border);
-  }
-  
-  .gradient-text {
-    background: var(--gradient-primary);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    font-weight: 600;
-    font-family: 'Montserrat', sans-serif;
-  }
-  
-  .gradient-bg {
-    background: var(--gradient-primary);
-  }
-  
-  .animate-float {
-    animation: float 3s ease-in-out infinite;
-  }
-  
-  @keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-6px); }
-  }
-  
-  .text-shadow {
-    text-shadow: 0 2px 8px oklch(0.1 0 0 / 0.2);
-  }
-
-  .hover-lift {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    font-family: 'Montserrat', sans-serif;
-  }
-
-  .hover-lift:hover {
-    transform: translateY(-3px);
-    box-shadow: var(--shadow-lg);
-    border-color: var(--color-hover-border);
+  /* Apply mint hover to all buttons */
+  button:not([data-no-mint-hover]):hover,
+  .btn:hover,
+  [type='button']:hover,
+  [type='submit']:hover,
+  [type='reset']:hover {
+    background-color: var(--mint) !important;
+    color: var(--mint-foreground) !important;
+    border-color: var(--mint) !important;
   }
 }
 
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
-    font-family: 'Montserrat', sans-serif;
+  /* Utility class for explicit mint hover */
+  .hover-mint:hover {
+    background-color: var(--mint) !important;
+    color: var(--mint-foreground) !important;
+    border-color: var(--mint) !important;
   }
   
-  .bg-grid {
-    background-image: 
-      linear-gradient(to right, var(--color-border) 1px, transparent 1px),
-      linear-gradient(to bottom, var(--color-border) 1px, transparent 1px);
-    background-size: 24px 24px;
+  .text-mint {
+    color: var(--mint);
   }
   
-  .border-glow {
-    box-shadow: 0 0 25px -5px var(--color-hover-primary);
+  .bg-mint {
+    background-color: var(--mint);
   }
-
-  .glass-effect {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+  
+  .border-mint {
+    border-color: var(--mint);
   }
-
-  .text-enhanced {
-    color: color-mix(in oklch, var(--color-foreground) 95%);
-    font-weight: 500;
-    font-family: 'Montserrat', sans-serif;
-  }
-
-  .font-montserrat {
-    font-family: 'Montserrat', sans-serif;
-  }
-}
-
-/* Стили для скроллбара */
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--color-muted);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--color-primary);
-  border-radius: 4px;
-  transition: all 0.3s ease;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-hover-primary);
-  transform: scale(1.1);
-}
-
-/* Анимации для появления элементов */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fade-in-up {
-  animation: fadeInUp 0.6s ease-out;
-}
-
-/* Улучшенные стили для интерактивных элементов */
-input, textarea, select {
-  transition: all 0.2s;
-  font-family: 'Montserrat', sans-serif;
-}
-
-input:focus, textarea:focus, select:focus {
-  border-color: var(--color-hover-border);
-  box-shadow: 0 0 0 2px oklch(0.85 0.12 165 / 0.2);
-}
-
-button {
-  transition: all 0.2s;
-  font-family: 'Montserrat', sans-serif;
-}
-
-button:active {
-  transform: scale(0.95);
-}
-
-/* Градиентные границы */
-.gradient-border {
-  position: relative;
-  background: var(--color-background);
-  border-radius: 0.75rem;
-}
-
-.gradient-border::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: calc(0.75rem + 1px);
-  padding: 1px;
-  background: var(--gradient-primary);
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask-composite: xor;
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  pointer-events: none;
-}
-
-/* Дополнительные ховер-эффекты */
-a:hover {
-  color: var(--color-hover-primary);
-}
-
-.hover-mint:hover {
-  color: var(--color-hover-primary);
-  border-color: var(--color-hover-border);
-}
-
-/* Ховер для кнопок outline - текст остается черным */
-button[class*="outline"]:hover {
-  background-color: var(--color-hover-primary);
-  color: oklch(0.15 0 0);
-  border-color: var(--color-hover-primary);
-}
-
-/* Ховер для ссылок в навигации */
-nav a:hover {
-  color: var(--color-hover-primary);
-}
-
-/* Ховер для иконок */
-svg:hover {
-  color: var(--color-hover-primary);
-}
-
-/* Для темной темы - текст кнопок остается белым при ховере */
-.dark .btn-primary:hover,
-.dark .btn-secondary:hover,
-.dark button[class*="outline"]:hover {
-  color: oklch(1 0 0);
 }
