@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,7 +21,7 @@ export default function EditProfilePage() {
   const router = useRouter()
 
   // Загружаем данные профиля при монтировании
-  useState(() => {
+  useEffect(() => {
     const fetchProfile = async () => {
       const supabase = createClient()
       
@@ -47,7 +47,7 @@ export default function EditProfilePage() {
     }
 
     fetchProfile()
-  })
+  }, [router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -61,20 +61,23 @@ export default function EditProfilePage() {
     const supabase = createClient()
 
     try {
+      // ✅ НОРМАЛИЗАЦИЯ USERNAME - приводим к нижнему регистру
+      const normalizedUsername = username ? username.toLowerCase().trim() : ""
+
       // Валидация username
-      if (username && !/^[a-zA-Z0-9_]+$/.test(username)) {
+      if (normalizedUsername && !/^[a-zA-Z0-9_]+$/.test(normalizedUsername)) {
         throw new Error("Username can only contain letters, numbers, and underscores")
       }
 
       // Проверяем, не занят ли username другим пользователем
-      if (username) {
+      if (normalizedUsername) {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) throw new Error("User not authenticated")
 
         const { data: existingProfile } = await supabase
           .from("profiles")
           .select("id, username")
-          .eq("username", username)
+          .eq("username", normalizedUsername) // ✅ Сравниваем с нормализованным
           .neq("id", user.id)
           .single()
 
@@ -91,7 +94,7 @@ export default function EditProfilePage() {
         .from("profiles")
         .update({
           display_name: displayName || null,
-          username: username || null,
+          username: normalizedUsername || null, // ✅ Сохраняем нормализованный
           bio: bio || null,
           updated_at: new Date().toISOString(),
         })
@@ -190,7 +193,8 @@ export default function EditProfilePage() {
                     disabled={isLoading}
                   />
                   <p className="text-sm text-muted-foreground">
-                    Your unique username. Only letters, numbers, and underscores allowed.
+                    Your unique username. Only letters, numbers, and underscores allowed. 
+                    <span className="text-blue-500"> Usernames are case-insensitive.</span>
                   </p>
                 </div>
 
