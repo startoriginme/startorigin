@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import { Lightbulb, Plus, LogOut, Calendar, MessageSquare, ArrowBigUp, Edit, Eye } from "lucide-react"
+import { Lightbulb, Plus, LogOut, Calendar, MessageSquare, ArrowBigUp, Edit } from "lucide-react"
 import { ProfileMobileMenu } from "@/components/profile-mobile-menu"
 
 export default async function ProfilePage() {
@@ -45,15 +45,6 @@ export default async function ProfilePage() {
       month: "long",
       day: "numeric",
     })
-  }
-
-  const getCategoryLabel = (category: string) => {
-    return category.charAt(0).toUpperCase() + category.slice(1)
-  }
-
-  const getStatusLabel = (status: string) => {
-    if (status === "in_progress") return "In Progress"
-    return status.charAt(0).toUpperCase() + status.slice(1)
   }
 
   const handleSignOut = async () => {
@@ -152,35 +143,16 @@ export default async function ProfilePage() {
                 <div className="space-y-6">
                   {problems.map((problem) => (
                     <Link key={problem.id} href={`/problems/${problem.id}`}>
-                      <Card className="transition-all duration-300 hover:shadow-lg hover:scale-[1.02] cursor-pointer border-2 hover:border-primary/20 group">
+                      <Card className="transition-shadow hover:shadow-md cursor-pointer">
                         <CardContent className="p-6">
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1">
-                              <div className="flex items-start justify-between mb-3">
-                                <h3 className="text-xl font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2">
-                                  {problem.title}
-                                </h3>
-                                <div className="flex items-center gap-1 text-muted-foreground ml-4">
-                                  <Eye className="h-4 w-4" />
-                                  <span className="text-sm">View</span>
-                                </div>
-                              </div>
-                              
-                              <p className="text-muted-foreground line-clamp-3 mb-4 leading-relaxed">
-                                {problem.description}
-                              </p>
-                              
+                              <h3 className="text-lg font-semibold text-foreground hover:text-primary transition-colors mb-3">
+                                {problem.title}
+                              </h3>
+                              <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{problem.description}</p>
                               <div className="flex flex-wrap gap-2 mb-4">
-                                {problem.category && (
-                                  <Badge variant="secondary" className="px-3 py-1">
-                                    {getCategoryLabel(problem.category)}
-                                  </Badge>
-                                )}
-                                {problem.tags?.map((tag) => (
-                                  <Badge key={tag} variant="outline" className="px-2 py-1">
-                                    {tag}
-                                  </Badge>
-                                ))}
+                                {problem.category && <Badge variant="secondary">{problem.category}</Badge>}
                                 <Badge
                                   variant={
                                     problem.status === "open"
@@ -189,30 +161,22 @@ export default async function ProfilePage() {
                                         ? "secondary"
                                         : "outline"
                                   }
-                                  className="px-3 py-1"
                                 >
-                                  {getStatusLabel(problem.status)}
+                                  {problem.status}
                                 </Badge>
-                                {problem.looking_for_cofounder && (
-                                  <Badge variant="default" className="px-3 py-1 bg-green-600 hover:bg-green-700 gap-1">
-                                    <Plus className="h-3 w-3" />
-                                    Seeking Cofounder
-                                  </Badge>
-                                )}
                               </div>
-
-                              <div className="flex items-center gap-6 text-sm text-muted-foreground pt-3 border-t border-border">
-                                <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                <div className="flex items-center gap-1">
                                   <Calendar className="h-4 w-4" />
                                   <span>{formatDate(problem.created_at)}</span>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1">
                                   <ArrowBigUp className="h-4 w-4" />
-                                  <span className="font-medium">{problem.upvotes} upvotes</span>
+                                  <span>{problem.upvotes}</span>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1">
                                   <MessageSquare className="h-4 w-4" />
-                                  <span className="font-medium">{problem.comment_count} comments</span>
+                                  <span>{problem.comment_count}</span>
                                 </div>
                               </div>
                             </div>
@@ -223,22 +187,11 @@ export default async function ProfilePage() {
                   ))}
                 </div>
               ) : (
-                <div className="py-12 text-center">
-                  <div className="mx-auto max-w-md space-y-4">
-                    <div className="rounded-full bg-muted p-6 w-16 h-16 mx-auto flex items-center justify-center">
-                      <Lightbulb className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                    <h3 className="text-xl font-semibold text-foreground">No problems yet</h3>
-                    <p className="text-muted-foreground mb-6">
-                      Share your first problem and start collaborating with the community
-                    </p>
-                    <Link href="/problems/new">
-                      <Button size="lg" className="gap-2">
-                        <Plus className="h-5 w-5" />
-                        Share Your First Problem
-                      </Button>
-                    </Link>
-                  </div>
+                <div className="py-8 text-center text-muted-foreground">
+                  <p className="mb-4">You haven't shared any problems yet.</p>
+                  <Link href="/problems/new">
+                    <Button>Share Your First Problem</Button>
+                  </Link>
                 </div>
               )}
             </CardContent>
