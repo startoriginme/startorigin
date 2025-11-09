@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { X } from "lucide-react"
+import { X, Loader2 } from "lucide-react"
 
 type ProblemFormProps = {
   userId: string
@@ -72,6 +72,10 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // 🔒 ЗАЩИТА ОТ МНОЖЕСТВЕННЫХ НАЖАТИЙ
+    if (isLoading) return
+    
     setIsLoading(true)
     setError(null)
 
@@ -96,7 +100,10 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
           .eq("author_id", userId)
 
         if (error) throw error
+        
+        // 🚀 ОПТИМИСТИЧНЫЙ РЕДИРЕКТ
         router.push(`/problems/${initialData.id}`)
+        router.refresh()
       } else {
         // Create new problem
         const { data, error } = await supabase
@@ -114,14 +121,16 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
           .single()
 
         if (error) throw error
+        
+        // 🚀 ОПТИМИСТИЧНЫЙ РЕДИРЕКТ - сразу переходим
         router.push(`/problems/${data.id}`)
+        router.refresh()
       }
-      router.refresh()
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred")
-    } finally {
-      setIsLoading(false)
+      setIsLoading(false) // ❌ При ошибке снова разрешаем нажатия
     }
+    // ⚠️ Убрал finally - при успехе isLoading останется true, но это ок т.к. мы уходим со страницы
   }
 
   const getCategoryLabel = (category: string) => {
@@ -141,6 +150,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               onChange={(e) => setTitle(e.target.value)}
               required
               maxLength={200}
+              disabled={isLoading} // 🔒 Блокируем поля при загрузке
             />
             <p className="text-xs text-muted-foreground">{title.length}/200 characters</p>
           </div>
@@ -155,6 +165,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               required
               rows={8}
               maxLength={2000}
+              disabled={isLoading} // 🔒 Блокируем поля при загрузке
             />
             <p className="text-xs text-muted-foreground">{description.length}/2000 characters</p>
           </div>
@@ -167,13 +178,14 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               value={contact}
               onChange={(e) => setContact(e.target.value)}
               maxLength={100}
+              disabled={isLoading} // 🔒 Блокируем поля при загрузке
             />
             <p className="text-xs text-muted-foreground">How can people reach you? (Optional)</p>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="category">Category</Label>
-            <Select value={category} onValueChange={setCategory}>
+            <Select value={category} onValueChange={setCategory} disabled={isLoading}>
               <SelectTrigger id="category">
                 <SelectValue placeholder="Select a category" />
               </SelectTrigger>
@@ -201,12 +213,13 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
                     handleAddTag()
                   }
                 }}
+                disabled={isLoading} // 🔒 Блокируем поля при загрузке
               />
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleAddTag}
-                disabled={!tagInput.trim() || tags.length >= 5}
+                disabled={!tagInput.trim() || tags.length >= 5 || isLoading}
               >
                 Add
               </Button>
@@ -216,7 +229,12 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
                 {tags.map((tag) => (
                   <Badge key={tag} variant="secondary" className="gap-1">
                     {tag}
-                    <button type="button" onClick={() => handleRemoveTag(tag)} className="ml-1 hover:text-destructive">
+                    <button 
+                      type="button" 
+                      onClick={() => handleRemoveTag(tag)} 
+                      className="ml-1 hover:text-destructive"
+                      disabled={isLoading} // 🔒 Блокируем кнопки при загрузке
+                    >
                       <X className="h-3 w-3" />
                     </button>
                   </Badge>
@@ -230,6 +248,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               id="cofounder"
               checked={lookingForCofounder}
               onCheckedChange={(checked) => setLookingForCofounder(checked as boolean)}
+              disabled={isLoading} // 🔒 Блокируем чекбокс при загрузке
             />
             <Label htmlFor="cofounder" className="text-sm font-normal cursor-pointer">
               I'm looking for a cofounder to solve this problem
@@ -239,7 +258,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
           {initialData && (
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
-              <Select value={status} onValueChange={setStatus}>
+              <Select value={status} onValueChange={setStatus} disabled={isLoading}>
                 <SelectTrigger id="status">
                   <SelectValue />
                 </SelectTrigger>
@@ -261,7 +280,14 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
 
           <div className="flex gap-4">
             <Button type="submit" disabled={isLoading} className="flex-1">
-              {isLoading ? "Please wait..." : initialData ? "Update Problem" : "Publish Problem"}
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  {initialData ? "Updating..." : "Publishing..."}
+                </>
+              ) : (
+                initialData ? "Update Problem" : "Publish Problem"
+              )}
             </Button>
             <Button type="button" variant="outline" onClick={() => router.back()} disabled={isLoading}>
               Cancel
