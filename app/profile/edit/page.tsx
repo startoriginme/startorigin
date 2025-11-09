@@ -1,34 +1,126 @@
-import { createClient } from "@/lib/supabase/server"
-import { redirect } from "next/navigation"
+"use client"
+
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import Link from "next/link"
-import { Lightbulb, ArrowLeft } from "lucide-react"
-import { updateProfile } from "./actions"
+import { Lightbulb, ArrowLeft, Loader2 } from "lucide-react"
 
-export default async function EditProfilePage({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | string[] | undefined }
-}) {
-  const supabase = await createClient()
+export default function EditProfilePage() {
+  const [displayName, setDisplayName] = useState("")
+  const [username, setUsername] = useState("")
+  const [bio, setBio] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [isDataLoading, setIsDataLoading] = useState(true)
+  const router = useRouter()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // Загружаем данные профиля при монтировании
+  useState(() => {
+    const fetchProfile = async () => {
+      const supabase = createClient()
+      
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        router.push("/auth/login")
+        return
+      }
 
-  if (!user) {
-    redirect("/auth/login")
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single()
+
+      if (profile) {
+        setDisplayName(profile.display_name || "")
+        setUsername(profile.username || "")
+        setBio(profile.bio || "")
+      }
+      
+      setIsDataLoading(false)
+    }
+
+    fetchProfile()
+  })
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    // 🔒 ЗАЩИТА ОТ МНОЖЕСТВЕННЫХ НАЖАТИЙ
+    if (isLoading) return
+    
+    setIsLoading(true)
+    setError(null)
+
+    const supabase = createClient()
+
+    try {
+      // Валидация username
+      if (username && !/^[a-zA-Z0-9_]+$/.test(username)) {
+        throw new Error("Username can only contain letters, numbers, and underscores")
+      }
+
+      // Проверяем, не занят ли username другим пользователем
+      if (username) {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) throw new Error("User not authenticated")
+
+        const { data: existingProfile } = await supabase
+          .from("profiles")
+          .select("id, username")
+          .eq("username", username)
+          .neq("id", user.id)
+          .single()
+
+        if (existingProfile) {
+          throw new Error("This username is already taken. Please choose another one.")
+        }
+      }
+
+      // Обновляем профиль
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error("User not authenticated")
+
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({
+          display_name: displayName || null,
+          username: username || null,
+          bio: bio || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", user.id)
+
+      if (updateError) {
+        if (updateError.code === "23505") {
+          throw new Error("This username is already taken. Please choose another one.")
+        }
+        throw new Error(`Failed to update profile: ${updateError.message}`)
+      }
+
+      // 🚀 ОПТИМИСТИЧНЫЙ РЕДИРЕКТ
+      router.push("/profile")
+      router.refresh()
+
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : "An error occurred")
+      setIsLoading(false) // ❌ При ошибке снова разрешаем нажатия
+    }
   }
 
-  // Fetch user profile
-  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
-
-  // Get error from URL params if exists
-  const error = searchParams.error as string | undefined
+  if (isDataLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -62,20 +154,22 @@ export default async function EditProfilePage({
               {error && (
                 <div className="mb-6 p-4 bg-destructive/10 border border-destructive rounded-lg">
                   <p className="text-destructive text-sm font-medium">
-                    {decodeURIComponent(error)}
+                    {error}
                   </p>
                 </div>
               )}
 
-              <form action={updateProfile} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="display_name">Display Name</Label>
                   <Input
                     id="display_name"
                     name="display_name"
                     type="text"
-                    defaultValue={profile?.display_name || ""}
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
                     placeholder="Your full name"
+                    disabled={isLoading}
                   />
                   <p className="text-sm text-muted-foreground">
                     This is the name that will be displayed on your profile and posts.
@@ -88,10 +182,12 @@ export default async function EditProfilePage({
                     id="username"
                     name="username"
                     type="text"
-                    defaultValue={profile?.username || ""}
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
                     placeholder="username"
                     pattern="[a-zA-Z0-9_]+"
                     title="Username can only contain letters, numbers, and underscores"
+                    disabled={isLoading}
                   />
                   <p className="text-sm text-muted-foreground">
                     Your unique username. Only letters, numbers, and underscores allowed.
@@ -103,19 +199,28 @@ export default async function EditProfilePage({
                   <Textarea
                     id="bio"
                     name="bio"
-                    defaultValue={profile?.bio || ""}
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
                     placeholder="Tell us about yourself..."
                     rows={4}
+                    disabled={isLoading}
                   />
                   <p className="text-sm text-muted-foreground">A short bio about yourself (optional).</p>
                 </div>
 
                 <div className="flex gap-4">
-                  <Button type="submit" className="flex-1">
-                    Save Changes
+                  <Button type="submit" disabled={isLoading} className="flex-1">
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save Changes"
+                    )}
                   </Button>
                   <Link href="/profile" className="flex-1">
-                    <Button type="button" variant="outline" className="w-full bg-transparent">
+                    <Button type="button" variant="outline" className="w-full bg-transparent" disabled={isLoading}>
                       Cancel
                     </Button>
                   </Link>
