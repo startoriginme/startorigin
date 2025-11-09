@@ -9,7 +9,11 @@ import Link from "next/link"
 import { Lightbulb, ArrowLeft } from "lucide-react"
 import { updateProfile } from "./actions"
 
-export default async function EditProfilePage() {
+export default async function EditProfilePage({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | string[] | undefined }
+}) {
   const supabase = await createClient()
 
   const {
@@ -22,6 +26,9 @@ export default async function EditProfilePage() {
 
   // Fetch user profile
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+
+  // Get error from URL params if exists
+  const error = searchParams.error as string | undefined
 
   return (
     <div className="min-h-screen bg-background">
@@ -51,6 +58,15 @@ export default async function EditProfilePage() {
               <CardTitle>Edit Profile</CardTitle>
             </CardHeader>
             <CardContent>
+              {/* Error Message Display */}
+              {error && (
+                <div className="mb-6 p-4 bg-destructive/10 border border-destructive rounded-lg">
+                  <p className="text-destructive text-sm font-medium">
+                    {decodeURIComponent(error)}
+                  </p>
+                </div>
+              )}
+
               <form action={updateProfile} className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="display_name">Display Name</Label>
