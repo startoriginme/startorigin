@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { BriefcaseBusiness, ArrowLeft } from "lucide-react"
+import { Lightbulb, ArrowLeft } from "lucide-react"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -54,7 +54,7 @@ export default function LoginPage() {
 
         <div className="mb-6 flex justify-center">
           <Link href="/" className="flex items-center gap-2">
-            <BriefcaseBusiness className="h-8 w-8 text-primary" />
+            <Lightbulb className="h-8 w-8 text-primary" />
             <span className="text-2xl font-bold text-foreground">StartOrigin</span>
           </Link>
         </div>
