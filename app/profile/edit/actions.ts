@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 
-export async function updateProfile(formData: FormData) {
+export async function updateProfile(prevState: any, formData: FormData) {
   const supabase = await createClient()
 
   const {
@@ -12,7 +12,7 @@ export async function updateProfile(formData: FormData) {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    throw new Error("User not authenticated")
+    return { error: "User not authenticated" }
   }
 
   const display_name = formData.get("display_name") as string
@@ -20,26 +20,29 @@ export async function updateProfile(formData: FormData) {
   const bio = formData.get("bio") as string
 
   try {
+    // ✅ НОРМАЛИЗАЦИЯ USERNAME
+    const normalizedUsername = username ? username.toLowerCase().trim() : ""
+
     // Validate username format
-    if (username && !/^[a-zA-Z0-9_]+$/.test(username)) {
-      throw new Error("Username can only contain letters, numbers, and underscores")
+    if (normalizedUsername && !/^[a-zA-Z0-9_]+$/.test(normalizedUsername)) {
+      return { error: "Username can only contain letters, numbers, and underscores" }
     }
 
     // Проверяем, не занят ли username другим пользователем
-    if (username) {
+    if (normalizedUsername) {
       const { data: existingProfile, error: checkError } = await supabase
         .from("profiles")
         .select("id, username")
-        .eq("username", username)
+        .eq("username", normalizedUsername) // ✅ Сравниваем с нормализованным
         .neq("id", user.id)
         .single()
 
-      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows returned
-        throw new Error(`Check failed: ${checkError.message}`)
+      if (checkError && checkError.code !== 'PGRST116') {
+        return { error: `Check failed: ${checkError.message}` }
       }
 
       if (existingProfile) {
-        throw new Error("This username is already taken. Please choose another one.")
+        return { error: "This username is already taken. Please choose another one." }
       }
     }
 
@@ -48,7 +51,7 @@ export async function updateProfile(formData: FormData) {
       .from("profiles")
       .update({
         display_name: display_name || null,
-        username: username || null,
+        username: normalizedUsername || null, // ✅ Сохраняем нормализованный
         bio: bio || null,
         updated_at: new Date().toISOString(),
       })
@@ -56,19 +59,17 @@ export async function updateProfile(formData: FormData) {
 
     if (updateError) {
       if (updateError.code === "23505") {
-        throw new Error("This username is already taken. Please choose another one.")
+        return { error: "This username is already taken. Please choose another one." }
       }
-      throw new Error(`Database error: ${updateError.message}`)
+      return { error: `Database error: ${updateError.message}` }
     }
 
-    // Revalidate all pages that might display the profile
     revalidatePath("/profile")
     revalidatePath("/")
     revalidatePath("/problems/[id]", "page")
 
   } catch (error) {
-    // Перенаправляем обратно на страницу редактирования с ошибкой
-    redirect(`/profile/edit?error=${encodeURIComponent(error instanceof Error ? error.message : 'Unknown error')}`)
+    return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
   }
 
   redirect("/profile")
