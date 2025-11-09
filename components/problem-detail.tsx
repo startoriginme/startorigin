@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users } from "lucide-react"
+import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical } from "lucide-react"
 import Link from "next/link"
 import {
   AlertDialog,
@@ -20,6 +20,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 type Problem = {
   id: string
@@ -144,86 +151,144 @@ export function ProblemDetail({ problem, userId, initialHasUpvoted }: ProblemDet
       {/* Problem Card */}
       <Card>
         <CardHeader>
-          <div className="flex items-start gap-4">
-            <Button
-              variant={hasUpvoted ? "default" : "outline"}
-              size="sm"
-              className="flex-col gap-1 h-auto py-3 px-4"
-              onClick={handleUpvote}
-              disabled={isUpvoting}
-            >
-              <ArrowBigUp className="h-6 w-6" />
-              <span className="text-sm font-semibold">{upvotes}</span>
-            </Button>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-4 flex-1">
+              <Button
+                variant={hasUpvoted ? "default" : "outline"}
+                size="sm"
+                className="flex-col gap-1 h-auto py-3 px-4"
+                onClick={handleUpvote}
+                disabled={isUpvoting}
+              >
+                <ArrowBigUp className="h-6 w-6" />
+                <span className="text-sm font-semibold">{upvotes}</span>
+              </Button>
 
-            <div className="flex-1 space-y-4">
-              <div>
-                <h1 className="text-3xl font-bold text-foreground mb-3">{problem.title}</h1>
-                <div className="flex flex-wrap gap-2">
-                  {problem.category && <Badge variant="secondary">{getCategoryLabel(problem.category)}</Badge>}
-                  {problem.tags?.map((tag) => (
-                    <Badge key={tag} variant="outline">
-                      {tag}
+              <div className="flex-1 space-y-4">
+                <div>
+                  <h1 className="text-3xl font-bold text-foreground mb-3">{problem.title}</h1>
+                  <div className="flex flex-wrap gap-2">
+                    {problem.category && <Badge variant="secondary">{getCategoryLabel(problem.category)}</Badge>}
+                    {problem.tags?.map((tag) => (
+                      <Badge key={tag} variant="outline">
+                        {tag}
+                      </Badge>
+                    ))}
+                    <Badge
+                      variant={
+                        problem.status === "open" ? "default" : problem.status === "solved" ? "secondary" : "outline"
+                      }
+                    >
+                      {getStatusLabel(problem.status)}
                     </Badge>
-                  ))}
-                  <Badge
-                    variant={
-                      problem.status === "open" ? "default" : problem.status === "solved" ? "secondary" : "outline"
-                    }
-                  >
-                    {getStatusLabel(problem.status)}
-                  </Badge>
-                  {problem.looking_for_cofounder && (
-                    <Badge variant="default" className="gap-1 bg-green-600 hover:bg-green-700">
-                      <Users className="h-4 w-4" />
-                      Looking for Cofounder
-                    </Badge>
-                  )}
+                    {problem.looking_for_cofounder && (
+                      <Badge variant="default" className="gap-1 bg-green-600 hover:bg-green-700">
+                        <Users className="h-4 w-4" />
+                        Looking for Cofounder
+                      </Badge>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  <span>{formatDate(problem.created_at)}</span>
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-4 w-4" />
+                    <span>{formatDate(problem.created_at)}</span>
+                  </div>
                 </div>
               </div>
             </div>
 
+            {/* Кнопки действий - выровнены по правому краю */}
             {isAuthor && (
               <div className="flex gap-2">
-                <Link href={`/problems/${problem.id}/edit`}>
-                  <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-                    <Edit className="h-4 w-4" />
-                    
-                  </Button>
-                </Link>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
+                {/* Основные кнопки для десктопа */}
+                <div className="hidden sm:flex gap-2">
+                  <Link href={`/problems/${problem.id}/edit`}>
                     <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-                      <Trash2 className="h-4 w-4" />
-                      
+                      <Edit className="h-4 w-4" />
+                      Edit
                     </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete Problem</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Are you sure you want to delete this problem? This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={handleDelete}
-                        disabled={isDeleting}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  </Link>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" size="sm" className="gap-2 bg-transparent text-destructive hover:text-destructive hover:bg-destructive/10">
+                        <Trash2 className="h-4 w-4" />
+                        Delete
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Problem</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete this problem? This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleDelete}
+                          disabled={isDeleting}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          {isDeleting ? "Deleting..." : "Delete"}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+
+                {/* Dropdown меню для мобильных */}
+                <div className="sm:hidden">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem asChild>
+                        <Link href={`/problems/${problem.id}/edit`} className="flex items-center gap-2 cursor-pointer">
+                          <Edit className="h-4 w-4" />
+                          Edit Problem
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem 
+                        className="text-destructive focus:text-destructive cursor-pointer"
+                        onClick={() => document.querySelector('[data-delete-trigger]')?.click()}
                       >
-                        {isDeleting ? "Deleting..." : "Delete"}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                        <Trash2 className="h-4 w-4" />
+                        Delete Problem
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {/* Скрытый триггер для диалога удаления */}
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <button data-delete-trigger className="hidden" />
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Problem</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete this problem? This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleDelete}
+                          disabled={isDeleting}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          {isDeleting ? "Deleting..." : "Delete"}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               </div>
             )}
           </div>
