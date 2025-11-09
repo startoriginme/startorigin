@@ -68,7 +68,7 @@ export function NavigationLoading() {
   return (
     <div className="fixed top-0 left-0 right-0 h-1 bg-transparent z-50 overflow-hidden">
       <div 
-        className="h-full bg-primary transition-all duration-500 ease-[cubic-bezier(0.65,0,0.35,1)]"
+        className="h-full bg-mint transition-all duration-500 ease-[cubic-bezier(0.65,0,0.35,1)]"
         style={{ width: `${progress}%` }}
       />
     </div>
