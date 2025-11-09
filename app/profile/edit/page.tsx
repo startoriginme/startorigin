@@ -1,71 +1,34 @@
-"use client"
-
-import { useFormState, useFormStatus } from "react-dom"
+import { createClient } from "@/lib/supabase/server"
+import { redirect } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import Link from "next/link"
-import { Lightbulb, ArrowLeft, Loader2 } from "lucide-react"
+import { Lightbulb, ArrowLeft } from "lucide-react"
 import { updateProfile } from "./actions"
-import { useEffect, useState } from "react"
-import { createClient } from "@/lib/supabase/client"
-import { useRouter } from "next/navigation"
 
-function SubmitButton() {
-  const { pending } = useFormStatus()
-  
-  return (
-    <Button type="submit" className="flex-1" disabled={pending}>
-      {pending ? (
-        <>
-          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-          Saving...
-        </>
-      ) : (
-        "Save Changes"
-      )}
-    </Button>
-  )
-}
+export default async function EditProfilePage({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | string[] | undefined }
+}) {
+  const supabase = await createClient()
 
-export default function EditProfilePage() {
-  const [state, formAction] = useFormState(updateProfile, null)
-  const [profile, setProfile] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const router = useRouter()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  useEffect(() => {
-    async function fetchProfile() {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (!user) {
-        router.push("/auth/login")
-        return
-      }
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single()
-
-      setProfile(profile)
-      setLoading(false)
-    }
-
-    fetchProfile()
-  }, [router])
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    )
+  if (!user) {
+    redirect("/auth/login")
   }
+
+  // Fetch user profile
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+
+  // Get error from URL params if exists
+  const error = searchParams.error as string | undefined
 
   return (
     <div className="min-h-screen bg-background">
@@ -96,15 +59,15 @@ export default function EditProfilePage() {
             </CardHeader>
             <CardContent>
               {/* Error Message Display */}
-              {state?.error && (
+              {error && (
                 <div className="mb-6 p-4 bg-destructive/10 border border-destructive rounded-lg">
                   <p className="text-destructive text-sm font-medium">
-                    {state.error}
+                    {decodeURIComponent(error)}
                   </p>
                 </div>
               )}
 
-              <form action={formAction} className="space-y-6">
+              <form action={updateProfile} className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="display_name">Display Name</Label>
                   <Input
@@ -148,7 +111,9 @@ export default function EditProfilePage() {
                 </div>
 
                 <div className="flex gap-4">
-                  <SubmitButton />
+                  <Button type="submit" className="flex-1">
+                    Save Changes
+                  </Button>
                   <Link href="/profile" className="flex-1">
                     <Button type="button" variant="outline" className="w-full bg-transparent">
                       Cancel
