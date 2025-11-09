@@ -24,6 +24,20 @@ export async function updateProfile(formData: FormData) {
     throw new Error("Username can only contain letters, numbers, and underscores")
   }
 
+  // ✅ ДОБАВЛЕНО: Проверяем, не занят ли username другим пользователем
+  if (username) {
+    const { data: existingProfile } = await supabase
+      .from("profiles")
+      .select("id, username")
+      .eq("username", username)
+      .neq("id", user.id) // Исключаем текущего пользователя
+      .single()
+
+    if (existingProfile) {
+      throw new Error("This username is already taken. Please choose another one.")
+    }
+  }
+
   // Update profile
   const { error } = await supabase
     .from("profiles")
@@ -37,10 +51,10 @@ export async function updateProfile(formData: FormData) {
 
   if (error) {
     if (error.code === "23505") {
-      // Unique constraint violation
+      // Unique constraint violation (дополнительная защита)
       throw new Error("This username is already taken. Please choose another one.")
     }
-    throw error
+    throw new Error(`Failed to update profile: ${error.message}`)
   }
 
   // Revalidate all pages that might display the profile
