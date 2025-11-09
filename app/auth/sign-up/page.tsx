@@ -27,6 +27,26 @@ export default function SignUpPage() {
     setError(null)
 
     try {
+      // ✅ НОРМАЛИЗАЦИЯ USERNAME
+      const normalizedUsername = username.toLowerCase().trim()
+
+      // Проверяем формат username
+      if (!/^[a-zA-Z0-9_]+$/.test(normalizedUsername)) {
+        throw new Error("Username can only contain letters, numbers, and underscores")
+      }
+
+      // ✅ ПРОВЕРЯЕМ СУЩЕСТВУЕТ ЛИ USERNAME ПЕРЕД РЕГИСТРАЦИЕЙ
+      const { data: existingProfile } = await supabase
+        .from("profiles")
+        .select("username")
+        .eq("username", normalizedUsername)
+        .single()
+
+      if (existingProfile) {
+        throw new Error(`Username "${normalizedUsername}" is already taken. Please choose a different one.`)
+      }
+
+      // Регистрируем пользователя
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -34,14 +54,25 @@ export default function SignUpPage() {
           emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}`,
           data: {
             display_name: displayName,
-            username: username,
+            username: normalizedUsername, // ✅ Сохраняем нормализованный
           },
         },
       })
-      if (error) throw error
+      
+      if (error) {
+        // Обрабатываем специфичные ошибки Supabase
+        if (error.message.includes("already registered")) {
+          throw new Error("This email is already registered. Please sign in instead.")
+        } else if (error.message.includes("password")) {
+          throw new Error("Password should be at least 6 characters long.")
+        } else {
+          throw error
+        }
+      }
+      
       setIsSuccess(true)
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred")
+      setError(error instanceof Error ? error.message : "An error occurred during registration")
     } finally {
       setIsLoading(false)
     }
@@ -127,6 +158,7 @@ export default function SignUpPage() {
                     required
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
+                    disabled={isLoading}
                   />
                 </div>
                 <div className="grid gap-2">
@@ -138,7 +170,13 @@ export default function SignUpPage() {
                     required
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
+                    pattern="[a-zA-Z0-9_]+"
+                    title="Only letters, numbers, and underscores allowed"
+                    disabled={isLoading}
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Only letters, numbers, and underscores. <span className="text-blue-500">Case-insensitive.</span>
+                  </p>
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="email">Email</Label>
@@ -149,6 +187,7 @@ export default function SignUpPage() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    disabled={isLoading}
                   />
                 </div>
                 <div className="grid gap-2">
@@ -159,11 +198,14 @@ export default function SignUpPage() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    disabled={isLoading}
+                    minLength={6}
                   />
+                  <p className="text-xs text-muted-foreground">At least 6 characters</p>
                 </div>
                 {error && (
-                  <div className="rounded-md bg-destructive/10 p-3">
-                    <p className="text-sm text-destructive">{error}</p>
+                  <div className="rounded-md bg-destructive/10 p-3 border border-destructive/20">
+                    <p className="text-sm text-destructive font-medium">{error}</p>
                   </div>
                 )}
                 <Button type="submit" className="w-full" disabled={isLoading}>
