@@ -10,11 +10,7 @@ export const metadata: Metadata = {
   title: "StartOrigin - Share Problems, Create Solutions",
   description: "A platform for innovators to share problems and collaborate on solutions",
   generator: 'v0.app',
-  icons: {
-    icon: "/lightbulbb.png",
-    shortcut: "/lightbulbb.png",
-    apple: "/lightbulbb.png",
-  },
+ 
 }
 
 export default function RootLayout({
