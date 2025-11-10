@@ -1,6 +1,8 @@
 import { Button } from "@/components/ui/button"
 import { Lightbulb, Users, Target, Zap, ArrowRight, Globe, Rocket } from "lucide-react"
 import Link from "next/link"
+import { MobileMenu } from "@/components/mobile-menu"
+
 
 export default function IntroducingPage() {
   // Для страницы introducing мы не будем проверять аутентификацию
