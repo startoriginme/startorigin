@@ -142,9 +142,9 @@ export function ProblemCard({ problem, userId }: ProblemCardProps) {
     <Card className="transition-shadow hover:shadow-md">
       <CardHeader className="pb-3">
         {/* Используем CSS Grid для жесткого контроля */}
-        <div className="grid grid-cols-[1fr_auto] gap-4 items-start"> {/* ← GRID вместо flex */}
+        <div className="grid grid-cols-[1fr_auto] gap-4 items-start">
           {/* Левая колонка - контент */}
-          <div className="min-w-0"> {/* ← Основной контент */}
+          <div className="min-w-0">
             <Link href={`/problems/${problem.id}`}>
               <h3 className="mb-2 text-xl font-semibold text-foreground hover:text-primary transition-colors line-clamp-2 break-words">
                 {problem.title}
@@ -156,11 +156,11 @@ export function ProblemCard({ problem, userId }: ProblemCardProps) {
           </div>
           
           {/* Правая колонка - upvote (фиксированная ширина) */}
-          <div className="w-12 flex justify-end"> {/* ← Фиксированная ширина */}
+          <div className="w-12 flex justify-end">
             <Button
               variant={isUpvoted ? "default" : "outline"}
               size="sm"
-              className="flex-col gap-1 h-auto py-2 px-3 w-12" {/* ← Фиксированная ширина кнопки */}
+              className="flex-col gap-1 h-auto py-2 px-3 w-12"
               onClick={handleUpvote}
               disabled={isLoading}
             >
@@ -224,7 +224,7 @@ export function ProblemCard({ problem, userId }: ProblemCardProps) {
         {/* Кнопка View Details */}
         <div className="flex-shrink-0 ml-4">
           <Link href={`/problems/${problem.id}`}>
-            <Button variant="ghost" size="sm" className="whitespace-nowrap"> {/* ← Запрещаем перенос текста */}
+            <Button variant="ghost" size="sm" className="whitespace-nowrap">
               View Details
             </Button>
           </Link>
