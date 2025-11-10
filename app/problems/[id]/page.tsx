@@ -22,7 +22,8 @@ export default async function ProblemDetailPage({
         username,
         display_name,
         avatar_url,
-        bio
+        bio,
+        is_verified  // ← ДОБАВЛЕНО ЭТО ПОЛЕ
       )
     `)
     .eq("id", id)
