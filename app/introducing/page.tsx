@@ -7,6 +7,7 @@ export default function IntroducingPage() {
   // чтобы избежать ошибок Server Components
   const user = null
 
+  
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
@@ -20,21 +21,33 @@ export default function IntroducingPage() {
             
             {/* Desktop Navigation - hidden on mobile */}
             <div className="hidden md:flex items-center gap-4">
-              <Link href="/problems">
-                <Button variant="outline">Explore</Button>
-              </Link>
-              <Link href="/auth/sign-up">
-                <Button>Get Started</Button>
-              </Link>
+              {user ? (
+                <>
+                  <Link href="/problems/new">
+                    <Button className="gap-2">
+                      <Plus className="h-4 w-4" />
+                      Share Problem
+                    </Button>
+                  </Link>
+                  <Link href="/profile">
+                    <Button variant="outline">Profile</Button>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link href="/auth/login">
+                    <Button variant="outline">Sign In</Button>
+                  </Link>
+                  <Link href="/auth/sign-up">
+                    <Button>Get Started</Button>
+                  </Link>
+                </>
+              )}
             </div>
 
-            {/* Mobile Menu - simplified without auth */}
+            {/* Mobile Menu Button - hidden on desktop */}
             <div className="md:hidden">
-              <Link href="/problems">
-                <Button variant="outline" size="sm">
-                  Explore
-                </Button>
-              </Link>
+              <MobileMenu user={user} />
             </div>
           </nav>
         </div>
@@ -63,11 +76,7 @@ export default function IntroducingPage() {
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
-              <Link href="/auth/sign-up">
-                <Button variant="outline" size="lg">
-                  Join Now
-                </Button>
-              </Link>
+             
             </div>
           </div>
         </div>
