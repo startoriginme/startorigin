@@ -22,8 +22,7 @@ export default async function ProblemDetailPage({
         username,
         display_name,
         avatar_url,
-        bio,
-        is_verified  // ← ДОБАВЛЕНО ЭТО ПОЛЕ
+        bio
       )
     `)
     .eq("id", id)
@@ -76,4 +75,4 @@ export default async function ProblemDetailPage({
       </main>
     </div>
   )
-}
+} это app/problems/[id]/page.tsx
