@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical } from "lucide-react"
+import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical, Check } from "lucide-react"
 import Link from "next/link"
 import {
   AlertDialog,
@@ -46,6 +46,7 @@ type Problem = {
     display_name: string | null
     avatar_url: string | null
     bio: string | null
+    is_verified: boolean | null
   } | null
 }
 
@@ -315,9 +316,19 @@ export function ProblemDetail({ problem, userId, initialHasUpvoted }: ProblemDet
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">
-              <h3 className="font-semibold text-foreground">
-                {problem.profiles?.display_name || problem.profiles?.username || "Anonymous"}
-              </h3>
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-semibold text-foreground">
+                  {problem.profiles?.display_name || problem.profiles?.username || "Anonymous"}
+                </h3>
+                {problem.profiles?.is_verified && (
+                  <div 
+                    className="flex items-center justify-center rounded-full bg-blue-500 text-white h-4 w-4"
+                    title="Verified User"
+                  >
+                    <Check className="h-3 w-3" />
+                  </div>
+                )}
+              </div>
               {problem.profiles?.username && (
                 <p className="text-sm text-muted-foreground">@{problem.profiles.username}</p>
               )}
