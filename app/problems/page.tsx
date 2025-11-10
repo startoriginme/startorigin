@@ -88,7 +88,7 @@ export default async function ProblemsPage() {
             </p>
             <Link href="https://startorigin.netlify.app/problems/00d8dd35-a4e8-49b5-bc0a-18b15c75c52d">
               <Button variant="outline" className="gap-2">
-                See Example
+                Introducing
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
