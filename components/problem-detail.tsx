@@ -28,6 +28,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
+type Profile = {
+  id: string
+  username: string | null
+  display_name: string | null
+  avatar_url: string | null
+  bio: string | null
+  is_verified: boolean | null
+}
+
 type Problem = {
   id: string
   title: string
@@ -40,14 +49,7 @@ type Problem = {
   author_id: string
   contact: string | null
   looking_for_cofounder: boolean | null
-  profiles: {
-    id: string
-    username: string | null
-    display_name: string | null
-    avatar_url: string | null
-    bio: string | null
-    is_verified: boolean | null
-  } | null
+  profiles: Profile | null
 }
 
 type ProblemDetailProps = {
