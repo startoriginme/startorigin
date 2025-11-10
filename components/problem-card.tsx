@@ -140,30 +140,34 @@ export function ProblemCard({ problem, userId }: ProblemCardProps) {
 
   return (
     <Card className="transition-shadow hover:shadow-md">
-      <CardHeader>
+      <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-4">
-          <div className="flex-1">
+          <div className="flex-1 min-w-0"> {/* ← Добавлен min-w-0 для правильного сокращения текста */}
             <Link href={`/problems/${problem.id}`}>
-              <h3 className="mb-2 text-xl font-semibold text-foreground hover:text-primary transition-colors">
+              <h3 className="mb-2 text-xl font-semibold text-foreground hover:text-primary transition-colors line-clamp-2"> {/* ← line-clamp-2 для заголовка */}
                 {problem.title}
               </h3>
             </Link>
-            <p className="text-muted-foreground line-clamp-2">{problem.description}</p>
+            <p className="text-muted-foreground line-clamp-3"> {/* ← line-clamp-3 для описания */}
+              {problem.description}
+            </p>
           </div>
-          <Button
-            variant={isUpvoted ? "default" : "outline"}
-            size="sm"
-            className="flex-col gap-1 h-auto py-2 px-3"
-            onClick={handleUpvote}
-            disabled={isLoading}
-          >
-            <ArrowBigUp className="h-5 w-5" />
-            <span className="text-xs font-semibold">{upvotes}</span>
-          </Button>
+          <div className="flex-shrink-0"> {/* ← Кнопка upvote теперь не сжимается */}
+            <Button
+              variant={isUpvoted ? "default" : "outline"}
+              size="sm"
+              className="flex-col gap-1 h-auto py-2 px-3"
+              onClick={handleUpvote}
+              disabled={isLoading}
+            >
+              <ArrowBigUp className="h-5 w-5" />
+              <span className="text-xs font-semibold">{upvotes}</span>
+            </Button>
+          </div>
         </div>
       </CardHeader>
 
-      <CardContent>
+      <CardContent className="pb-3">
         <div className="flex flex-wrap gap-2">
           {problem.category && (
             <Badge variant="secondary">{getCategoryLabel(problem.category)}</Badge>
@@ -194,28 +198,30 @@ export function ProblemCard({ problem, userId }: ProblemCardProps) {
       </CardContent>
 
       <CardFooter className="flex items-center justify-between border-t pt-4">
-        <div className="flex items-center gap-3">
-          <Avatar className="h-8 w-8">
+        <div className="flex items-center gap-3 min-w-0 flex-1"> {/* ← Добавлен min-w-0 и flex-1 */}
+          <Avatar className="h-8 w-8 flex-shrink-0"> {/* ← Аватар не сжимается */}
             <AvatarImage src={problem.profiles?.avatar_url || undefined} />
             <AvatarFallback>
               {getInitials(problem.profiles?.display_name || problem.profiles?.username)}
             </AvatarFallback>
           </Avatar>
-          <div className="text-sm">
-            <p className="font-medium text-foreground">
+          <div className="text-sm min-w-0 flex-1"> {/* ← Текст адаптируется под пространство */}
+            <p className="font-medium text-foreground truncate"> {/* ← truncate для имени */}
               {problem.profiles?.display_name || problem.profiles?.username || "Anonymous"}
             </p>
             <div className="flex items-center gap-1 text-muted-foreground">
-              <Calendar className="h-3 w-3" />
-              <span>{formatDate(problem.created_at)}</span>
+              <Calendar className="h-3 w-3 flex-shrink-0" /> {/* ← Иконка не сжимается */}
+              <span className="truncate">{formatDate(problem.created_at)}</span> {/* ← truncate для даты */}
             </div>
           </div>
         </div>
-        <Link href={`/problems/${problem.id}`}>
-          <Button variant="ghost" size="sm">
-            View Details
-          </Button>
-        </Link>
+        <div className="flex-shrink-0 ml-4"> {/* ← Кнопка View Details не сжимается */}
+          <Link href={`/problems/${problem.id}`}>
+            <Button variant="ghost" size="sm">
+              View Details
+            </Button>
+          </Link>
+        </div>
       </CardFooter>
     </Card>
   )
