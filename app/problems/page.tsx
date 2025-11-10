@@ -86,7 +86,7 @@ export default async function ProblemsPage() {
             <p className="mb-6 text-muted-foreground">
               A platform for innovators to collaborate on meaningful problems
             </p>
-            <Link href="https://startorigin.netlify.app/problems/00d8dd35-a4e8-49b5-bc0a-18b15c75c52d">
+            <Link href="https://startorigin.netlify.app/introducing">
               <Button variant="outline" className="gap-2">
                 Introducing
                 <ArrowRight className="h-4 w-4" />
