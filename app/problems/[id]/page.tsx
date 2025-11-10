@@ -75,4 +75,4 @@ export default async function ProblemDetailPage({
       </main>
     </div>
   )
-} это app/problems/[id]/page.tsx
+} 
