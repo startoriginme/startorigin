@@ -27,21 +27,18 @@ export default async function AboutPage() {
             <div className="hidden md:flex items-center gap-4">
               {user ? (
                 <>
-                  <Link href="/problems">
-                    <Button variant="outline">Explore Problems</Button>
-                  </Link>
                   <Link href="/problems/new">
                     <Button className="gap-2">
-                      <Zap className="h-4 w-4" />
+                      <Plus className="h-4 w-4" />
                       Share Problem
                     </Button>
+                  </Link>
+                  <Link href="/profile">
+                    <Button variant="outline">Profile</Button>
                   </Link>
                 </>
               ) : (
                 <>
-                  <Link href="/problems">
-                    <Button variant="outline">Explore</Button>
-                  </Link>
                   <Link href="/auth/login">
                     <Button variant="outline">Sign In</Button>
                   </Link>
