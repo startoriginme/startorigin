@@ -1,22 +1,13 @@
-import { createClient } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
 import { Lightbulb, Users, Target, Zap, ArrowRight, Globe, Rocket } from "lucide-react"
 import Link from "next/link"
-import { MobileMenu } from "@/components/mobile-menu"
 
-export default async function IntroducingPage() {
-  let user = null
-  
-  try {
-    const supabase = await createClient()
-    const { data: { user: authUser } } = await supabase.auth.getUser()
-    user = authUser
-  } catch (error) {
-    console.error("Auth error:", error)
-    // Continue without user data
-  }
+export default function IntroducingPage() {
+  // Для страницы introducing мы не будем проверять аутентификацию
+  // чтобы избежать ошибок Server Components
+  const user = null
 
-return (
+  return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="border-b border-border bg-card">
@@ -29,33 +20,21 @@ return (
             
             {/* Desktop Navigation - hidden on mobile */}
             <div className="hidden md:flex items-center gap-4">
-              {user ? (
-                <>
-                  <Link href="/problems/new">
-                    <Button className="gap-2">
-                      <Plus className="h-4 w-4" />
-                      Share Problem
-                    </Button>
-                  </Link>
-                  <Link href="/profile">
-                    <Button variant="outline">Profile</Button>
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <Link href="/auth/login">
-                    <Button variant="outline">Sign In</Button>
-                  </Link>
-                  <Link href="/auth/sign-up">
-                    <Button>Get Started</Button>
-                  </Link>
-                </>
-              )}
+              <Link href="/problems">
+                <Button variant="outline">Explore</Button>
+              </Link>
+              <Link href="/auth/sign-up">
+                <Button>Get Started</Button>
+              </Link>
             </div>
 
-            {/* Mobile Menu Button - hidden on desktop */}
+            {/* Mobile Menu - simplified without auth */}
             <div className="md:hidden">
-              <MobileMenu user={user} />
+              <Link href="/problems">
+                <Button variant="outline" size="sm">
+                  Explore
+                </Button>
+              </Link>
             </div>
           </nav>
         </div>
@@ -84,9 +63,9 @@ return (
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
-              <Link href="/problems">
+              <Link href="/auth/sign-up">
                 <Button variant="outline" size="lg">
-                  See Examples
+                  Join Now
                 </Button>
               </Link>
             </div>
@@ -214,28 +193,17 @@ return (
               one challenge at a time.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              {user ? (
-                <Link href="/problems/new">
-                  <Button size="lg" className="gap-2">
-                    <Zap className="h-4 w-4" />
-                    Share Your First Problem
-                  </Button>
-                </Link>
-              ) : (
-                <>
-                  <Link href="/auth/sign-up">
-                    <Button size="lg" className="gap-2">
-                      <Rocket className="h-4 w-4" />
-                      Join StartOrigin
-                    </Button>
-                  </Link>
-                  <Link href="/problems">
-                    <Button variant="outline" size="lg">
-                      Explore First
-                    </Button>
-                  </Link>
-                </>
-              )}
+              <Link href="/auth/sign-up">
+                <Button size="lg" className="gap-2">
+                  <Rocket className="h-4 w-4" />
+                  Join StartOrigin
+                </Button>
+              </Link>
+              <Link href="/problems">
+                <Button variant="outline" size="lg">
+                  Explore First
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
