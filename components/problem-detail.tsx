@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"  // ← ДОБАВЬ useEffect
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
@@ -59,11 +59,17 @@ type ProblemDetailProps = {
 }
 
 export function ProblemDetail({ problem, userId, initialHasUpvoted }: ProblemDetailProps) {
+  const [isClient, setIsClient] = useState(false)  // ← ДОБАВЬ ЭТО СОСТОЯНИЕ
   const [upvotes, setUpvotes] = useState(problem.upvotes)
   const [hasUpvoted, setHasUpvoted] = useState(initialHasUpvoted)
   const [isUpvoting, setIsUpvoting] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const router = useRouter()
+
+  // ← ДОБАВЬ ЭТОТ useEffect
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   const isAuthor = userId === problem.author_id
 
@@ -322,7 +328,7 @@ export function ProblemDetail({ problem, userId, initialHasUpvoted }: ProblemDet
                 <h3 className="font-semibold text-foreground">
                   {problem.profiles?.display_name || problem.profiles?.username || "Anonymous"}
                 </h3>
-                {problem.profiles?.is_verified && (
+                {isClient && problem.profiles?.is_verified && (  // ← ИЗМЕНИ ЭТУ СТРОКУ
                   <div 
                     className="flex items-center justify-center rounded-full bg-blue-500 text-white h-4 w-4"
                     title="Verified User"
