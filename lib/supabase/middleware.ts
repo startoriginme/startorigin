@@ -29,12 +29,14 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Allow access to auth pages and home page without authentication
+  // Allow access to these pages without authentication
   const isAuthPage = request.nextUrl.pathname.startsWith("/auth")
   const isHomePage = request.nextUrl.pathname === "/"
   const isProblemsPage = request.nextUrl.pathname === "/problems"
+  const isProblemDetailPage = request.nextUrl.pathname.startsWith("/problems/") // ← ДОБАВЬТЕ ЭТУ СТРОКУ
+  const isIntroducingPage = request.nextUrl.pathname === "/introducing" // ← И ЭТУ, ЕСЛИ НУЖНО
 
-  if (!user && !isAuthPage && !isHomePage && !isProblemsPage) {
+  if (!user && !isAuthPage && !isHomePage && !isProblemsPage && !isProblemDetailPage && !isIntroducingPage) {
     const url = request.nextUrl.clone()
     url.pathname = "/auth/login"
     return NextResponse.redirect(url)
