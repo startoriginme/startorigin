@@ -32,21 +32,27 @@ export default async function ProblemDetailPage({
     notFound()
   }
 
-  // Get current user
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  // Check if user has upvoted
+  // Получаем пользователя, но не требуем аутентификации
+  let user = null
   let hasUpvoted = false
-  if (user) {
-    const { data: upvote } = await supabase
-      .from("upvotes")
-      .select("id")
-      .eq("problem_id", id)
-      .eq("user_id", user.id)
-      .single()
-    hasUpvoted = !!upvote
+
+  try {
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+    user = authUser
+
+    // Проверяем апвоут только если пользователь авторизован
+    if (user) {
+      const { data: upvote } = await supabase
+        .from("upvotes")
+        .select("id")
+        .eq("problem_id", id)
+        .eq("user_id", user.id)
+        .single()
+      hasUpvoted = !!upvote
+    }
+  } catch (error) {
+    // Игнорируем ошибки аутентификации - страница доступна без логина
+    console.log("Auth error, but page is still accessible:", error)
   }
 
   return (
@@ -59,7 +65,7 @@ export default async function ProblemDetailPage({
               <Lightbulb className="h-6 w-6 text-primary" />
               <span className="text-xl font-bold text-foreground">StartOrigin</span>
             </Link>
-            <Link href="/">
+            <Link href="/problems">
               <Button variant="ghost" className="gap-2">
                 <ArrowLeft className="h-4 w-4" />
                 Back to Problems
@@ -71,8 +77,12 @@ export default async function ProblemDetailPage({
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        <ProblemDetail problem={problem} userId={user?.id} initialHasUpvoted={hasUpvoted} />
+        <ProblemDetail 
+          problem={problem} 
+          userId={user?.id} 
+          initialHasUpvoted={hasUpvoted} 
+        />
       </main>
     </div>
   )
-} 
+}
