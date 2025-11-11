@@ -1,15 +1,12 @@
 import { Button } from "@/components/ui/button"
-import { Lightbulb, Users, Target, Zap, ArrowRight, Globe, Rocket } from "lucide-react"
+import { Lightbulb, Users, Target, Zap, ArrowRight, Globe, Rocket, Plus } from "lucide-react"
 import Link from "next/link"
 import { MobileMenu } from "@/components/mobile-menu"
 
-
 export default function IntroducingPage() {
-  // Для страницы introducing мы не будем проверять аутентификацию
-  // чтобы избежать ошибок Server Components
+  // Для страницы introducing показываем одинаковую навигацию для всех
   const user = null
 
-  
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
@@ -54,7 +51,6 @@ export default function IntroducingPage() {
           </nav>
         </div>
       </header>
-
       {/* Hero Section */}
       <section className="border-b border-border bg-gradient-to-br from-card to-card/50">
         <div className="container mx-auto px-4 py-16">
@@ -78,7 +74,11 @@ export default function IntroducingPage() {
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
-             
+              <Link href="/auth/sign-up">
+                <Button variant="outline" size="lg">
+                  Join Now
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
