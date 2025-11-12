@@ -11,9 +11,9 @@ export const metadata: Metadata = {
   description: "A platform for innovators to share problems and collaborate on solutions",
   generator: 'v0.app',
   icons: {
-    icon: "/lightbulbb.png",
-    shortcut: "/lightbulbb.png",
-    apple: "/lightbulbb.png",
+    icon: "/lampochka.png",
+    shortcut: "/lampochka.png",
+    apple: "/lampochka.png",
   },
 }
 
