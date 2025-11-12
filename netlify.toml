@@ -1,0 +1,5 @@
+[[redirects]]
+  from = "https://startorigin.netlify.app/*"
+  to = "https://startorigin.me/:splat"
+  status = 301
+  force = true
