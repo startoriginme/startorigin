@@ -1,3 +1,8 @@
+# Редирект с Netlify subdomain на кастомный домен
 https://startorigin.netlify.app/* https://startorigin.me/:splat 301!
+
+# Главная страница редиректит на /problems
 /    /problems    302
+
+# Все остальные пути ведут на index.html (для SPA)
 /*   /index.html  200
