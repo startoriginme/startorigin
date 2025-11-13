@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { Lightbulb, ArrowLeft, Edit, LogOut, Plus } from "lucide-react"
+import { Lightbulb, ArrowLeft, Edit, LogOut, Plus, MoreVertical } from "lucide-react"
 import { ProblemCard } from "@/components/problem-card"
 
 export default async function ProfilePage() {
@@ -102,31 +102,30 @@ export default async function ProfilePage() {
                 </div>
 
                 {/* Mobile dropdown - visible on mobile */}
-                <div className="md:hidden">
-                  <div className="relative">
-                    <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h.01M12 12h.01M19 12h.01" />
-                      </svg>
-                    </Button>
-                    
-                    {/* Simple dropdown menu */}
-                    <div className="absolute right-0 top-full mt-1 w-48 rounded-md border border-border bg-background shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                      <div className="py-1">
-                        <Link href="/profile/edit" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-muted">
-                          <Edit className="h-4 w-4" />
-                          Edit Profile
-                        </Link>
-                        <form action={handleSignOut}>
-                          <button 
-                            type="submit" 
-                            className="flex items-center gap-2 w-full px-4 py-2 text-sm text-destructive hover:bg-destructive/10"
-                          >
-                            <LogOut className="h-4 w-4" />
-                            Sign Out
-                          </button>
-                        </form>
-                      </div>
+                <div className="md:hidden relative group">
+                  <Button variant="outline" size="sm" className="gap-2 bg-transparent p-2">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                  
+                  {/* Dropdown menu */}
+                  <div className="absolute right-0 top-full mt-1 w-40 rounded-md border border-border bg-background shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                    <div className="py-1">
+                      <Link 
+                        href="/profile/edit" 
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                      >
+                        <Edit className="h-4 w-4" />
+                        Edit Profile
+                      </Link>
+                      <form action={handleSignOut}>
+                        <button 
+                          type="submit" 
+                          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors text-left"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          Sign Out
+                        </button>
+                      </form>
                     </div>
                   </div>
                 </div>
