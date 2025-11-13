@@ -1,12 +1,13 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-import { ProfileActions } from "@/components/profile-actions"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import { Lightbulb, ArrowLeft, Edit, LogOut, Plus, MoreVertical } from "lucide-react"
-import { ProblemCard } from "@/components/problem-card"
+import { Lightbulb, Plus, LogOut, Calendar, MessageSquare, ArrowBigUp, Edit } from "lucide-react"
+import { ProfileMobileMenu } from "@/components/profile-mobile-menu"
+import { ProblemCard } from "@/components/problem-card" // ← Импортируем компонент
 
 export default async function ProfilePage() {
   const supabase = await createClient()
@@ -65,14 +66,26 @@ export default async function ProfilePage() {
               <span className="text-xl font-bold text-foreground">StartOrigin</span>
             </Link>
             
-            {/* Back to Problems button - visible on all screens */}
-            <Link href="/problems">
-              <Button variant="ghost" className="gap-2">
-                <ArrowLeft className="h-4 w-4" />
-                <span className="hidden sm:inline">Back to Problems</span>
-                <span className="sm:hidden">Back</span>
-              </Button>
-            </Link>
+            {/* Desktop Navigation - hidden on mobile */}
+            <div className="hidden md:flex items-center gap-4">
+              <Link href="/problems/new">
+                <Button className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Share Problem
+                </Button>
+              </Link>
+              <form action={handleSignOut}>
+                <Button variant="outline" type="submit" className="gap-2 bg-transparent">
+                  <LogOut className="h-4 w-4" />
+                  Sign Out
+                </Button>
+              </form>
+            </div>
+
+            {/* Mobile Menu Button - hidden on desktop */}
+            <div className="md:hidden">
+              <ProfileMobileMenu user={user} onSignOut={handleSignOut} />
+            </div>
           </nav>
         </div>
       </header>
@@ -85,51 +98,12 @@ export default async function ProfilePage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Profile</CardTitle>
-                
-                {/* Action buttons - visible on desktop */}
-                <div className="hidden md:flex items-center gap-2">
-                  <Link href="/profile/edit">
-                    <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-                      <Edit className="h-4 w-4" />
-                      Edit Profile
-                    </Button>
-                  </Link>
-                  <form action={handleSignOut}>
-                    <Button variant="outline" size="sm" type="submit" className="gap-2 bg-transparent text-destructive hover:text-destructive hover:bg-destructive/10">
-                      <LogOut className="h-4 w-4" />
-                      Sign Out
-                    </Button>
-                  </form>
-                </div>
-
-                {/* Mobile dropdown - visible on mobile */}
-                <div className="md:hidden relative group">
-                  <Button variant="outline" size="sm" className="gap-2 bg-transparent p-2">
-                    <MoreVertical className="h-4 w-4" />
+                <Link href="/profile/edit">
+                  <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+                    <Edit className="h-4 w-4" />
+                    Edit Profile
                   </Button>
-                  
-                  {/* Dropdown menu */}
-                  <div className="absolute right-0 top-full mt-1 w-40 rounded-md border border-border bg-background shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                    <div className="py-1">
-                      <Link 
-                        href="/profile/edit" 
-                        className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-                      >
-                        <Edit className="h-4 w-4" />
-                        Edit Profile
-                      </Link>
-                      <form action={handleSignOut}>
-                        <button 
-                          type="submit" 
-                          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors text-left"
-                        >
-                          <LogOut className="h-4 w-4" />
-                          Sign Out
-                        </button>
-                      </form>
-                    </div>
-                  </div>
-                </div>
+                </Link>
               </div>
             </CardHeader>
             <CardContent>
@@ -167,7 +141,7 @@ export default async function ProfilePage() {
             </CardHeader>
             <CardContent>
               {problems && problems.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-4"> {/* Уменьшил gap между карточками */}
                   {problems.map((problem) => (
                     <ProblemCard 
                       key={problem.id} 
