@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { Lightbulb, Plus, LogOut, Calendar, MessageSquare, ArrowBigUp, Edit } from "lucide-react"
 import { ProfileMobileMenu } from "@/components/profile-mobile-menu"
+import { ProblemCard } from "@/components/problem-card" // ← Импортируем компонент
 
 export default async function ProfilePage() {
   const supabase = await createClient()
@@ -22,10 +23,18 @@ export default async function ProfilePage() {
   // Fetch user profile
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
 
-  // Fetch user's problems
+  // Fetch user's problems with profiles data
   const { data: problems } = await supabase
     .from("problems")
-    .select("*")
+    .select(`
+      *,
+      profiles:author_id (
+        id,
+        username,
+        display_name,
+        avatar_url
+      )
+    `)
     .eq("author_id", user.id)
     .order("created_at", { ascending: false })
 
@@ -37,14 +46,6 @@ export default async function ProfilePage() {
       .join("")
       .toUpperCase()
       .slice(0, 2)
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    })
   }
 
   const handleSignOut = async () => {
@@ -140,50 +141,13 @@ export default async function ProfilePage() {
             </CardHeader>
             <CardContent>
               {problems && problems.length > 0 ? (
-                <div className="space-y-6">
+                <div className="space-y-4"> {/* Уменьшил gap между карточками */}
                   {problems.map((problem) => (
-                    <Link key={problem.id} href={`/problems/${problem.id}`}>
-                      <Card className="transition-shadow hover:shadow-md cursor-pointer">
-                        <CardContent className="p-6">
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1">
-                              <h3 className="text-lg font-semibold text-foreground hover:text-primary transition-colors mb-3">
-                                {problem.title}
-                              </h3>
-                              <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{problem.description}</p>
-                              <div className="flex flex-wrap gap-2 mb-4">
-                                {problem.category && <Badge variant="secondary">{problem.category}</Badge>}
-                                <Badge
-                                  variant={
-                                    problem.status === "open"
-                                      ? "default"
-                                      : problem.status === "solved"
-                                        ? "secondary"
-                                        : "outline"
-                                  }
-                                >
-                                  {problem.status}
-                                </Badge>
-                              </div>
-                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                <div className="flex items-center gap-1">
-                                  <Calendar className="h-4 w-4" />
-                                  <span>{formatDate(problem.created_at)}</span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <ArrowBigUp className="h-4 w-4" />
-                                  <span>{problem.upvotes}</span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <MessageSquare className="h-4 w-4" />
-                                  <span>{problem.comment_count}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </Link>
+                    <ProblemCard 
+                      key={problem.id} 
+                      problem={problem} 
+                      userId={user.id} 
+                    />
                   ))}
                 </div>
               ) : (
