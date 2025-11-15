@@ -35,6 +35,8 @@ export default async function ProblemDetailPage({
   // Получаем пользователя, но не требуем аутентификации
   let user = null
   let hasUpvoted = false
+  let applications = []
+  let userApplication = null
 
   try {
     const { data: { user: authUser } } = await supabase.auth.getUser()
@@ -49,6 +51,34 @@ export default async function ProblemDetailPage({
         .eq("user_id", user.id)
         .single()
       hasUpvoted = !!upvote
+    }
+
+    // Получаем заявки кофаундеров для этой проблемы
+    const { data: cofounderApplications } = await supabase
+      .from("cofounder_applications")
+      .select(`
+        *,
+        profiles:user_id (
+          id,
+          username,
+          display_name,
+          avatar_url
+        )
+      `)
+      .eq("problem_id", id)
+      .order("created_at", { ascending: false })
+
+    applications = cofounderApplications || []
+
+    // Получаем заявку текущего пользователя если он авторизован
+    if (user) {
+      const { data: application } = await supabase
+        .from("cofounder_applications")
+        .select("*")
+        .eq("problem_id", id)
+        .eq("user_id", user.id)
+        .single()
+      userApplication = application
     }
   } catch (error) {
     // Игнорируем ошибки аутентификации - страница доступна без логина
@@ -80,7 +110,9 @@ export default async function ProblemDetailPage({
         <ProblemDetail 
           problem={problem} 
           userId={user?.id} 
-          initialHasUpvoted={hasUpvoted} 
+          initialHasUpvoted={hasUpvoted}
+          initialApplications={applications}
+          userApplication={userApplication}
         />
       </main>
     </div>
