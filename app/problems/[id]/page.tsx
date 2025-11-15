@@ -8,9 +8,9 @@ import Link from "next/link"
 export default async function ProblemDetailPage({
   params,
 }: {
-params: { id: string }
+  params: { id: string }
 }) {
-  const { id } = await params
+  const { id } = params   // ← тут уже всё ок, без await!
   const supabase = await createClient()
 
   const { data: problem, error } = await supabase
@@ -32,7 +32,6 @@ params: { id: string }
     notFound()
   }
 
-  // Получаем пользователя, но не требуем аутентификации
   let user = null
   let hasUpvoted = false
   let applications = []
@@ -42,7 +41,6 @@ params: { id: string }
     const { data: { user: authUser } } = await supabase.auth.getUser()
     user = authUser
 
-    // Проверяем апвоут только если пользователь авторизован
     if (user) {
       const { data: upvote } = await supabase
         .from("upvotes")
@@ -50,10 +48,10 @@ params: { id: string }
         .eq("problem_id", id)
         .eq("user_id", user.id)
         .single()
+
       hasUpvoted = !!upvote
     }
 
-    // Получаем заявки кофаундеров для этой проблемы
     const { data: cofounderApplications } = await supabase
       .from("cofounder_applications")
       .select(`
@@ -70,7 +68,6 @@ params: { id: string }
 
     applications = cofounderApplications || []
 
-    // Получаем заявку текущего пользователя если он авторизован
     if (user) {
       const { data: application } = await supabase
         .from("cofounder_applications")
@@ -81,13 +78,11 @@ params: { id: string }
       userApplication = application
     }
   } catch (error) {
-    // Игнорируем ошибки аутентификации - страница доступна без логина
     console.log("Auth error, but page is still accessible:", error)
   }
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4">
           <nav className="flex items-center justify-between">
@@ -104,6 +99,8 @@ params: { id: string }
           </nav>
         </div>
       </header>
+
+   
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
