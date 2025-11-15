@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,18 +9,24 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import Link from "next/link"
-import { Lightbulb, ArrowLeft, Loader2, Upload, X, Image as ImageIcon } from "lucide-react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Lightbulb, ArrowLeft, Loader2, Upload, X, Image as ImageIcon, Move, ZoomIn, ZoomOut } from "lucide-react"
+import { Slider } from "@/components/ui/slider"
 
 export default function EditProfilePage() {
   const [displayName, setDisplayName] = useState("")
   const [username, setUsername] = useState("")
   const [bio, setBio] = useState("")
   const [avatarUrl, setAvatarUrl] = useState("")
+  const [storedAvatarUrl, setStoredAvatarUrl] = useState("") // URL из базы данных
+  const [customAvatarUrl, setCustomAvatarUrl] = useState("") // Пользовательский URL
+  const [avatarPosition, setAvatarPosition] = useState({ x: 50, y: 50 }) // Позиция в %
+  const [avatarScale, setAvatarScale] = useState(100) // Масштаб в %
+  const [isEditingAvatar, setIsEditingAvatar] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isDataLoading, setIsDataLoading] = useState(true)
   const [isUploading, setIsUploading] = useState(false)
+  const avatarContainerRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
   // Загружаем данные профиля при монтировании
@@ -44,7 +50,8 @@ export default function EditProfilePage() {
         setDisplayName(profile.display_name || "")
         setUsername(profile.username || "")
         setBio(profile.bio || "")
-        setAvatarUrl(profile.avatar_url || "")
+        setStoredAvatarUrl(profile.avatar_url || "")
+        setAvatarUrl(profile.avatar_url || "") // Показываем аватар, но не в инпуте
       }
       
       setIsDataLoading(false)
@@ -84,13 +91,9 @@ export default function EditProfilePage() {
       
       if (!user) throw new Error("User not authenticated")
 
-      // Создаем безопасное имя файла
       const safeFileName = createSafeFileName(file)
       const filePath = `${user.id}/${safeFileName}`
       
-      console.log("Uploading file:", filePath)
-      
-      // Загружаем файл в Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(filePath, file, {
@@ -100,9 +103,6 @@ export default function EditProfilePage() {
         })
 
       if (uploadError) {
-        console.error("Upload error:", uploadError)
-        
-        // Если файл уже существует, пробуем с другим именем
         if (uploadError.message?.includes('already exists')) {
           const newSafeFileName = createSafeFileName(file)
           const newFilePath = `${user.id}/${newSafeFileName}`
@@ -121,19 +121,16 @@ export default function EditProfilePage() {
         }
       }
 
-      // Получаем публичный URL
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath)
 
-      console.log("Upload successful, URL:", publicUrl)
-      
-      // Добавляем параметр для избежания кэширования
       const uniqueUrl = `${publicUrl}?t=${Date.now()}`
       setAvatarUrl(uniqueUrl)
+      setStoredAvatarUrl(uniqueUrl)
+      setIsEditingAvatar(true) // Автоматически включаем редактирование после загрузки
       
     } catch (error: any) {
-      console.error("Upload failed:", error)
       setError(`Failed to upload avatar: ${error.message}`)
     } finally {
       setIsUploading(false)
@@ -144,22 +141,20 @@ export default function EditProfilePage() {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Валидация имени файла
     const fileName = file.name
     if (/[^a-zA-Z0-9._-]/.test(fileName)) {
       setError("File name contains invalid characters. Please rename the file to use only English letters, numbers, and basic symbols.")
       return
     }
 
-    // Сначала показываем превью через Data URL
     const reader = new FileReader()
     reader.onload = (e) => {
       const dataUrl = e.target?.result as string
       setAvatarUrl(dataUrl)
+      setIsEditingAvatar(true)
     }
     reader.readAsDataURL(file)
 
-    // Затем загружаем на сервер
     handleAvatarUpload(file)
   }
 
@@ -168,22 +163,20 @@ export default function EditProfilePage() {
     const file = e.dataTransfer.files[0]
     if (!file) return
 
-    // Валидация имени файла
     const fileName = file.name
     if (/[^a-zA-Z0-9._-]/.test(fileName)) {
       setError("File name contains invalid characters. Please rename the file to use only English letters, numbers, and basic symbols.")
       return
     }
 
-    // Превью через Data URL
     const reader = new FileReader()
     reader.onload = (e) => {
       const dataUrl = e.target?.result as string
       setAvatarUrl(dataUrl)
+      setIsEditingAvatar(true)
     }
     reader.readAsDataURL(file)
 
-    // Загрузка на сервер
     handleAvatarUpload(file)
   }
 
@@ -191,15 +184,36 @@ export default function EditProfilePage() {
     e.preventDefault()
   }
 
+  // Обработка перемещения аватарки
+  const handleAvatarDrag = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isEditingAvatar || !avatarContainerRef.current) return
+
+    const container = avatarContainerRef.current
+    const rect = container.getBoundingClientRect()
+    
+    const x = ((e.clientX - rect.left) / rect.width) * 100
+    const y = ((e.clientY - rect.top) / rect.height) * 100
+
+    setAvatarPosition({
+      x: Math.max(0, Math.min(100, x)),
+      y: Math.max(0, Math.min(100, y))
+    })
+  }
+
+  const handleAvatarClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (isEditingAvatar) {
+      handleAvatarDrag(e)
+    }
+  }
+
   const removeAvatar = async () => {
-    if (avatarUrl && avatarUrl.startsWith('http')) {
+    if (storedAvatarUrl && storedAvatarUrl.startsWith('http')) {
       try {
         const supabase = createClient()
         const { data: { user } } = await supabase.auth.getUser()
         
-        if (user && avatarUrl.includes('avatars')) {
-          // Извлекаем имя файла из URL
-          const urlParts = avatarUrl.split('/')
+        if (user && storedAvatarUrl.includes('avatars')) {
+          const urlParts = storedAvatarUrl.split('/')
           const fileNameWithParams = urlParts[urlParts.length - 1]
           const fileName = fileNameWithParams.split('?')[0]
           
@@ -214,6 +228,16 @@ export default function EditProfilePage() {
       }
     }
     setAvatarUrl("")
+    setStoredAvatarUrl("")
+    setCustomAvatarUrl("")
+    setIsEditingAvatar(false)
+  }
+
+  const applyCustomUrl = () => {
+    if (customAvatarUrl.trim()) {
+      setAvatarUrl(customAvatarUrl)
+      setIsEditingAvatar(true)
+    }
   }
 
   const getInitials = (name: string) => {
@@ -262,8 +286,9 @@ export default function EditProfilePage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error("User not authenticated")
 
-      // Если avatarUrl - это Data URL, находим соответствующий загруженный файл
       let finalAvatarUrl = avatarUrl
+
+      // Если это Data URL, находим соответствующий загруженный файл
       if (avatarUrl.startsWith('data:')) {
         const { data: files } = await supabase.storage
           .from('avatars')
@@ -318,7 +343,6 @@ export default function EditProfilePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4">
           <nav className="flex items-center justify-between">
@@ -336,7 +360,6 @@ export default function EditProfilePage() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <div className="mx-auto max-w-2xl">
           <Card>
@@ -361,23 +384,34 @@ export default function EditProfilePage() {
                     {/* Current Avatar Preview */}
                     <div className="flex flex-col items-center gap-3">
                       <div className="relative">
-                        {/* Кастомный аватар с правильным отображением */}
-                        <div className="h-24 w-24 rounded-full overflow-hidden border-2 border-border bg-muted">
-                          <img
-                            src={avatarUrl}
-                            alt="Profile avatar"
-                            className="w-full h-full object-cover" // object-cover покажет центральную часть без искажений
-                            onError={(e) => {
-                              // Если изображение не загружается, показываем инициалы
-                              e.currentTarget.style.display = 'none'
-                            }}
-                          />
-                          {!avatarUrl && (
+                        {/* Редактируемый аватар */}
+                        <div 
+                          ref={avatarContainerRef}
+                          className="h-24 w-24 rounded-full overflow-hidden border-2 border-border bg-muted cursor-move relative"
+                          onMouseMove={handleAvatarDrag}
+                          onClick={handleAvatarClick}
+                        >
+                          {avatarUrl ? (
+                            <img
+                              src={avatarUrl}
+                              alt="Profile avatar"
+                              className="w-full h-full object-cover"
+                              style={{
+                                objectPosition: `${avatarPosition.x}% ${avatarPosition.y}%`,
+                                transform: `scale(${avatarScale / 100})`
+                              }}
+                            />
+                          ) : (
                             <div className="w-full h-full flex items-center justify-center bg-muted">
                               <span className="text-lg font-semibold text-muted-foreground">
                                 {getInitials(displayName || username || "U")}
                               </span>
                             </div>
+                          )}
+                          
+                          {/* Overlay для редактирования */}
+                          {isEditingAvatar && avatarUrl && (
+                            <div className="absolute inset-0 border-2 border-primary border-dashed rounded-full pointer-events-none" />
                           )}
                         </div>
                         {avatarUrl && (
@@ -392,9 +426,74 @@ export default function EditProfilePage() {
                           </Button>
                         )}
                       </div>
-                      <p className="text-sm text-muted-foreground text-center">
-                        {isUploading ? "Uploading..." : "Current avatar"}
-                      </p>
+                      
+                      {/* Controls for avatar editing */}
+                      {isEditingAvatar && avatarUrl && (
+                        <div className="space-y-2 w-full">
+                          <div className="flex items-center gap-2">
+                            <Move className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground">Drag to reposition</span>
+                          </div>
+                          
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-muted-foreground">Zoom</span>
+                              <span className="text-xs font-medium">{avatarScale}%</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => setAvatarScale(Math.max(50, avatarScale - 10))}
+                              >
+                                <ZoomOut className="h-3 w-3" />
+                              </Button>
+                              <Slider
+                                value={[avatarScale]}
+                                onValueChange={([value]) => setAvatarScale(value)}
+                                min={50}
+                                max={200}
+                                step={10}
+                                className="flex-1"
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => setAvatarScale(Math.min(200, avatarScale + 10))}
+                              >
+                                <ZoomIn className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                          
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="w-full"
+                            onClick={() => setIsEditingAvatar(false)}
+                          >
+                            Done Editing
+                          </Button>
+                        </div>
+                      )}
+                      
+                      {!isEditingAvatar && avatarUrl && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setIsEditingAvatar(true)}
+                          className="gap-2"
+                        >
+                          <Move className="h-3 w-3" />
+                          Adjust Avatar
+                        </Button>
+                      )}
                     </div>
 
                     {/* Upload Area */}
@@ -432,9 +531,6 @@ export default function EditProfilePage() {
                             <p className="text-sm text-muted-foreground">
                               PNG, JPG, GIF up to 10MB
                             </p>
-                            <p className="text-xs text-blue-500">
-                              Image will be cropped to circle without distortion
-                            </p>
                           </div>
                           
                           <Button
@@ -462,7 +558,10 @@ export default function EditProfilePage() {
                               key={index}
                               type="button"
                               className="relative group rounded-lg overflow-hidden border-2 border-transparent hover:border-primary transition-all"
-                              onClick={() => setAvatarUrl(preset)}
+                              onClick={() => {
+                                setAvatarUrl(preset)
+                                setIsEditingAvatar(true)
+                              }}
                             >
                               <div className="w-full h-16 overflow-hidden">
                                 <img
@@ -485,19 +584,21 @@ export default function EditProfilePage() {
                         <div className="flex gap-2">
                           <Input
                             placeholder="https://example.com/avatar.jpg"
-                            value={avatarUrl}
-                            onChange={(e) => setAvatarUrl(e.target.value)}
+                            value={customAvatarUrl}
+                            onChange={(e) => setCustomAvatarUrl(e.target.value)}
                             className="flex-1"
                           />
                           <Button 
                             type="button" 
-                            variant="outline"
-                            onClick={() => setAvatarUrl("")}
-                            disabled={!avatarUrl}
+                            onClick={applyCustomUrl}
+                            disabled={!customAvatarUrl.trim()}
                           >
-                            Clear
+                            Apply
                           </Button>
                         </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Enter any image URL from the web
+                        </p>
                       </div>
                     </div>
                   </div>
