@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical } from "lucide-react" // ← Убрал Check
+import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical, Share2, Copy, Twitter, MessageCircle } from "lucide-react"
 import Link from "next/link"
 import {
   AlertDialog,
@@ -27,6 +27,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { ToastAction } from "@/components/ui/toast"
+import { useToast } from "@/components/ui/use-toast"
 
 type Profile = {
   id: string
@@ -64,7 +66,9 @@ export function ProblemDetail({ problem, userId, initialHasUpvoted }: ProblemDet
   const [hasUpvoted, setHasUpvoted] = useState(initialHasUpvoted)
   const [isUpvoting, setIsUpvoting] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isShareOpen, setIsShareOpen] = useState(false)
   const router = useRouter()
+  const { toast } = useToast()
 
   useEffect(() => {
     setIsClient(true)
@@ -120,6 +124,40 @@ export function ProblemDetail({ problem, userId, initialHasUpvoted }: ProblemDet
     } finally {
       setIsDeleting(false)
     }
+  }
+
+  const copyToClipboard = async () => {
+    const url = `${window.location.origin}/problems/${problem.id}`
+    try {
+      await navigator.clipboard.writeText(url)
+      toast({
+        title: "Link copied!",
+        description: "Problem link has been copied to clipboard",
+      })
+      setIsShareOpen(false)
+    } catch (err) {
+      toast({
+        title: "Failed to copy",
+        description: "Please copy the link manually",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const shareOnTwitter = () => {
+    const text = `Take a look on ${problem.profiles?.username || "someone"}'s problem on StartOrigin.me - it's a platform, where you can publish problems you face and find co-founders to solve it.`
+    const url = `${window.location.origin}/problems/${problem.id}`
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`
+    window.open(twitterUrl, '_blank', 'width=550,height=420')
+    setIsShareOpen(false)
+  }
+
+  const shareOnTelegram = () => {
+    const text = `Take a look on ${problem.profiles?.username || "someone"}'s problem on StartOrigin.me - it's a platform, where you can publish problems you face and find co-founders to solve it.`
+    const url = `${window.location.origin}/problems/${problem.id}`
+    const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`
+    window.open(telegramUrl, '_blank', 'width=550,height=420')
+    setIsShareOpen(false)
   }
 
   const formatDate = (dateString: string) => {
@@ -202,6 +240,32 @@ export function ProblemDetail({ problem, userId, initialHasUpvoted }: ProblemDet
                   <div className="flex items-center gap-1">
                     <Calendar className="h-4 w-4" />
                     <span>{formatDate(problem.created_at)}</span>
+                  </div>
+                  
+                  {/* Кнопка поделиться */}
+                  <div className="relative">
+                    <DropdownMenu open={isShareOpen} onOpenChange={setIsShareOpen}>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
+                          <Share2 className="h-4 w-4" />
+                          Share
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem onClick={copyToClipboard} className="cursor-pointer">
+                          <Copy className="h-4 w-4 mr-2" />
+                          Copy Link
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={shareOnTwitter} className="cursor-pointer">
+                          <Twitter className="h-4 w-4 mr-2" />
+                          Share on X
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={shareOnTelegram} className="cursor-pointer">
+                          <MessageCircle className="h-4 w-4 mr-2" />
+                          Share on Telegram
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               </div>
@@ -316,23 +380,45 @@ export function ProblemDetail({ problem, userId, initialHasUpvoted }: ProblemDet
         </CardHeader>
         <CardContent>
           <div className="flex items-start gap-4">
-            <Avatar className="h-16 w-16">
-              <AvatarImage src={problem.profiles?.avatar_url || undefined} />
-              <AvatarFallback className="text-lg">
-                {getInitials(problem.profiles?.display_name || problem.profiles?.username)}
-              </AvatarFallback>
-            </Avatar>
+            <Link 
+              href={problem.profiles?.username ? `/user/${problem.profiles.username}` : "#"}
+              className={problem.profiles?.username ? "cursor-pointer" : "cursor-default"}
+            >
+              <Avatar className="h-16 w-16">
+                <AvatarImage src={problem.profiles?.avatar_url || undefined} />
+                <AvatarFallback className="text-lg">
+                  {getInitials(problem.profiles?.display_name || problem.profiles?.username)}
+                </AvatarFallback>
+              </Avatar>
+            </Link>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-semibold text-foreground">
-                  {problem.profiles?.display_name || problem.profiles?.username || "Anonymous"}
-                </h3>
-                {/* ГАЛОЧКА УБРАНА */}
+                {problem.profiles?.username ? (
+                  <Link 
+                    href={`/user/${problem.profiles.username}`}
+                    className="font-semibold text-foreground hover:text-primary transition-colors"
+                  >
+                    {problem.profiles.display_name || problem.profiles.username}
+                  </Link>
+                ) : (
+                  <h3 className="font-semibold text-foreground">
+                    {problem.profiles?.display_name || "Anonymous"}
+                  </h3>
+                )}
               </div>
+              
               {problem.profiles?.username && (
-                <p className="text-sm text-muted-foreground">@{problem.profiles.username}</p>
+                <Link 
+                  href={`/user/${problem.profiles.username}`}
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                >
+                  @{problem.profiles.username}
+                </Link>
               )}
-              {problem.profiles?.bio && <p className="mt-2 text-sm text-muted-foreground">{problem.profiles.bio}</p>}
+              
+              {problem.profiles?.bio && (
+                <p className="mt-2 text-sm text-muted-foreground">{problem.profiles.bio}</p>
+              )}
 
               {problem.contact && (
                 <div className="mt-4 pt-4 border-t">
