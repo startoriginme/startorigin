@@ -59,8 +59,9 @@ export default function EditProfilePage() {
       return
     }
 
-    if (file.size > 5 * 1024 * 1024) { // 5MB limit
-      setError("Image size should be less than 5MB")
+    // Увеличиваем лимит размера файла для лучшего качества
+    if (file.size > 10 * 1024 * 1024) { // 10MB limit
+      setError("Image size should be less than 10MB")
       return
     }
 
@@ -73,58 +74,122 @@ export default function EditProfilePage() {
       
       if (!user) throw new Error("User not authenticated")
 
-      // Генерируем уникальное имя файла
+      // Сохраняем оригинальное расширение файла
       const fileExt = file.name.split('.').pop()
-      const fileName = `${user.id}/${Math.random().toString(36).substring(2)}.${fileExt}`
+      const timestamp = Date.now()
+      // Используем оригинальное имя файла + timestamp для уникальности
+      const originalName = file.name.replace(/\.[^/.]+$/, "") // убираем расширение
+      const fileName = `${user.id}/${timestamp}-${originalName}.${fileExt}`
       
-      // Загружаем файл в Supabase Storage
-      const { error: uploadError, data } = await supabase.storage
+      // Загружаем файл БЕЗ сжатия
+      const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(fileName, file, {
           cacheControl: '3600',
-          upsert: true
+          upsert: false, // не перезаписывать существующие
+          // Отключаем любую обработку изображений
+          contentType: file.type
         })
 
-      if (uploadError) throw uploadError
+      if (uploadError) {
+        // Если ошибка из-за дубликата, пробуем с другим именем
+        if (uploadError.message?.includes('already exists')) {
+          const uniqueFileName = `${user.id}/${timestamp}-${Math.random().toString(36).substring(2)}.${fileExt}`
+          const { error: retryError } = await supabase.storage
+            .from('avatars')
+            .upload(uniqueFileName, file, {
+              cacheControl: '3600',
+              upsert: false,
+              contentType: file.type
+            })
+          if (retryError) throw retryError
+        } else {
+          throw uploadError
+        }
+      }
 
-      // Получаем публичный URL
+      // Получаем публичный URL БЕЗ параметров трансформации
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
         .getPublicUrl(fileName)
 
-      setAvatarUrl(publicUrl)
+      // Добавляем параметр, чтобы избежать кэширования старой версии
+      const uniqueUrl = `${publicUrl}?t=${timestamp}`
+      
+      setAvatarUrl(uniqueUrl)
       
     } catch (error: any) {
+      console.error("Upload error:", error)
       setError(`Failed to upload avatar: ${error.message}`)
     } finally {
       setIsUploading(false)
     }
   }
 
+  // Альтернативный метод: создание Data URL для немедленного предпросмотра
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      handleAvatarUpload(file)
+    if (!file) return
+
+    // Сначала показываем превью через Data URL
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string
+      setAvatarUrl(dataUrl)
     }
+    reader.readAsDataURL(file)
+
+    // Затем загружаем на сервер
+    handleAvatarUpload(file)
   }
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
     const file = e.dataTransfer.files[0]
-    if (file) {
-      handleAvatarUpload(file)
+    if (!file) return
+
+    // Превью через Data URL
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string
+      setAvatarUrl(dataUrl)
     }
+    reader.readAsDataURL(file)
+
+    // Загрузка на сервер
+    handleAvatarUpload(file)
   }
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
   }
 
-  const removeAvatar = () => {
+  const removeAvatar = async () => {
+    if (avatarUrl && avatarUrl.startsWith('http')) {
+      // Если это URL из Supabase, можно попробовать удалить файл
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        
+        if (user) {
+          // Извлекаем имя файла из URL
+          const urlParts = avatarUrl.split('/')
+          const fileName = urlParts[urlParts.length - 1].split('?')[0]
+          if (fileName) {
+            await supabase.storage
+              .from('avatars')
+              .remove([`${user.id}/${fileName}`])
+          }
+        }
+      } catch (error) {
+        console.error("Error removing avatar from storage:", error)
+      }
+    }
     setAvatarUrl("")
   }
 
   const getInitials = (name: string) => {
+    if (!name) return "U"
     return name
       .split(" ")
       .map((n) => n[0])
@@ -169,13 +234,32 @@ export default function EditProfilePage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error("User not authenticated")
 
+      // Если avatarUrl - это Data URL, преобразуем его обратно в обычный URL
+      let finalAvatarUrl = avatarUrl
+      if (avatarUrl.startsWith('data:')) {
+        // Находим последний загруженный файл пользователя
+        const { data: files } = await supabase.storage
+          .from('avatars')
+          .list(user.id, {
+            sortBy: { column: 'created_at', order: 'desc' }
+          })
+
+        if (files && files.length > 0) {
+          const latestFile = files[0]
+          const { data: { publicUrl } } = supabase.storage
+            .from('avatars')
+            .getPublicUrl(`${user.id}/${latestFile.name}`)
+          finalAvatarUrl = publicUrl
+        }
+      }
+
       const { error: updateError } = await supabase
         .from("profiles")
         .update({
           display_name: displayName || null,
           username: normalizedUsername || null,
           bio: bio || null,
-          avatar_url: avatarUrl || null,
+          avatar_url: finalAvatarUrl || null,
           updated_at: new Date().toISOString(),
         })
         .eq("id", user.id)
@@ -250,7 +334,10 @@ export default function EditProfilePage() {
                     <div className="flex flex-col items-center gap-3">
                       <div className="relative">
                         <Avatar className="h-24 w-24 border-2 border-border">
-                          <AvatarImage src={avatarUrl} />
+                          <AvatarImage 
+                            src={avatarUrl} 
+                            className="object-cover" // Сохраняем пропорции
+                          />
                           <AvatarFallback className="text-lg bg-muted">
                             {getInitials(displayName || username || "U")}
                           </AvatarFallback>
@@ -268,7 +355,7 @@ export default function EditProfilePage() {
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground text-center">
-                        Current avatar
+                        {isUploading ? "Uploading..." : "Current avatar"}
                       </p>
                     </div>
 
@@ -305,7 +392,7 @@ export default function EditProfilePage() {
                               {isUploading ? "Uploading..." : "Click to upload or drag and drop"}
                             </p>
                             <p className="text-sm text-muted-foreground">
-                              PNG, JPG, GIF up to 5MB
+                              PNG, JPG, GIF up to 10MB (original quality)
                             </p>
                           </div>
                           
@@ -323,11 +410,11 @@ export default function EditProfilePage() {
                       </div>
                       
                       <div className="mt-3 grid grid-cols-3 gap-2">
-                        {/* Пример пресетов аватарок */}
+                        {/* Пресеты аватарок */}
                         {[
-                          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
-                          "https://images.unsplash.com/photo-1757351122515-21a7b61d682e?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxmZWF0dXJlZC1waG90b3MtZmVlZHwxOHx8fGVufDB8fHx8fA%3D%3D",
-                          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face"
+                          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e",
+                          "https://images.unsplash.com/photo-1494790108755-2616b612b786", 
+                          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d"
                         ].map((preset, index) => (
                           <button
                             key={index}
