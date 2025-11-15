@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical, Share2, Copy, Twitter, MessageCircle } from "lucide-react"
+import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical, Share2, Copy, Twitter, MessageCircle, Flag } from "lucide-react"
 import Link from "next/link"
 import {
   AlertDialog,
@@ -185,6 +185,21 @@ export function ProblemDetail({
     setIsShareOpen(false)
   }
 
+  const handleReport = () => {
+    // Google Forms URL для жалоб
+    const googleFormUrl = "https://docs.google.com/forms/d/e/1FAIpQLSfEXAMPLE/viewform"
+    
+    // Можно добавить автоматическое заполнение некоторых полей
+    const prefillUrl = `${googleFormUrl}?entry.123456789=${encodeURIComponent(problem.title)}&entry.987654321=${encodeURIComponent(window.location.href)}`
+    
+    window.open(prefillUrl, '_blank', 'noopener,noreferrer')
+    
+    toast({
+      title: "Opening Report Form",
+      description: "You'll be redirected to Google Forms to submit your report",
+    })
+  }
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
@@ -297,97 +312,133 @@ export function ProblemDetail({
             </div>
 
             {/* Кнопки действий - выровнены по правому краю */}
-            {isAuthor && (
-              <div className="flex gap-2">
-                {/* Основные кнопки для десктопа */}
-                <div className="hidden sm:flex gap-2">
-                  <Link href={`/problems/${problem.id}/edit`}>
-                    <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-                      <Edit className="h-4 w-4" />
-                      Edit
-                    </Button>
-                  </Link>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="outline" size="sm" className="gap-2 bg-transparent text-destructive hover:text-destructive hover:bg-destructive/10">
-                        <Trash2 className="h-4 w-4" />
-                        Delete
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Problem</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Are you sure you want to delete this problem? This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={handleDelete}
-                          disabled={isDeleting}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          {isDeleting ? "Deleting..." : "Delete"}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
+            <div className="flex gap-2">
+              {/* Кнопка пожаловаться - всегда видна */}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="gap-2 bg-transparent text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                  >
+                    <Flag className="h-4 w-4" />
+                    <span className="hidden sm:inline">Report</span>
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Report Problem</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      If you believe this problem violates our community guidelines or contains inappropriate content, 
+                      you can report it using Google Forms. This will open a new window where you can provide more details.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleReport}
+                      className="bg-orange-600 text-white hover:bg-orange-700"
+                    >
+                      <Flag className="h-4 w-4 mr-2" />
+                      Open Report Form
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
 
-                {/* Dropdown меню для мобильных */}
-                <div className="sm:hidden">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
+              {/* Кнопки автора */}
+              {isAuthor && (
+                <>
+                  {/* Основные кнопки для десктопа */}
+                  <div className="hidden sm:flex gap-2">
+                    <Link href={`/problems/${problem.id}/edit`}>
                       <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-                        <MoreVertical className="h-4 w-4" />
+                        <Edit className="h-4 w-4" />
+                        Edit
                       </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem asChild>
-                        <Link href={`/problems/${problem.id}/edit`} className="flex items-center gap-2 cursor-pointer">
-                          <Edit className="h-4 w-4" />
-                          Edit Problem
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem 
-                        className="text-destructive focus:text-destructive cursor-pointer"
-                        onClick={() => document.querySelector('[data-delete-trigger]')?.click()}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Delete Problem
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                    </Link>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="gap-2 bg-transparent text-destructive hover:text-destructive hover:bg-destructive/10">
+                          <Trash2 className="h-4 w-4" />
+                          Delete
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Problem</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete this problem? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleDelete}
+                            disabled={isDeleting}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            {isDeleting ? "Deleting..." : "Delete"}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
 
-                  {/* Скрытый триггер для диалога удаления */}
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <button data-delete-trigger className="hidden" />
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Problem</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Are you sure you want to delete this problem? This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={handleDelete}
-                          disabled={isDeleting}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  {/* Dropdown меню для мобильных */}
+                  <div className="sm:hidden">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                          <Link href={`/problems/${problem.id}/edit`} className="flex items-center gap-2 cursor-pointer">
+                            <Edit className="h-4 w-4" />
+                            Edit Problem
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          className="text-destructive focus:text-destructive cursor-pointer"
+                          onClick={() => document.querySelector('[data-delete-trigger]')?.click()}
                         >
-                          {isDeleting ? "Deleting..." : "Delete"}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </div>
-            )}
+                          <Trash2 className="h-4 w-4" />
+                          Delete Problem
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    {/* Скрытый триггер для диалога удаления */}
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <button data-delete-trigger className="hidden" />
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Problem</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete this problem? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleDelete}
+                            disabled={isDeleting}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            {isDeleting ? "Deleting..." : "Delete"}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </CardHeader>
 
