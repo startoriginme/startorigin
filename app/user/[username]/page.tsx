@@ -14,6 +14,9 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
   const { username } = await params
   const supabase = await createClient()
 
+  // Получаем текущего пользователя
+  const { data: { user } } = await supabase.auth.getUser()
+
   // Fetch user profile by username
   const { data: profile } = await supabase
     .from("profiles")
@@ -39,6 +42,19 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
     `)
     .eq("author_id", profile.id)
     .order("created_at", { ascending: false })
+
+  // Fetch upvotes for current user if logged in
+  let userUpvotes: Set<string> = new Set()
+  if (user) {
+    const { data: upvotes } = await supabase
+      .from("upvotes")
+      .select("problem_id")
+      .eq("user_id", user.id)
+    
+    if (upvotes) {
+      userUpvotes = new Set(upvotes.map(upvote => upvote.problem_id))
+    }
+  }
 
   const getInitials = (name: string | null) => {
     if (!name) return "U"
@@ -131,6 +147,8 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
                     <ProblemCard 
                       key={problem.id} 
                       problem={problem} 
+                      userId={user?.id} // Передаем ID пользователя
+                      initialHasUpvoted={userUpvotes.has(problem.id)} // Передаем информацию о лайках
                     />
                   ))}
                 </div>
