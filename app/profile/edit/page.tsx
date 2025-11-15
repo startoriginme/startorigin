@@ -22,6 +22,7 @@ export default function EditProfilePage() {
   const [avatarPosition, setAvatarPosition] = useState({ x: 50, y: 50 }) // Позиция в %
   const [avatarScale, setAvatarScale] = useState(100) // Масштаб в %
   const [isEditingAvatar, setIsEditingAvatar] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isDataLoading, setIsDataLoading] = useState(true)
@@ -51,7 +52,7 @@ export default function EditProfilePage() {
         setUsername(profile.username || "")
         setBio(profile.bio || "")
         setStoredAvatarUrl(profile.avatar_url || "")
-        setAvatarUrl(profile.avatar_url || "") // Показываем аватар, но не в инпуте
+        setAvatarUrl(profile.avatar_url || "")
       }
       
       setIsDataLoading(false)
@@ -128,7 +129,7 @@ export default function EditProfilePage() {
       const uniqueUrl = `${publicUrl}?t=${Date.now()}`
       setAvatarUrl(uniqueUrl)
       setStoredAvatarUrl(uniqueUrl)
-      setIsEditingAvatar(true) // Автоматически включаем редактирование после загрузки
+      setIsEditingAvatar(true)
       
     } catch (error: any) {
       setError(`Failed to upload avatar: ${error.message}`)
@@ -184,7 +185,35 @@ export default function EditProfilePage() {
     e.preventDefault()
   }
 
-  // Обработка перемещения аватарки
+  // Начало перетаскивания
+  const handleDragStart = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isEditingAvatar) return
+    
+    setIsDragging(true)
+    handleAvatarDrag(e)
+    
+    // Добавляем обработчики для всего документа
+    document.addEventListener('mousemove', handleDocumentDrag)
+    document.addEventListener('mouseup', handleDragEnd)
+  }
+
+  // Перетаскивание по документу
+  const handleDocumentDrag = (e: MouseEvent) => {
+    if (!isDragging || !avatarContainerRef.current) return
+
+    const container = avatarContainerRef.current
+    const rect = container.getBoundingClientRect()
+    
+    const x = ((e.clientX - rect.left) / rect.width) * 100
+    const y = ((e.clientY - rect.top) / rect.height) * 100
+
+    setAvatarPosition({
+      x: Math.max(0, Math.min(100, x)),
+      y: Math.max(0, Math.min(100, y))
+    })
+  }
+
+  // Обработка перетаскивания (для клика)
   const handleAvatarDrag = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isEditingAvatar || !avatarContainerRef.current) return
 
@@ -200,10 +229,11 @@ export default function EditProfilePage() {
     })
   }
 
-  const handleAvatarClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (isEditingAvatar) {
-      handleAvatarDrag(e)
-    }
+  // Конец перетаскивания
+  const handleDragEnd = () => {
+    setIsDragging(false)
+    document.removeEventListener('mousemove', handleDocumentDrag)
+    document.removeEventListener('mouseup', handleDragEnd)
   }
 
   const removeAvatar = async () => {
@@ -288,7 +318,6 @@ export default function EditProfilePage() {
 
       let finalAvatarUrl = avatarUrl
 
-      // Если это Data URL, находим соответствующий загруженный файл
       if (avatarUrl.startsWith('data:')) {
         const { data: files } = await supabase.storage
           .from('avatars')
@@ -387,19 +416,26 @@ export default function EditProfilePage() {
                         {/* Редактируемый аватар */}
                         <div 
                           ref={avatarContainerRef}
-                          className="h-24 w-24 rounded-full overflow-hidden border-2 border-border bg-muted cursor-move relative"
-                          onMouseMove={handleAvatarDrag}
-                          onClick={handleAvatarClick}
+                          className={`h-24 w-24 rounded-full overflow-hidden border-2 border-border bg-muted relative ${
+                            isEditingAvatar && avatarUrl ? 'cursor-grab active:cursor-grabbing' : ''
+                          }`}
+                          onMouseDown={handleDragStart}
+                          onClick={(e) => {
+                            if (!isDragging) {
+                              handleAvatarDrag(e)
+                            }
+                          }}
                         >
                           {avatarUrl ? (
                             <img
                               src={avatarUrl}
                               alt="Profile avatar"
-                              className="w-full h-full object-cover"
+                              className="w-full h-full object-cover select-none"
                               style={{
                                 objectPosition: `${avatarPosition.x}% ${avatarPosition.y}%`,
                                 transform: `scale(${avatarScale / 100})`
                               }}
+                              draggable="false"
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center bg-muted">
@@ -411,7 +447,12 @@ export default function EditProfilePage() {
                           
                           {/* Overlay для редактирования */}
                           {isEditingAvatar && avatarUrl && (
-                            <div className="absolute inset-0 border-2 border-primary border-dashed rounded-full pointer-events-none" />
+                            <>
+                              <div className="absolute inset-0 border-2 border-primary border-dashed rounded-full pointer-events-none" />
+                              <div className="absolute inset-0 bg-black/20 opacity-0 hover:opacity-100 transition-opacity pointer-events-none flex items-center justify-center">
+                                <Move className="h-6 w-6 text-white" />
+                              </div>
+                            </>
                           )}
                         </div>
                         {avatarUrl && (
@@ -432,7 +473,9 @@ export default function EditProfilePage() {
                         <div className="space-y-2 w-full">
                           <div className="flex items-center gap-2">
                             <Move className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-xs text-muted-foreground">Drag to reposition</span>
+                            <span className="text-xs text-muted-foreground">
+                              {isDragging ? "Dragging..." : "Click and drag to reposition"}
+                            </span>
                           </div>
                           
                           <div className="space-y-1">
@@ -470,15 +513,27 @@ export default function EditProfilePage() {
                             </div>
                           </div>
                           
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="w-full"
-                            onClick={() => setIsEditingAvatar(false)}
-                          >
-                            Done Editing
-                          </Button>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setAvatarPosition({ x: 50, y: 50 })
+                                setAvatarScale(100)
+                              }}
+                            >
+                              Reset
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setIsEditingAvatar(false)}
+                            >
+                              Done
+                            </Button>
+                          </div>
                         </div>
                       )}
                       
