@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { Lightbulb, Plus, LogOut, Calendar, MessageSquare, ArrowBigUp, Edit } from "lucide-react"
 import { ProfileMobileMenu } from "@/components/profile-mobile-menu"
-import { ProblemCard } from "@/components/problem-card" // ← Импортируем компонент
+import { ProblemCard } from "@/components/problem-card"
 
 export default async function ProfilePage() {
   const supabase = await createClient()
@@ -108,12 +108,24 @@ export default async function ProfilePage() {
             </CardHeader>
             <CardContent>
               <div className="flex items-start gap-6">
-                <Avatar className="h-24 w-24">
-                  <AvatarImage src={profile?.avatar_url || undefined} />
-                  <AvatarFallback className="text-2xl">
-                    {getInitials(profile?.display_name || profile?.username)}
-                  </AvatarFallback>
-                </Avatar>
+                {/* Кастомный аватар без сжатия */}
+                <div className="relative h-24 w-24">
+                  <div className="h-24 w-24 rounded-full overflow-hidden border-2 border-border bg-muted">
+                    {profile?.avatar_url ? (
+                      <img
+                        src={profile.avatar_url}
+                        alt="Profile avatar"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-muted">
+                        <span className="text-2xl font-semibold text-muted-foreground">
+                          {getInitials(profile?.display_name || profile?.username)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
                 <div className="flex-1">
                   <h2 className="text-2xl font-bold text-foreground">
                     {profile?.display_name || profile?.username || "Anonymous"}
@@ -141,7 +153,7 @@ export default async function ProfilePage() {
             </CardHeader>
             <CardContent>
               {problems && problems.length > 0 ? (
-                <div className="space-y-4"> {/* Уменьшил gap между карточками */}
+                <div className="space-y-4">
                   {problems.map((problem) => (
                     <ProblemCard 
                       key={problem.id} 
