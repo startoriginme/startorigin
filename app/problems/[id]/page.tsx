@@ -10,7 +10,7 @@ export default async function ProblemDetailPage({
 }: {
   params: { id: string }
 }) {
-  const { id } = params   // ← тут уже всё ок, без await!
+  const { id } = params
   const supabase = await createClient()
 
   const { data: problem, error } = await supabase
@@ -75,6 +75,7 @@ export default async function ProblemDetailPage({
         .eq("problem_id", id)
         .eq("user_id", user.id)
         .single()
+
       userApplication = application
     }
   } catch (error) {
@@ -83,6 +84,8 @@ export default async function ProblemDetailPage({
 
   return (
     <div className="min-h-screen bg-background">
+
+      {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4">
           <nav className="flex items-center justify-between">
@@ -100,13 +103,11 @@ export default async function ProblemDetailPage({
         </div>
       </header>
 
-   
-
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        <ProblemDetail 
-          problem={problem} 
-          userId={user?.id} 
+        <ProblemDetail
+          problem={problem}
+          userId={user?.id}
           initialHasUpvoted={hasUpvoted}
           initialApplications={applications}
           userApplication={userApplication}
