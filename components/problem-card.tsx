@@ -4,7 +4,6 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ArrowBigUp, Calendar, Users } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
@@ -204,12 +203,24 @@ export function ProblemCard({ problem, userId }: ProblemCardProps) {
       <CardFooter className="flex items-center justify-between border-t pt-4">
         {/* Автор и дата */}
         <div className="flex items-center gap-3 min-w-0 flex-1">
-          <Avatar className="h-8 w-8 flex-shrink-0">
-            <AvatarImage src={problem.profiles?.avatar_url || undefined} />
-            <AvatarFallback>
-              {getInitials(problem.profiles?.display_name || problem.profiles?.username)}
-            </AvatarFallback>
-          </Avatar>
+          {/* Кастомный аватар без сжатия */}
+          <div className="h-8 w-8 flex-shrink-0">
+            <div className="h-8 w-8 rounded-full overflow-hidden border border-border bg-muted">
+              {problem.profiles?.avatar_url ? (
+                <img
+                  src={problem.profiles.avatar_url}
+                  alt="Profile avatar"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-muted">
+                  <span className="text-xs font-semibold text-muted-foreground">
+                    {getInitials(problem.profiles?.display_name || problem.profiles?.username)}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
           <div className="text-sm min-w-0 flex-1">
             <p className="font-medium text-foreground truncate">
               {problem.profiles?.display_name || problem.profiles?.username || "Anonymous"}
