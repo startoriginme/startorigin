@@ -8,7 +8,7 @@ import Link from "next/link"
 export default async function ProblemDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }>
+params: { id: string }
 }) {
   const { id } = await params
   const supabase = await createClient()
