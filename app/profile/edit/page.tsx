@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect } from "react"
@@ -18,6 +17,7 @@ export default function EditProfilePage() {
   const [username, setUsername] = useState("")
   const [bio, setBio] = useState("")
   const [avatarUrl, setAvatarUrl] = useState("")
+  const [customAvatarUrl, setCustomAvatarUrl] = useState("") // Новое состояние для кастомного URL
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isDataLoading, setIsDataLoading] = useState(true)
@@ -46,6 +46,7 @@ export default function EditProfilePage() {
         setUsername(profile.username || "")
         setBio(profile.bio || "")
         setAvatarUrl(profile.avatar_url || "")
+        // Не устанавливаем customAvatarUrl из базы данных
       }
       
       setIsDataLoading(false)
@@ -215,6 +216,7 @@ export default function EditProfilePage() {
       }
     }
     setAvatarUrl("")
+    setCustomAvatarUrl("") // Также очищаем кастомный URL
   }
 
   const getInitials = (name: string) => {
@@ -225,6 +227,14 @@ export default function EditProfilePage() {
       .join("")
       .toUpperCase()
       .slice(0, 2)
+  }
+
+  // Функция для применения кастомного URL
+  const applyCustomAvatarUrl = () => {
+    if (customAvatarUrl.trim()) {
+      setAvatarUrl(customAvatarUrl.trim())
+      setCustomAvatarUrl("") // Очищаем инпут после применения
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -367,7 +377,7 @@ export default function EditProfilePage() {
                           <img
                             src={avatarUrl}
                             alt="Profile avatar"
-                            className="w-full h-full object-cover" // object-cover покажет центральную часть без искажений
+                            className="w-full h-full object-cover"
                             onError={(e) => {
                               // Если изображение не загружается, показываем инициалы
                               e.currentTarget.style.display = 'none'
@@ -486,17 +496,17 @@ export default function EditProfilePage() {
                         <div className="flex gap-2">
                           <Input
                             placeholder="https://example.com/avatar.jpg"
-                            value={avatarUrl}
-                            onChange={(e) => setAvatarUrl(e.target.value)}
+                            value={customAvatarUrl} // Используем отдельное состояние для инпута
+                            onChange={(e) => setCustomAvatarUrl(e.target.value)}
                             className="flex-1"
                           />
                           <Button 
                             type="button" 
                             variant="outline"
-                            onClick={() => setAvatarUrl("")}
-                            disabled={!avatarUrl}
+                            onClick={applyCustomAvatarUrl}
+                            disabled={!customAvatarUrl.trim()}
                           >
-                            Clear
+                            Apply
                           </Button>
                         </div>
                       </div>
