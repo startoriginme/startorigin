@@ -9,15 +9,18 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import Link from "next/link"
-import { Lightbulb, ArrowLeft, Loader2 } from "lucide-react"
+import { Lightbulb, ArrowLeft, Loader2, Upload, X, Image as ImageIcon } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 export default function EditProfilePage() {
   const [displayName, setDisplayName] = useState("")
   const [username, setUsername] = useState("")
   const [bio, setBio] = useState("")
+  const [avatarUrl, setAvatarUrl] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isDataLoading, setIsDataLoading] = useState(true)
+  const [isUploading, setIsUploading] = useState(false)
   const router = useRouter()
 
   // Загружаем данные профиля при монтировании
@@ -41,6 +44,7 @@ export default function EditProfilePage() {
         setDisplayName(profile.display_name || "")
         setUsername(profile.username || "")
         setBio(profile.bio || "")
+        setAvatarUrl(profile.avatar_url || "")
       }
       
       setIsDataLoading(false)
@@ -49,10 +53,89 @@ export default function EditProfilePage() {
     fetchProfile()
   }, [router])
 
+  const handleAvatarUpload = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      setError("Please select an image file")
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      setError("Image size should be less than 5MB")
+      return
+    }
+
+    setIsUploading(true)
+    setError(null)
+
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) throw new Error("User not authenticated")
+
+      // Генерируем уникальное имя файла
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${user.id}/${Math.random().toString(36).substring(2)}.${fileExt}`
+      
+      // Загружаем файл в Supabase Storage
+      const { error: uploadError, data } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: true
+        })
+
+      if (uploadError) throw uploadError
+
+      // Получаем публичный URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName)
+
+      setAvatarUrl(publicUrl)
+      
+    } catch (error: any) {
+      setError(`Failed to upload avatar: ${error.message}`)
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      handleAvatarUpload(file)
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    const file = e.dataTransfer.files[0]
+    if (file) {
+      handleAvatarUpload(file)
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+  }
+
+  const removeAvatar = () => {
+    setAvatarUrl("")
+  }
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // 🔒 ЗАЩИТА ОТ МНОЖЕСТВЕННЫХ НАЖАТИЙ
     if (isLoading) return
     
     setIsLoading(true)
@@ -61,15 +144,12 @@ export default function EditProfilePage() {
     const supabase = createClient()
 
     try {
-      // ✅ НОРМАЛИЗАЦИЯ USERNAME - приводим к нижнему регистру
       const normalizedUsername = username ? username.toLowerCase().trim() : ""
 
-      // Валидация username
       if (normalizedUsername && !/^[a-zA-Z0-9_]+$/.test(normalizedUsername)) {
         throw new Error("Username can only contain letters, numbers, and underscores")
       }
 
-      // Проверяем, не занят ли username другим пользователем
       if (normalizedUsername) {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) throw new Error("User not authenticated")
@@ -77,7 +157,7 @@ export default function EditProfilePage() {
         const { data: existingProfile } = await supabase
           .from("profiles")
           .select("id, username")
-          .eq("username", normalizedUsername) // ✅ Сравниваем с нормализованным
+          .eq("username", normalizedUsername)
           .neq("id", user.id)
           .single()
 
@@ -86,7 +166,6 @@ export default function EditProfilePage() {
         }
       }
 
-      // Обновляем профиль
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error("User not authenticated")
 
@@ -94,8 +173,9 @@ export default function EditProfilePage() {
         .from("profiles")
         .update({
           display_name: displayName || null,
-          username: normalizedUsername || null, // ✅ Сохраняем нормализованный
+          username: normalizedUsername || null,
           bio: bio || null,
+          avatar_url: avatarUrl || null,
           updated_at: new Date().toISOString(),
         })
         .eq("id", user.id)
@@ -107,13 +187,12 @@ export default function EditProfilePage() {
         throw new Error(`Failed to update profile: ${updateError.message}`)
       }
 
-      // 🚀 ОПТИМИСТИЧНЫЙ РЕДИРЕКТ
       router.push("/profile")
       router.refresh()
 
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred")
-      setIsLoading(false) // ❌ При ошибке снова разрешаем нажатия
+      setIsLoading(false)
     }
   }
 
@@ -153,7 +232,6 @@ export default function EditProfilePage() {
               <CardTitle>Edit Profile</CardTitle>
             </CardHeader>
             <CardContent>
-              {/* Error Message Display */}
               {error && (
                 <div className="mb-6 p-4 bg-destructive/10 border border-destructive rounded-lg">
                   <p className="text-destructive text-sm font-medium">
@@ -163,6 +241,115 @@ export default function EditProfilePage() {
               )}
 
               <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Avatar Upload Section */}
+                <div className="space-y-4">
+                  <Label>Profile Picture</Label>
+                  
+                  <div className="flex flex-col sm:flex-row gap-6 items-start">
+                    {/* Current Avatar Preview */}
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="relative">
+                        <Avatar className="h-24 w-24 border-2 border-border">
+                          <AvatarImage src={avatarUrl} />
+                          <AvatarFallback className="text-lg bg-muted">
+                            {getInitials(displayName || username || "U")}
+                          </AvatarFallback>
+                        </Avatar>
+                        {avatarUrl && (
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                            onClick={removeAvatar}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground text-center">
+                        Current avatar
+                      </p>
+                    </div>
+
+                    {/* Upload Area */}
+                    <div className="flex-1">
+                      <div
+                        className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center hover:border-muted-foreground/50 transition-colors cursor-pointer"
+                        onDrop={handleDrop}
+                        onDragOver={handleDragOver}
+                        onClick={() => document.getElementById('avatar-upload')?.click()}
+                      >
+                        <input
+                          id="avatar-upload"
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleFileSelect}
+                          disabled={isUploading}
+                        />
+                        
+                        <div className="space-y-3">
+                          <div className="flex justify-center">
+                            <div className="p-3 bg-primary/10 rounded-full">
+                              {isUploading ? (
+                                <Loader2 className="h-6 w-6 text-primary animate-spin" />
+                              ) : (
+                                <Upload className="h-6 w-6 text-primary" />
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-1">
+                            <p className="font-medium text-foreground">
+                              {isUploading ? "Uploading..." : "Click to upload or drag and drop"}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              PNG, JPG, GIF up to 5MB
+                            </p>
+                          </div>
+                          
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={isUploading}
+                            className="gap-2"
+                          >
+                            <ImageIcon className="h-4 w-4" />
+                            Choose Image
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-3 grid grid-cols-3 gap-2">
+                        {/* Пример пресетов аватарок */}
+                        {[
+                          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
+                          "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face",
+                          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face"
+                        ].map((preset, index) => (
+                          <button
+                            key={index}
+                            type="button"
+                            className="relative group rounded-lg overflow-hidden border-2 border-transparent hover:border-primary transition-all"
+                            onClick={() => setAvatarUrl(preset)}
+                          >
+                            <img
+                              src={preset}
+                              alt={`Avatar preset ${index + 1}`}
+                              className="w-full h-16 object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <span className="text-white text-xs">Use</span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="display_name">Display Name</Label>
                   <Input
@@ -213,7 +400,7 @@ export default function EditProfilePage() {
                 </div>
 
                 <div className="flex gap-4">
-                  <Button type="submit" disabled={isLoading} className="flex-1">
+                  <Button type="submit" disabled={isLoading || isUploading} className="flex-1">
                     {isLoading ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
