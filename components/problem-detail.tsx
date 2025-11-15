@@ -7,7 +7,9 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical, Share2, Copy, Twitter, MessageCircle } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical, Share2, Copy, Twitter, MessageCircle, CheckCircle2 } from "lucide-react"
 import Link from "next/link"
 import {
   AlertDialog,
@@ -27,7 +29,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { ToastAction } from "@/components/ui/toast"
 import { useToast } from "@/components/ui/use-toast"
 
 type Profile = {
@@ -54,19 +55,45 @@ type Problem = {
   profiles: Profile | null
 }
 
+type CofounderApplication = {
+  id: string
+  problem_id: string
+  user_id: string
+  contact_info: string
+  message: string | null
+  status: string
+  created_at: string
+  profiles: Profile
+}
+
 type ProblemDetailProps = {
   problem: Problem
   userId?: string
   initialHasUpvoted: boolean
+  initialApplications?: CofounderApplication[]
+  userApplication?: CofounderApplication | null
 }
 
-export function ProblemDetail({ problem, userId, initialHasUpvoted }: ProblemDetailProps) {
+export function ProblemDetail({ 
+  problem, 
+  userId, 
+  initialHasUpvoted, 
+  initialApplications = [],
+  userApplication = null 
+}: ProblemDetailProps) {
   const [isClient, setIsClient] = useState(false)
   const [upvotes, setUpvotes] = useState(problem.upvotes)
   const [hasUpvoted, setHasUpvoted] = useState(initialHasUpvoted)
   const [isUpvoting, setIsUpvoting] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isShareOpen, setIsShareOpen] = useState(false)
+  const [showApplicationForm, setShowApplicationForm] = useState(false)
+  const [contactInfo, setContactInfo] = useState("")
+  const [message, setMessage] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [applications, setApplications] = useState<CofounderApplication[]>(initialApplications)
+  const [currentUserApplication, setCurrentUserApplication] = useState<CofounderApplication | null>(userApplication)
+  
   const router = useRouter()
   const { toast } = useToast()
 
@@ -75,6 +102,7 @@ export function ProblemDetail({ problem, userId, initialHasUpvoted }: ProblemDet
   }, [])
 
   const isAuthor = userId === problem.author_id
+  const canApply = problem.looking_for_cofounder && userId && !isAuthor && !currentUserApplication
 
   const handleUpvote = async () => {
     if (!userId) {
@@ -123,6 +151,68 @@ export function ProblemDetail({ problem, userId, initialHasUpvoted }: ProblemDet
       console.error("Error deleting problem:", error)
     } finally {
       setIsDeleting(false)
+    }
+  }
+
+  const handleApplyAsCofounder = async () => {
+    if (!userId) {
+      router.push("/auth/login")
+      return
+    }
+
+    if (!contactInfo.trim()) {
+      toast({
+        title: "Contact info required",
+        description: "Please provide your contact information",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsSubmitting(true)
+    const supabase = createClient()
+
+    try {
+      const { data, error } = await supabase
+        .from("cofounder_applications")
+        .insert({
+          problem_id: problem.id,
+          user_id: userId,
+          contact_info: contactInfo.trim(),
+          message: message.trim() || null,
+        })
+        .select(`
+          *,
+          profiles:user_id (
+            id,
+            username,
+            display_name,
+            avatar_url
+          )
+        `)
+        .single()
+
+      if (!error && data) {
+        setCurrentUserApplication(data)
+        setApplications(prev => [data, ...prev])
+        setShowApplicationForm(false)
+        setContactInfo("")
+        setMessage("")
+        
+        toast({
+          title: "Application sent!",
+          description: "Your cofounder application has been submitted",
+        })
+      }
+    } catch (error) {
+      console.error("Error submitting application:", error)
+      toast({
+        title: "Error",
+        description: "Failed to submit application",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -372,6 +462,155 @@ export function ProblemDetail({ problem, userId, initialHasUpvoted }: ProblemDet
           </div>
         </CardContent>
       </Card>
+
+      {/* Cofounder Application Section */}
+      {problem.looking_for_cofounder && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Cofounder Applications ({applications.length})
+              </h2>
+              
+              {canApply && (
+                <Button 
+                  onClick={() => setShowApplicationForm(!showApplicationForm)}
+                  variant={currentUserApplication ? "outline" : "default"}
+                  className="gap-2"
+                >
+                  {currentUserApplication ? (
+                    <>
+                      <CheckCircle2 className="h-4 w-4" />
+                      Application Sent
+                    </>
+                  ) : (
+                    <>
+                      <Users className="h-4 w-4" />
+                      Apply as Cofounder
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+
+          <CardContent className="space-y-4">
+            {/* Application Form */}
+            {showApplicationForm && (
+              <Card className="bg-muted/50">
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">
+                        How should problem author contact you? *
+                      </label>
+                      <Input
+                        placeholder="Email, Telegram, LinkedIn, phone number..."
+                        value={contactInfo}
+                        onChange={(e) => setContactInfo(e.target.value)}
+                        required
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        This will be visible to the problem author
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">
+                        Additional message (optional)
+                      </label>
+                      <Textarea
+                        placeholder="Tell why you're interested in being a cofounder for this problem..."
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        rows={3}
+                      />
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <Button 
+                        onClick={handleApplyAsCofounder}
+                        disabled={isSubmitting || !contactInfo.trim()}
+                      >
+                        {isSubmitting ? "Submitting..." : "Submit Application"}
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setShowApplicationForm(false)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Applications List */}
+            {applications.length > 0 ? (
+              <div className="space-y-3">
+                {applications.map((application) => (
+                  <Card key={application.id} className="bg-muted/30">
+                    <CardContent className="pt-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-3 flex-1">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={application.profiles.avatar_url || undefined} />
+                            <AvatarFallback>
+                              {getInitials(application.profiles.display_name || application.profiles.username)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Link 
+                                href={application.profiles.username ? `/user/${application.profiles.username}` : "#"}
+                                className="font-medium text-foreground hover:text-primary transition-colors"
+                              >
+                                {application.profiles.display_name || application.profiles.username || "Anonymous"}
+                              </Link>
+                              <Badge variant="outline" className="text-xs">
+                                Wants to be cofounder
+                              </Badge>
+                            </div>
+                            
+                            {application.profiles.username && (
+                              <p className="text-sm text-muted-foreground mb-2">
+                                @{application.profiles.username}
+                              </p>
+                            )}
+                            
+                            <div className="space-y-2">
+                              <div>
+                                <span className="text-sm font-medium">Contact: </span>
+                                <span className="text-sm">{application.contact_info}</span>
+                              </div>
+                              
+                              {application.message && (
+                                <div>
+                                  <span className="text-sm font-medium">Message: </span>
+                                  <span className="text-sm text-muted-foreground">{application.message}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              !showApplicationForm && (
+                <p className="text-muted-foreground text-center py-4">
+                  No cofounder applications yet.
+                  {!userId && " Sign in to apply."}
+                </p>
+              )
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Author Card */}
       <Card>
