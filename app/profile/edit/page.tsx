@@ -53,14 +53,24 @@ export default function EditProfilePage() {
     fetchProfile()
   }, [router])
 
+  // Функция для создания безопасного имени файла
+  const createSafeFileName = (file: File) => {
+    const timestamp = Date.now()
+    const randomString = Math.random().toString(36).substring(2, 8)
+    const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+    
+    const safeName = `avatar-${timestamp}-${randomString}.${fileExt}`
+    
+    return safeName
+  }
+
   const handleAvatarUpload = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       setError("Please select an image file")
       return
     }
 
-    // Увеличиваем лимит размера файла для лучшего качества
-    if (file.size > 10 * 1024 * 1024) { // 10MB limit
+    if (file.size > 10 * 1024 * 1024) {
       setError("Image size should be less than 10MB")
       return
     }
@@ -74,62 +84,72 @@ export default function EditProfilePage() {
       
       if (!user) throw new Error("User not authenticated")
 
-      // Сохраняем оригинальное расширение файла
-      const fileExt = file.name.split('.').pop()
-      const timestamp = Date.now()
-      // Используем оригинальное имя файла + timestamp для уникальности
-      const originalName = file.name.replace(/\.[^/.]+$/, "") // убираем расширение
-      const fileName = `${user.id}/${timestamp}-${originalName}.${fileExt}`
+      // Создаем безопасное имя файла
+      const safeFileName = createSafeFileName(file)
+      const filePath = `${user.id}/${safeFileName}`
       
-      // Загружаем файл БЕЗ сжатия
+      console.log("Uploading file:", filePath)
+      
+      // Загружаем файл в Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(fileName, file, {
+        .upload(filePath, file, {
           cacheControl: '3600',
-          upsert: false, // не перезаписывать существующие
-          // Отключаем любую обработку изображений
+          upsert: false,
           contentType: file.type
         })
 
       if (uploadError) {
-        // Если ошибка из-за дубликата, пробуем с другим именем
+        console.error("Upload error:", uploadError)
+        
+        // Если файл уже существует, пробуем с другим именем
         if (uploadError.message?.includes('already exists')) {
-          const uniqueFileName = `${user.id}/${timestamp}-${Math.random().toString(36).substring(2)}.${fileExt}`
+          const newSafeFileName = createSafeFileName(file)
+          const newFilePath = `${user.id}/${newSafeFileName}`
+          
           const { error: retryError } = await supabase.storage
             .from('avatars')
-            .upload(uniqueFileName, file, {
+            .upload(newFilePath, file, {
               cacheControl: '3600',
               upsert: false,
               contentType: file.type
             })
+          
           if (retryError) throw retryError
         } else {
           throw uploadError
         }
       }
 
-      // Получаем публичный URL БЕЗ параметров трансформации
+      // Получаем публичный URL
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
-        .getPublicUrl(fileName)
+        .getPublicUrl(filePath)
 
-      // Добавляем параметр, чтобы избежать кэширования старой версии
-      const uniqueUrl = `${publicUrl}?t=${timestamp}`
+      console.log("Upload successful, URL:", publicUrl)
       
+      // Добавляем параметр для избежания кэширования
+      const uniqueUrl = `${publicUrl}?t=${Date.now()}`
       setAvatarUrl(uniqueUrl)
       
     } catch (error: any) {
-      console.error("Upload error:", error)
+      console.error("Upload failed:", error)
       setError(`Failed to upload avatar: ${error.message}`)
     } finally {
       setIsUploading(false)
     }
   }
 
-  // Альтернативный метод: создание Data URL для немедленного предпросмотра
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+
+    // Валидация имени файла
+    const fileName = file.name
+    if (/[^a-zA-Z0-9._-]/.test(fileName)) {
+      setError("File name contains invalid characters. Please rename the file to use only English letters, numbers, and basic symbols.")
+      return
+    }
 
     // Сначала показываем превью через Data URL
     const reader = new FileReader()
@@ -147,6 +167,13 @@ export default function EditProfilePage() {
     e.preventDefault()
     const file = e.dataTransfer.files[0]
     if (!file) return
+
+    // Валидация имени файла
+    const fileName = file.name
+    if (/[^a-zA-Z0-9._-]/.test(fileName)) {
+      setError("File name contains invalid characters. Please rename the file to use only English letters, numbers, and basic symbols.")
+      return
+    }
 
     // Превью через Data URL
     const reader = new FileReader()
@@ -166,15 +193,16 @@ export default function EditProfilePage() {
 
   const removeAvatar = async () => {
     if (avatarUrl && avatarUrl.startsWith('http')) {
-      // Если это URL из Supabase, можно попробовать удалить файл
       try {
         const supabase = createClient()
         const { data: { user } } = await supabase.auth.getUser()
         
-        if (user) {
+        if (user && avatarUrl.includes('avatars')) {
           // Извлекаем имя файла из URL
           const urlParts = avatarUrl.split('/')
-          const fileName = urlParts[urlParts.length - 1].split('?')[0]
+          const fileNameWithParams = urlParts[urlParts.length - 1]
+          const fileName = fileNameWithParams.split('?')[0]
+          
           if (fileName) {
             await supabase.storage
               .from('avatars')
@@ -234,14 +262,14 @@ export default function EditProfilePage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error("User not authenticated")
 
-      // Если avatarUrl - это Data URL, преобразуем его обратно в обычный URL
+      // Если avatarUrl - это Data URL, находим соответствующий загруженный файл
       let finalAvatarUrl = avatarUrl
       if (avatarUrl.startsWith('data:')) {
-        // Находим последний загруженный файл пользователя
         const { data: files } = await supabase.storage
           .from('avatars')
           .list(user.id, {
-            sortBy: { column: 'created_at', order: 'desc' }
+            sortBy: { column: 'created_at', order: 'desc' },
+            limit: 1
           })
 
         if (files && files.length > 0) {
@@ -249,7 +277,7 @@ export default function EditProfilePage() {
           const { data: { publicUrl } } = supabase.storage
             .from('avatars')
             .getPublicUrl(`${user.id}/${latestFile.name}`)
-          finalAvatarUrl = publicUrl
+          finalAvatarUrl = `${publicUrl}?t=${Date.now()}`
         }
       }
 
@@ -333,15 +361,25 @@ export default function EditProfilePage() {
                     {/* Current Avatar Preview */}
                     <div className="flex flex-col items-center gap-3">
                       <div className="relative">
-                        <Avatar className="h-24 w-24 border-2 border-border">
-                          <AvatarImage 
-                            src={avatarUrl} 
-                            className="object-cover" // Сохраняем пропорции
+                        {/* Кастомный аватар с правильным отображением */}
+                        <div className="h-24 w-24 rounded-full overflow-hidden border-2 border-border bg-muted">
+                          <img
+                            src={avatarUrl}
+                            alt="Profile avatar"
+                            className="w-full h-full object-cover" // object-cover покажет центральную часть без искажений
+                            onError={(e) => {
+                              // Если изображение не загружается, показываем инициалы
+                              e.currentTarget.style.display = 'none'
+                            }}
                           />
-                          <AvatarFallback className="text-lg bg-muted">
-                            {getInitials(displayName || username || "U")}
-                          </AvatarFallback>
-                        </Avatar>
+                          {!avatarUrl && (
+                            <div className="w-full h-full flex items-center justify-center bg-muted">
+                              <span className="text-lg font-semibold text-muted-foreground">
+                                {getInitials(displayName || username || "U")}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                         {avatarUrl && (
                           <Button
                             type="button"
@@ -392,7 +430,10 @@ export default function EditProfilePage() {
                               {isUploading ? "Uploading..." : "Click to upload or drag and drop"}
                             </p>
                             <p className="text-sm text-muted-foreground">
-                              PNG, JPG, GIF up to 10MB (original quality)
+                              PNG, JPG, GIF up to 10MB
+                            </p>
+                            <p className="text-xs text-blue-500">
+                              Image will be cropped to circle without distortion
                             </p>
                           </div>
                           
@@ -409,34 +450,60 @@ export default function EditProfilePage() {
                         </div>
                       </div>
                       
-                      <div className="mt-3 grid grid-cols-3 gap-2">
-                        {/* Пресеты аватарок */}
-                        {[
-                          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e",
-                          "https://images.unsplash.com/photo-1494790108755-2616b612b786", 
-                          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d"
-                        ].map((preset, index) => (
-                          <button
-                            key={index}
-                            type="button"
-                            className="relative group rounded-lg overflow-hidden border-2 border-transparent hover:border-primary transition-all"
-                            onClick={() => setAvatarUrl(preset)}
+                      <div className="mt-3">
+                        <p className="text-sm font-medium mb-2">Quick presets:</p>
+                        <div className="grid grid-cols-3 gap-2">
+                          {[
+                            "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=center",
+                            "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop&crop=center", 
+                            "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=center"
+                          ].map((preset, index) => (
+                            <button
+                              key={index}
+                              type="button"
+                              className="relative group rounded-lg overflow-hidden border-2 border-transparent hover:border-primary transition-all"
+                              onClick={() => setAvatarUrl(preset)}
+                            >
+                              <div className="w-full h-16 overflow-hidden">
+                                <img
+                                  src={preset}
+                                  alt={`Avatar preset ${index + 1}`}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <span className="text-white text-xs">Use</span>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Custom URL Input */}
+                      <div className="mt-4">
+                        <p className="text-sm font-medium mb-2">Or paste image URL:</p>
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="https://example.com/avatar.jpg"
+                            value={avatarUrl}
+                            onChange={(e) => setAvatarUrl(e.target.value)}
+                            className="flex-1"
+                          />
+                          <Button 
+                            type="button" 
+                            variant="outline"
+                            onClick={() => setAvatarUrl("")}
+                            disabled={!avatarUrl}
                           >
-                            <img
-                              src={preset}
-                              alt={`Avatar preset ${index + 1}`}
-                              className="w-full h-16 object-cover"
-                            />
-                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                              <span className="text-white text-xs">Use</span>
-                            </div>
-                          </button>
-                        ))}
+                            Clear
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
 
+                {/* Остальные поля формы */}
                 <div className="space-y-2">
                   <Label htmlFor="display_name">Display Name</Label>
                   <Input
