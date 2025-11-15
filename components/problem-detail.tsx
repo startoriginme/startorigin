@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical, Share2, Copy, Twitter, MessageCircle, Flag } from "lucide-react"
+import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical, Share2, Copy, Twitter, MessageCircle, Flag, Shield } from "lucide-react"
 import Link from "next/link"
 import {
   AlertDialog,
@@ -167,7 +167,7 @@ export function ProblemDetail({
 
   const handleReport = () => {
     // Google Forms URL для жалоб - ЗАМЕНИ НА СВОЙ URL
-    const googleFormUrl = "https://docs.google.com/forms/d/e/1FAIpQLSfEXAMPLE/viewform"
+    const googleFormUrl = "https://forms.gle/RPUEPZBQEJHZT4GFA"
     
     // Автозаполнение полей
     const prefillUrl = `${googleFormUrl}?entry.123456789=${encodeURIComponent(problem.title)}&entry.987654321=${encodeURIComponent(window.location.href)}`
@@ -511,6 +511,44 @@ export function ProblemDetail({
                 </div>
               )}
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Moderation Section */}
+      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+        <CardContent className="pt-6">
+          <div className="text-center space-y-4">
+            <div className="flex justify-center">
+              <div className="p-3 bg-blue-100 rounded-full">
+                <Shield className="h-8 w-8 text-blue-600" />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <h3 className="text-xl font-bold text-foreground">
+                Do you want to moderate problems with us?
+              </h3>
+              <p className="text-muted-foreground max-w-2xl mx-auto">
+                Help us maintain a high-quality community by reviewing and moderating content. 
+                Pass a test and we can discuss conditions of your work.
+              </p>
+            </div>
+
+            <Button 
+              asChild
+              className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
+              size="lg"
+            >
+              <a 
+                href="https://docs.google.com/forms/d/e/1FAIpQLSd2tJLo1tfTqwYeuOACX126ZoYWk9Iegl4CZHqozXNJSJSiMw/viewform?usp=dialog" 
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Shield className="h-4 w-4" />
+                Pass a test
+              </a>
+            </Button>
           </div>
         </CardContent>
       </Card>
