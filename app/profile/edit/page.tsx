@@ -189,6 +189,7 @@ export default function EditProfilePage() {
   const handleDragStart = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isEditingAvatar) return
     
+    e.preventDefault() // Предотвращаем стандартное поведение
     setIsDragging(true)
     handleAvatarDrag(e)
     
@@ -201,6 +202,8 @@ export default function EditProfilePage() {
   const handleDocumentDrag = (e: MouseEvent) => {
     if (!isDragging || !avatarContainerRef.current) return
 
+    e.preventDefault() // Предотвращаем стандартное поведение
+    
     const container = avatarContainerRef.current
     const rect = container.getBoundingClientRect()
     
@@ -217,6 +220,8 @@ export default function EditProfilePage() {
   const handleAvatarDrag = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isEditingAvatar || !avatarContainerRef.current) return
 
+    e.preventDefault() // Предотвращаем стандартное поведение
+    
     const container = avatarContainerRef.current
     const rect = container.getBoundingClientRect()
     
@@ -230,10 +235,20 @@ export default function EditProfilePage() {
   }
 
   // Конец перетаскивания
-  const handleDragEnd = () => {
+  const handleDragEnd = (e?: Event) => {
+    if (e) {
+      e.preventDefault() // Предотвращаем стандартное поведение
+    }
     setIsDragging(false)
     document.removeEventListener('mousemove', handleDocumentDrag)
     document.removeEventListener('mouseup', handleDragEnd)
+  }
+
+  // Предотвращаем контекстное меню при перетаскивании
+  const handleContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (isDragging) {
+      e.preventDefault()
+    }
   }
 
   const removeAvatar = async () => {
@@ -420,10 +435,12 @@ export default function EditProfilePage() {
                             isEditingAvatar && avatarUrl ? 'cursor-grab active:cursor-grabbing' : ''
                           }`}
                           onMouseDown={handleDragStart}
-                          onClick={(e) => {
-                            if (!isDragging) {
-                              handleAvatarDrag(e)
-                            }
+                          onContextMenu={handleContextMenu}
+                          style={{
+                            userSelect: 'none',
+                            WebkitUserSelect: 'none',
+                            MozUserSelect: 'none',
+                            msUserSelect: 'none'
                           }}
                         >
                           {avatarUrl ? (
@@ -433,9 +450,17 @@ export default function EditProfilePage() {
                               className="w-full h-full object-cover select-none"
                               style={{
                                 objectPosition: `${avatarPosition.x}% ${avatarPosition.y}%`,
-                                transform: `scale(${avatarScale / 100})`
+                                transform: `scale(${avatarScale / 100})`,
+                                userSelect: 'none',
+                                WebkitUserSelect: 'none',
+                                MozUserSelect: 'none',
+                                msUserSelect: 'none',
+                                WebkitUserDrag: 'none',
+                                userDrag: 'none'
                               }}
                               draggable="false"
+                              onDragStart={(e) => e.preventDefault()}
+                              onMouseDown={(e) => e.preventDefault()}
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center bg-muted">
