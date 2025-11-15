@@ -6,7 +6,6 @@ import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical, Share2, Copy, Twitter, MessageCircle } from "lucide-react"
@@ -410,12 +409,24 @@ export function ProblemDetail({
               href={problem.profiles?.username ? `/user/${problem.profiles.username}` : "#"}
               className={problem.profiles?.username ? "cursor-pointer" : "cursor-default"}
             >
-              <Avatar className="h-16 w-16">
-                <AvatarImage src={problem.profiles?.avatar_url || undefined} />
-                <AvatarFallback className="text-lg">
-                  {getInitials(problem.profiles?.display_name || problem.profiles?.username)}
-                </AvatarFallback>
-              </Avatar>
+              {/* Кастомный аватар без сжатия */}
+              <div className="relative h-16 w-16">
+                <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-border bg-muted">
+                  {problem.profiles?.avatar_url ? (
+                    <img
+                      src={problem.profiles.avatar_url}
+                      alt="Profile avatar"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-muted">
+                      <span className="text-lg font-semibold text-muted-foreground">
+                        {getInitials(problem.profiles?.display_name || problem.profiles?.username)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
             </Link>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
