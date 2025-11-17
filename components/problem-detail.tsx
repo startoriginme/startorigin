@@ -210,21 +210,7 @@ export function ProblemDetail({
     return <Mail className="h-4 w-4" />
   }
 
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        {/* Back Button */}
-        <div className="mb-6">
-          <Link href="/problems">
-            <Button variant="ghost" className="gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Back to Problems</span>
-              <span className="sm:hidden">Back</span>
-            </Button>
-          </Link>
-        </div>
-
+ 
         <div className="mx-auto max-w-4xl space-y-6">
           {/* Problem Card */}
           <Card>
