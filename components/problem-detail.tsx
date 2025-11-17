@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical, Share2, Copy, Twitter, MessageCircle, Flag, Shield, ArrowLeft, Lightbulb, Plus } from "lucide-react"
+import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical, Share2, Copy, Twitter, MessageCircle, Flag, Shield, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import {
   AlertDialog,
@@ -27,7 +27,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/components/ui/use-toast"
-import { MobileMenu } from "@/components/mobile-menu"
 
 type Profile = {
   id: string
@@ -213,49 +212,6 @@ export function ProblemDetail({
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <nav className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <Lightbulb className="h-6 w-6 text-primary" />
-              <span className="text-xl font-bold text-foreground">StartOrigin</span>
-            </Link>
-            
-            {/* Desktop Navigation - hidden on mobile */}
-            <div className="hidden md:flex items-center gap-4">
-              {userId ? (
-                <>
-                  <Link href="/problems/new">
-                    <Button className="gap-2">
-                      <Plus className="h-4 w-4" />
-                      Share Problem
-                    </Button>
-                  </Link>
-                  <Link href="/profile">
-                    <Button variant="outline">Profile</Button>
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <Link href="/auth/login">
-                    <Button variant="outline">Sign In</Button>
-                  </Link>
-                  <Link href="/auth/sign-up">
-                    <Button>Get Started</Button>
-                  </Link>
-                </>
-              )}
-            </div>
-
-            {/* Mobile Menu Button - hidden on desktop */}
-            <div className="md:hidden">
-              <MobileMenu user={userId ? { id: userId } : null} />
-            </div>
-          </nav>
-        </div>
-      </header>
-
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         {/* Back Button */}
@@ -610,15 +566,6 @@ export function ProblemDetail({
           </Card>
         </div>
       </main>
-
-      {/* Footer */}
-      <footer className="border-t border-border bg-card/50 py-6 mt-auto">
-        <div className="container mx-auto px-4">
-          <div className="text-center text-muted-foreground text-sm">
-            © 2025 StartOrigin. All rights reserved.
-          </div>
-        </div>
-      </footer>
     </div>
   )
 }
