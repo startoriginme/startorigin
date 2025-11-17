@@ -46,20 +46,23 @@ export function ProblemsFeed({ initialProblems, userId, trendingProblems = [] }:
     return Array.from(cats)
   }, [problems])
 
-  // Get rank for each problem
-  const problemsWithRank = useMemo(() => {
-    return problems.map(problem => {
-      const rank = trendingProblems.findIndex(trending => trending.id === problem.id) + 1
-      return {
-        ...problem,
-        rank: rank > 0 ? rank : 0
-      }
-    })
+  // Separate trending and regular problems
+  const { trendingProblemsWithRank, regularProblems } = useMemo(() => {
+    const trendingIds = new Set(trendingProblems.map(p => p.id))
+    
+    const trending = trendingProblems.map((problem, index) => ({
+      ...problem,
+      rank: index + 1
+    }))
+
+    const regular = problems.filter(problem => !trendingIds.has(problem.id))
+
+    return { trendingProblemsWithRank: trending, regularProblems: regular }
   }, [problems, trendingProblems])
 
-  // Filter and sort problems
-  const filteredProblems = useMemo(() => {
-    let filtered = problemsWithRank
+  // Filter and sort regular problems (trending always stay on top)
+  const filteredRegularProblems = useMemo(() => {
+    let filtered = regularProblems
 
     // Search filter
     if (searchQuery) {
@@ -83,7 +86,28 @@ export function ProblemsFeed({ initialProblems, userId, trendingProblems = [] }:
     }
 
     return filtered
-  }, [problemsWithRank, searchQuery, sortBy, filterCategory])
+  }, [regularProblems, searchQuery, sortBy, filterCategory])
+
+  // Filter trending problems (they always stay on top but can be filtered out)
+  const filteredTrendingProblems = useMemo(() => {
+    let filtered = trendingProblemsWithRank
+
+    // Search filter
+    if (searchQuery) {
+      filtered = filtered.filter(
+        (p) =>
+          p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          p.description.toLowerCase().includes(searchQuery.toLowerCase()),
+      )
+    }
+
+    // Category filter
+    if (filterCategory !== "all") {
+      filtered = filtered.filter((p) => p.category === filterCategory)
+    }
+
+    return filtered
+  }, [trendingProblemsWithRank, searchQuery, filterCategory])
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
@@ -110,6 +134,8 @@ export function ProblemsFeed({ initialProblems, userId, trendingProblems = [] }:
         return null
     }
   }
+
+  const allProblems = [...filteredTrendingProblems, ...filteredRegularProblems]
 
   return (
     <div className="space-y-6">
@@ -154,21 +180,21 @@ export function ProblemsFeed({ initialProblems, userId, trendingProblems = [] }:
 
       {/* Problems List */}
       <div className="space-y-4">
-        {filteredProblems.length === 0 ? (
+        {allProblems.length === 0 ? (
           <div className="py-12 text-center">
             <p className="text-muted-foreground">No problems found</p>
           </div>
         ) : (
-          filteredProblems.map((problem) => (
+          allProblems.map((problem) => (
             <div key={problem.id} className="relative">
               {/* Значки медалей для топ-3 */}
-              {problem.rank > 0 && (
+              {(problem as any).rank > 0 && (
                 <>
                   <div className="absolute -top-2 -left-2 z-10">
-                    {getRankIcon(problem.rank)}
+                    {getRankIcon((problem as any).rank)}
                   </div>
                   <div className="absolute -top-2 -right-2 z-10">
-                    {getRankBadge(problem.rank)}
+                    {getRankBadge((problem as any).rank)}
                   </div>
                 </>
               )}
