@@ -38,11 +38,6 @@ export default async function ProblemsPage() {
         .slice(0, 3)
     : []
 
-  // Remove trending problems from main list to avoid duplicates
-  const regularProblems = problems 
-    ? problems.filter(problem => !trendingProblems.some(trending => trending.id === problem.id))
-    : []
-
   const getRankIcon = (rank: number) => {
     switch (rank) {
       case 1:
@@ -136,85 +131,30 @@ export default async function ProblemsPage() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 flex-1">
-        {/* Trending Top-3 Problems Section */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-foreground">Explore Problems</h2>
+          <p className="text-muted-foreground">Discover problems from the community</p>
+        </div>
+
+        {/* Trending Top-3 Problems Section - небольшая секция над остальными */}
         {trendingProblems.length > 0 && (
-          <section className="mb-12">
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-foreground">
+          <section className="mb-8">
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-foreground">
                 Trending Top-3 Problems
-              </h2>
-              <p className="text-muted-foreground">
+              </h3>
+              <p className="text-sm text-muted-foreground">
                 Users find these problems interesting
               </p>
-            </div>
-
-            <div className="space-y-4">
-              {trendingProblems.map((problem, index) => {
-                const rank = index + 1
-                return (
-                  <div 
-                    key={problem.id} 
-                    className="border rounded-lg p-4 bg-card hover:shadow-md transition-shadow relative"
-                  >
-                    {/* Rank Badge */}
-                    <div className="absolute -top-2 -left-2">
-                      {getRankBadge(rank)}
-                    </div>
-                    
-                    <div className="flex items-start gap-3">
-                      {/* Rank Icon */}
-                      <div className="flex-shrink-0 mt-1">
-                        {getRankIcon(rank)}
-                      </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        <Link href={`/problems/${problem.id}`}>
-                          <h3 className="font-semibold text-foreground mb-2 hover:text-primary transition-colors line-clamp-2 text-lg">
-                            {problem.title}
-                          </h3>
-                        </Link>
-                        <p className="text-muted-foreground mb-3 line-clamp-2">
-                          {problem.description}
-                        </p>
-                        
-                        <div className="flex items-center justify-between flex-wrap gap-2">
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              <Lightbulb className="h-4 w-4" />
-                              <span className="font-semibold">{problem.upvotes} upvotes</span>
-                            </div>
-                            {problem.profiles?.username && (
-                              <span>by @{problem.profiles.username}</span>
-                            )}
-                          </div>
-                          
-                          {problem.category && (
-                            <div className="text-xs px-2 py-1 bg-secondary text-secondary-foreground rounded">
-                              {problem.category}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
             </div>
           </section>
         )}
 
-        {/* All Problems Section */}
-        <section>
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-foreground">Explore Problems</h2>
-            <p className="text-muted-foreground">Discover problems from the community</p>
-          </div>
-
-          <ProblemsFeed 
-            initialProblems={[...trendingProblems, ...regularProblems]} 
-            userId={user?.id} 
-          />
-        </section>
+        <ProblemsFeed 
+          initialProblems={problems || []} 
+          userId={user?.id}
+          trendingProblems={trendingProblems}
+        />
       </main>
 
       {/* Footer */}
