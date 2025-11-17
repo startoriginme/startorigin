@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { ProblemsFeed } from "@/components/problems-feed"
 import { Button } from "@/components/ui/button"
-import { Lightbulb, Plus, ArrowRight, Crown, Award, Medal } from "lucide-react"
+import { Lightbulb, Plus, ArrowRight } from "lucide-react"
 import Link from "next/link"
 import { MobileMenu } from "@/components/mobile-menu"
 
@@ -37,32 +37,6 @@ export default async function ProblemsPage() {
         .sort((a, b) => b.upvotes - a.upvotes)
         .slice(0, 3)
     : []
-
-  const getRankIcon = (rank: number) => {
-    switch (rank) {
-      case 1:
-        return <Crown className="h-5 w-5 text-yellow-500 fill-yellow-500" />
-      case 2:
-        return <Award className="h-5 w-5 text-gray-400 fill-gray-400" />
-      case 3:
-        return <Medal className="h-5 w-5 text-amber-600 fill-amber-600" />
-      default:
-        return null
-    }
-  }
-
-  const getRankBadge = (rank: number) => {
-    switch (rank) {
-      case 1:
-        return <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-yellow-500 text-white text-xs font-semibold">🥇 1st</div>
-      case 2:
-        return <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-400 text-white text-xs font-semibold">🥈 2nd</div>
-      case 3:
-        return <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-amber-600 text-white text-xs font-semibold">🥉 3rd</div>
-      default:
-        return null
-    }
-  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -135,20 +109,6 @@ export default async function ProblemsPage() {
           <h2 className="text-2xl font-bold text-foreground">Explore Problems</h2>
           <p className="text-muted-foreground">Discover problems from the community</p>
         </div>
-
-        {/* Trending Top-3 Problems Section - небольшая секция над остальными */}
-        {trendingProblems.length > 0 && (
-          <section className="mb-8">
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold text-foreground">
-                Trending Top-3 Problems
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Users find these problems interesting
-              </p>
-            </div>
-          </section>
-        )}
 
         <ProblemsFeed 
           initialProblems={problems || []} 
