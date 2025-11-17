@@ -4,7 +4,7 @@ import { useState, useMemo } from "react"
 import { ProblemCard } from "@/components/problem-card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { Search } from "lucide-react"
+import { Search, Crown, Award, Medal } from "lucide-react"
 
 type Problem = {
   id: string
@@ -28,9 +28,10 @@ type Problem = {
 type ProblemsFeedProps = {
   initialProblems: Problem[]
   userId?: string
+  trendingProblems?: Problem[]
 }
 
-export function ProblemsFeed({ initialProblems, userId }: ProblemsFeedProps) {
+export function ProblemsFeed({ initialProblems, userId, trendingProblems = [] }: ProblemsFeedProps) {
   const [problems] = useState<Problem[]>(initialProblems)
   const [searchQuery, setSearchQuery] = useState("")
   const [sortBy, setSortBy] = useState<"recent" | "popular">("recent")
@@ -45,9 +46,20 @@ export function ProblemsFeed({ initialProblems, userId }: ProblemsFeedProps) {
     return Array.from(cats)
   }, [problems])
 
+  // Get rank for each problem
+  const problemsWithRank = useMemo(() => {
+    return problems.map(problem => {
+      const rank = trendingProblems.findIndex(trending => trending.id === problem.id) + 1
+      return {
+        ...problem,
+        rank: rank > 0 ? rank : 0
+      }
+    })
+  }, [problems, trendingProblems])
+
   // Filter and sort problems
   const filteredProblems = useMemo(() => {
-    let filtered = problems
+    let filtered = problemsWithRank
 
     // Search filter
     if (searchQuery) {
@@ -71,7 +83,33 @@ export function ProblemsFeed({ initialProblems, userId }: ProblemsFeedProps) {
     }
 
     return filtered
-  }, [problems, searchQuery, sortBy, filterCategory])
+  }, [problemsWithRank, searchQuery, sortBy, filterCategory])
+
+  const getRankIcon = (rank: number) => {
+    switch (rank) {
+      case 1:
+        return <Crown className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+      case 2:
+        return <Award className="h-5 w-5 text-gray-400 fill-gray-400" />
+      case 3:
+        return <Medal className="h-5 w-5 text-amber-600 fill-amber-600" />
+      default:
+        return null
+    }
+  }
+
+  const getRankBadge = (rank: number) => {
+    switch (rank) {
+      case 1:
+        return <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-yellow-500 text-white text-xs font-semibold">🥇 1st</div>
+      case 2:
+        return <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-400 text-white text-xs font-semibold">🥈 2nd</div>
+      case 3:
+        return <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-amber-600 text-white text-xs font-semibold">🥉 3rd</div>
+      default:
+        return null
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -121,7 +159,26 @@ export function ProblemsFeed({ initialProblems, userId }: ProblemsFeedProps) {
             <p className="text-muted-foreground">No problems found</p>
           </div>
         ) : (
-          filteredProblems.map((problem) => <ProblemCard key={problem.id} problem={problem} userId={userId} />)
+          filteredProblems.map((problem) => (
+            <div key={problem.id} className="relative">
+              {/* Значки медалей для топ-3 */}
+              {problem.rank > 0 && (
+                <>
+                  <div className="absolute -top-2 -left-2 z-10">
+                    {getRankIcon(problem.rank)}
+                  </div>
+                  <div className="absolute -top-2 -right-2 z-10">
+                    {getRankBadge(problem.rank)}
+                  </div>
+                </>
+              )}
+              
+              <ProblemCard 
+                problem={problem} 
+                userId={userId}
+              />
+            </div>
+          ))
         )}
       </div>
     </div>
