@@ -1,172 +1,122 @@
-"use client"
-
-import { useState, useMemo } from "react"
-import { ProblemCard } from "@/components/problem-card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { Search, Loader2 } from "lucide-react"
+import { createClient } from "@/lib/supabase/server"
+import { ProblemsFeed } from "@/components/problems-feed"
 import { Button } from "@/components/ui/button"
+import { Lightbulb, Plus, ArrowRight } from "lucide-react"
+import Link from "next/link"
+import { MobileMenu } from "@/components/mobile-menu"
 
-type Problem = {
-  id: string
-  title: string
-  description: string
-  category: string | null
-  tags: string[] | null
-  upvotes: number
-  comment_count: number
-  status: string
-  created_at: string
-  author_id: string
-  profiles: {
-    id: string
-    username: string | null
-    display_name: string | null
-    avatar_url: string | null
-  } | null
-}
+export default async function ProblemsPage() {
+  const supabase = await createClient()
 
-type ProblemsFeedProps = {
-  initialProblems: Problem[]
-  userId?: string
-}
-
-export function ProblemsFeed({ initialProblems, userId }: ProblemsFeedProps) {
-  const [problems] = useState<Problem[]>(initialProblems)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [sortBy, setSortBy] = useState<"recent" | "popular">("recent")
-  const [filterCategory, setFilterCategory] = useState<string>("all")
-  const [visibleCount, setVisibleCount] = useState(4)
-  const [isLoading, setIsLoading] = useState(false)
-
-  // Get unique categories
-  const categories = useMemo(() => {
-    const cats = new Set<string>()
-    problems.forEach((p) => {
-      if (p.category) cats.add(p.category)
-    })
-    return Array.from(cats)
-  }, [problems])
-
-  // Filter and sort problems
-  const filteredProblems = useMemo(() => {
-    let filtered = problems
-
-    // Search filter
-    if (searchQuery) {
-      filtered = filtered.filter(
-        (p) =>
-          p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          p.description.toLowerCase().includes(searchQuery.toLowerCase()),
+  // Fetch problems with author profiles
+  const { data: problems, error } = await supabase
+    .from("problems")
+    .select(`
+      *,
+      profiles:author_id (
+        id,
+        username,
+        display_name,
+        avatar_url
       )
-    }
+    `)
+    .order("created_at", { ascending: false })
 
-    // Category filter
-    if (filterCategory !== "all") {
-      filtered = filtered.filter((p) => p.category === filterCategory)
-    }
-
-    // Sort
-    if (sortBy === "popular") {
-      filtered = [...filtered].sort((a, b) => b.upvotes - a.upvotes)
-    } else {
-      filtered = [...filtered].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    }
-
-    return filtered
-  }, [problems, searchQuery, sortBy, filterCategory])
-
-  // Get visible problems (pagination)
-  const visibleProblems = useMemo(() => {
-    return filteredProblems.slice(0, visibleCount)
-  }, [filteredProblems, visibleCount])
-
-  const hasMoreProblems = visibleProblems.length < filteredProblems.length
-
-  const loadMore = async () => {
-    setIsLoading(true)
-    // Имитируем загрузку для лучшего UX
-    await new Promise(resolve => setTimeout(resolve, 500))
-    setVisibleCount(prev => prev + 4)
-    setIsLoading(false)
+  if (error) {
+    console.error("Error fetching problems:", error)
   }
 
+  // Check if user is authenticated
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
   return (
-    <div className="space-y-6">
-      {/* Filters */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search problems..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-
-        <div className="flex gap-2">
-          <Select value={filterCategory} onValueChange={setFilterCategory}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {categories.map((cat) => (
-                <SelectItem key={cat} value={cat}>
-                  {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={sortBy} onValueChange={(v) => setSortBy(v as "recent" | "popular")}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="recent">Most Recent</SelectItem>
-              <SelectItem value="popular">Most Popular</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Problems List */}
-      <div className="space-y-4">
-        {visibleProblems.length === 0 ? (
-          <div className="py-12 text-center">
-            <p className="text-muted-foreground">No problems found</p>
-          </div>
-        ) : (
-          <>
-            {visibleProblems.map((problem) => (
-              <ProblemCard key={problem.id} problem={problem} userId={userId} />
-            ))}
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header */}
+      <header className="border-b border-border bg-card">
+        <div className="container mx-auto px-4 py-4">
+          <nav className="flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-2">
+              <Lightbulb className="h-6 w-6 text-primary" />
+              <span className="text-xl font-bold text-foreground">StartOrigin</span>
+            </Link>
             
-            {/* Load More Button */}
-            {hasMoreProblems && (
-              <div className="flex justify-center pt-4">
-                <Button 
-                  onClick={loadMore} 
-                  disabled={isLoading}
-                  variant="outline"
-                  className="gap-2"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Loading...
-                    </>
-                  ) : (
-                    "Load More"
-                  )}
-                </Button>
-              </div>
-            )}
-          </>
-        )}
-      </div>
+            {/* Desktop Navigation - hidden on mobile */}
+            <div className="hidden md:flex items-center gap-4">
+              {user ? (
+                <>
+                  <Link href="/problems/new">
+                    <Button className="gap-2">
+                      <Plus className="h-4 w-4" />
+                      Share Problem
+                    </Button>
+                  </Link>
+                  <Link href="/profile">
+                    <Button variant="outline">Profile</Button>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link href="/auth/login">
+                    <Button variant="outline">Sign In</Button>
+                  </Link>
+                  <Link href="/auth/sign-up">
+                    <Button>Get Started</Button>
+                  </Link>
+                </>
+              )}
+            </div>
+
+            {/* Mobile Menu Button - hidden on desktop */}
+            <div className="md:hidden">
+              <MobileMenu user={user} />
+            </div>
+          </nav>
+        </div>
+      </header>
+
+      {/* Minimal Hero Section */}
+      <section className="border-b border-border bg-card/50">
+        <div className="container mx-auto px-4 py-12">
+          <div className="mx-auto max-w-2xl text-center">
+            <h1 className="mb-4 text-3xl font-bold text-foreground">
+              Share Problems, Create Solutions
+            </h1>
+            <p className="mb-6 text-muted-foreground">
+              A platform for innovators to collaborate on meaningful problems
+            </p>
+            <Link href="https://startorigin.me/problems/00d8dd35-a4e8-49b5-bc0a-18b15c75c52d">
+              <Button variant="outline" className="gap-2">
+                Launch!
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-8 flex-1">
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-foreground">Explore Problems</h2>
+          <p className="text-muted-foreground">Discover problems from the community</p>
+        </div>
+
+        <ProblemsFeed 
+          initialProblems={problems || []} 
+          userId={user?.id}
+        />
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t border-border bg-card/50 py-6 mt-auto">
+        <div className="container mx-auto px-4">
+          <div className="text-center text-muted-foreground text-sm">
+            © 2025 StartOrigin. All rights reserved.
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }
