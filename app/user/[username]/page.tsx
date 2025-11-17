@@ -3,8 +3,9 @@ import { notFound, redirect } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { Lightbulb, ArrowLeft, Plus } from "lucide-react"
+import { Lightbulb, Plus, ArrowLeft } from "lucide-react"
 import { ProblemCard } from "@/components/problem-card"
+import { MobileMenu } from "@/components/mobile-menu"
 
 interface PublicProfilePageProps {
   params: Promise<{ username: string }>
@@ -72,7 +73,7 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4">
@@ -82,19 +83,53 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
               <span className="text-xl font-bold text-foreground">StartOrigin</span>
             </Link>
             
-            <Link href="/problems">
-              <Button variant="ghost" className="gap-2">
-                <ArrowLeft className="h-4 w-4" />
-                <span className="hidden sm:inline">Back to Problems</span>
-                <span className="sm:hidden">Back</span>
-              </Button>
-            </Link>
+            {/* Desktop Navigation - hidden on mobile */}
+            <div className="hidden md:flex items-center gap-4">
+              {user ? (
+                <>
+                  <Link href="/problems/new">
+                    <Button className="gap-2">
+                      <Plus className="h-4 w-4" />
+                      Share Problem
+                    </Button>
+                  </Link>
+                  <Link href="/profile">
+                    <Button variant="outline">Profile</Button>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link href="/auth/login">
+                    <Button variant="outline">Sign In</Button>
+                  </Link>
+                  <Link href="/auth/sign-up">
+                    <Button>Get Started</Button>
+                  </Link>
+                </>
+              )}
+            </div>
+
+            {/* Mobile Menu Button - hidden on desktop */}
+            <div className="md:hidden">
+              <MobileMenu user={user} />
+            </div>
           </nav>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 flex-1">
+        {/* Back Button */}
+        <div className="mb-6">
+          <Link href="/problems">
+            <Button variant="ghost" className="gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Back to Problems</span>
+              <span className="sm:hidden">Back</span>
+            </Button>
+          </Link>
+        </div>
+
         <div className="mx-auto max-w-4xl space-y-6">
           {/* Profile Card */}
           <Card>
