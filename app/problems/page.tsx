@@ -1,11 +1,9 @@
 import { createClient } from "@/lib/supabase/server"
 import { ProblemsFeed } from "@/components/problems-feed"
 import { Button } from "@/components/ui/button"
-import { Lightbulb, Plus, ArrowRight, Medal, Crown, Award, Star } from "lucide-react"
+import { Lightbulb, Plus, ArrowRight, Crown, Award, Medal } from "lucide-react"
 import Link from "next/link"
 import { MobileMenu } from "@/components/mobile-menu"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 
 export default async function ProblemsPage() {
   const supabase = await createClient()
@@ -38,10 +36,11 @@ export default async function ProblemsPage() {
     ? [...problems]
         .sort((a, b) => b.upvotes - a.upvotes)
         .slice(0, 3)
-        .map((problem, index) => ({
-          ...problem,
-          rank: index + 1
-        }))
+    : []
+
+  // Remove trending problems from main list to avoid duplicates
+  const regularProblems = problems 
+    ? problems.filter(problem => !trendingProblems.some(trending => trending.id === problem.id))
     : []
 
   const getRankIcon = (rank: number) => {
@@ -53,33 +52,20 @@ export default async function ProblemsPage() {
       case 3:
         return <Medal className="h-5 w-5 text-amber-600 fill-amber-600" />
       default:
-        return <Star className="h-5 w-5 text-blue-500" />
-    }
-  }
-
-  const getRankColor = (rank: number) => {
-    switch (rank) {
-      case 1:
-        return "bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-200"
-      case 2:
-        return "bg-gradient-to-r from-gray-50 to-slate-50 border-gray-200"
-      case 3:
-        return "bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200"
-      default:
-        return "bg-card"
+        return null
     }
   }
 
   const getRankBadge = (rank: number) => {
     switch (rank) {
       case 1:
-        return <Badge className="bg-yellow-500 text-white hover:bg-yellow-600">🥇 1st</Badge>
+        return <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-yellow-500 text-white text-xs font-semibold">🥇 1st</div>
       case 2:
-        return <Badge className="bg-gray-400 text-white hover:bg-gray-500">🥈 2nd</Badge>
+        return <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-400 text-white text-xs font-semibold">🥈 2nd</div>
       case 3:
-        return <Badge className="bg-amber-600 text-white hover:bg-amber-700">🥉 3rd</Badge>
+        return <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-amber-600 text-white text-xs font-semibold">🥉 3rd</div>
       default:
-        return <Badge>#{rank}</Badge>
+        return null
     }
   }
 
@@ -162,48 +148,57 @@ export default async function ProblemsPage() {
               </p>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
-              {trendingProblems.map((problem) => (
-                <Card 
-                  key={problem.id} 
-                  className={`transition-all hover:shadow-lg ${getRankColor(problem.rank)}`}
-                >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        {getRankIcon(problem.rank)}
-                        <span className="font-semibold text-foreground">
-                          #{problem.rank}
-                        </span>
-                      </div>
-                      {getRankBadge(problem.rank)}
+            <div className="space-y-4">
+              {trendingProblems.map((problem, index) => {
+                const rank = index + 1
+                return (
+                  <div 
+                    key={problem.id} 
+                    className="border rounded-lg p-4 bg-card hover:shadow-md transition-shadow relative"
+                  >
+                    {/* Rank Badge */}
+                    <div className="absolute -top-2 -left-2">
+                      {getRankBadge(rank)}
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <Link href={`/problems/${problem.id}`}>
-                      <h3 className="font-semibold text-foreground mb-2 hover:text-primary transition-colors line-clamp-2">
-                        {problem.title}
-                      </h3>
-                    </Link>
-                    <p className="text-muted-foreground text-sm mb-3 line-clamp-2">
-                      {problem.description}
-                    </p>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Lightbulb className="h-4 w-4" />
-                          <span>{problem.upvotes} upvotes</span>
+                    
+                    <div className="flex items-start gap-3">
+                      {/* Rank Icon */}
+                      <div className="flex-shrink-0 mt-1">
+                        {getRankIcon(rank)}
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <Link href={`/problems/${problem.id}`}>
+                          <h3 className="font-semibold text-foreground mb-2 hover:text-primary transition-colors line-clamp-2 text-lg">
+                            {problem.title}
+                          </h3>
+                        </Link>
+                        <p className="text-muted-foreground mb-3 line-clamp-2">
+                          {problem.description}
+                        </p>
+                        
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                              <Lightbulb className="h-4 w-4" />
+                              <span className="font-semibold">{problem.upvotes} upvotes</span>
+                            </div>
+                            {problem.profiles?.username && (
+                              <span>by @{problem.profiles.username}</span>
+                            )}
+                          </div>
+                          
+                          {problem.category && (
+                            <div className="text-xs px-2 py-1 bg-secondary text-secondary-foreground rounded">
+                              {problem.category}
+                            </div>
+                          )}
                         </div>
                       </div>
-                      {problem.profiles?.username && (
-                        <span className="text-xs text-muted-foreground">
-                          @{problem.profiles.username}
-                        </span>
-                      )}
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
+                  </div>
+                )
+              })}
             </div>
           </section>
         )}
@@ -215,7 +210,10 @@ export default async function ProblemsPage() {
             <p className="text-muted-foreground">Discover problems from the community</p>
           </div>
 
-          <ProblemsFeed initialProblems={problems || []} userId={user?.id} />
+          <ProblemsFeed 
+            initialProblems={[...trendingProblems, ...regularProblems]} 
+            userId={user?.id} 
+          />
         </section>
       </main>
 
