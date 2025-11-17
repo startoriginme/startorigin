@@ -6,9 +6,7 @@ import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical, Share2, Copy, Twitter, MessageCircle, Flag, Shield } from "lucide-react"
+import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical, Share2, Copy, Twitter, MessageCircle, Flag, Shield, ArrowLeft, Lightbulb, Plus } from "lucide-react"
 import Link from "next/link"
 import {
   AlertDialog,
@@ -29,6 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/components/ui/use-toast"
+import { MobileMenu } from "@/components/mobile-menu"
 
 type Profile = {
   id: string
@@ -213,345 +212,413 @@ export function ProblemDetail({
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-4 sm:px-6 lg:px-8">
-      {/* Problem Card */}
-      <Card>
-        <CardHeader className="pb-4">
-          <div className="flex flex-col gap-4">
-            {/* Заголовок и кнопки действий */}
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-3 break-words">
-                  {problem.title}
-                </h1>
-                
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {problem.category && <Badge variant="secondary">{getCategoryLabel(problem.category)}</Badge>}
-                  {problem.tags?.map((tag) => (
-                    <Badge key={tag} variant="outline" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
-                  <Badge
-                    variant={
-                      problem.status === "open" ? "default" : problem.status === "solved" ? "secondary" : "outline"
-                    }
-                    className="text-xs"
-                  >
-                    {getStatusLabel(problem.status)}
-                  </Badge>
-                  {problem.looking_for_cofounder && (
-                    <Badge variant="default" className="gap-1 bg-green-600 hover:bg-green-700 text-xs">
-                      <Users className="h-3 w-3" />
-                      Looking for Cofounder
-                    </Badge>
-                  )}
-                </div>
-              </div>
-
-              {/* Кнопки действий */}
-              <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
-                {/* Кнопка пожаловаться - скрыта для автора */}
-                {!isAuthor && (
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="gap-2 bg-transparent text-orange-600 hover:text-orange-700 hover:bg-orange-50 flex-1 sm:flex-none"
-                      >
-                        <Flag className="h-4 w-4" />
-                        <span className="hidden xs:inline">Report</span>
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="max-w-[95vw] sm:max-w-md">
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Report Problem</AlertDialogTitle>
-                        <AlertDialogDescription className="text-sm">
-                          If you believe this problem violates our community guidelines or contains inappropriate content, 
-                          you can report it using Google Forms.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter className="flex flex-col sm:flex-row gap-2">
-                        <AlertDialogCancel className="mt-0 sm:mt-0">Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={handleReport}
-                          className="bg-orange-600 text-white hover:bg-orange-700"
-                        >
-                          <Flag className="h-4 w-4 mr-2" />
-                          Open Report Form
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                )}
-
-                {/* Кнопки автора */}
-                {isAuthor && (
-                  <div className="flex gap-2 w-full sm:w-auto">
-                    {/* Основные кнопки для десктопа */}
-                    <div className="hidden sm:flex gap-2 flex-1 sm:flex-none">
-                      <Link href={`/problems/${problem.id}/edit`} className="flex-1 sm:flex-none">
-                        <Button variant="outline" size="sm" className="gap-2 bg-transparent w-full sm:w-auto">
-                          <Edit className="h-4 w-4" />
-                          Edit
-                        </Button>
-                      </Link>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="outline" size="sm" className="gap-2 bg-transparent text-destructive hover:text-destructive hover:bg-destructive/10 w-full sm:w-auto">
-                            <Trash2 className="h-4 w-4" />
-                            Delete
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent className="max-w-[95vw] sm:max-w-md">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Problem</AlertDialogTitle>
-                            <AlertDialogDescription className="text-sm">
-                              Are you sure you want to delete this problem? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter className="flex flex-col sm:flex-row gap-2">
-                            <AlertDialogCancel className="mt-0 sm:mt-0">Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={handleDelete}
-                              disabled={isDeleting}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              {isDeleting ? "Deleting..." : "Delete"}
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-
-                    {/* Dropdown меню для мобильных */}
-                    <div className="sm:hidden flex-1">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm" className="gap-2 bg-transparent w-full">
-                            <MoreVertical className="h-4 w-4" />
-                            <span>Actions</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56">
-                          <DropdownMenuItem asChild>
-                            <Link href={`/problems/${problem.id}/edit`} className="flex items-center gap-2 cursor-pointer">
-                              <Edit className="h-4 w-4" />
-                              Edit Problem
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            className="text-destructive focus:text-destructive cursor-pointer"
-                            onClick={() => document.querySelector('[data-delete-trigger]')?.click()}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            Delete Problem
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-
-                      {/* Скрытый триггер для диалога удаления */}
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <button data-delete-trigger className="hidden" />
-                        </AlertDialogTrigger>
-                        <AlertDialogContent className="max-w-[95vw] sm:max-w-md">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Problem</AlertDialogTitle>
-                            <AlertDialogDescription className="text-sm">
-                              Are you sure you want to delete this problem? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter className="flex flex-col sm:flex-row gap-2">
-                            <AlertDialogCancel className="mt-0 sm:mt-0">Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={handleDelete}
-                              disabled={isDeleting}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              {isDeleting ? "Deleting..." : "Delete"}
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </div>
-                )}
-              </div>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b border-border bg-card">
+        <div className="container mx-auto px-4 py-4">
+          <nav className="flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-2">
+              <Lightbulb className="h-6 w-6 text-primary" />
+              <span className="text-xl font-bold text-foreground">StartOrigin</span>
+            </Link>
+            
+            {/* Desktop Navigation - hidden on mobile */}
+            <div className="hidden md:flex items-center gap-4">
+              {userId ? (
+                <>
+                  <Link href="/problems/new">
+                    <Button className="gap-2">
+                      <Plus className="h-4 w-4" />
+                      Share Problem
+                    </Button>
+                  </Link>
+                  <Link href="/profile">
+                    <Button variant="outline">Profile</Button>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link href="/auth/login">
+                    <Button variant="outline">Sign In</Button>
+                  </Link>
+                  <Link href="/auth/sign-up">
+                    <Button>Get Started</Button>
+                  </Link>
+                </>
+              )}
             </div>
 
-            {/* Upvote и мета-информация */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t">
-              <div className="flex items-center gap-4">
-                <Button
-                  variant={hasUpvoted ? "default" : "outline"}
-                  size="sm"
-                  className="flex-col gap-1 h-auto py-2 px-3 min-w-[60px]"
-                  onClick={handleUpvote}
-                  disabled={isUpvoting}
-                >
-                  <ArrowBigUp className="h-5 w-5" />
-                  <span className="text-sm font-semibold">{upvotes}</span>
-                </Button>
+            {/* Mobile Menu Button - hidden on desktop */}
+            <div className="md:hidden">
+              <MobileMenu user={userId ? { id: userId } : null} />
+            </div>
+          </nav>
+        </div>
+      </header>
 
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
-                    <span>{formatDate(problem.created_at)}</span>
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-8">
+        {/* Back Button */}
+        <div className="mb-6">
+          <Link href="/problems">
+            <Button variant="ghost" className="gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Back to Problems</span>
+              <span className="sm:hidden">Back</span>
+            </Button>
+          </Link>
+        </div>
+
+        <div className="mx-auto max-w-4xl space-y-6">
+          {/* Problem Card */}
+          <Card>
+            <CardHeader className="pb-4">
+              <div className="flex flex-col gap-4">
+                {/* Заголовок и кнопки действий */}
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-3 break-words">
+                      {problem.title}
+                    </h1>
+                    
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {problem.category && <Badge variant="secondary">{getCategoryLabel(problem.category)}</Badge>}
+                      {problem.tags?.map((tag) => (
+                        <Badge key={tag} variant="outline" className="text-xs">
+                          {tag}
+                        </Badge>
+                      ))}
+                      <Badge
+                        variant={
+                          problem.status === "open" ? "default" : problem.status === "solved" ? "secondary" : "outline"
+                        }
+                        className="text-xs"
+                      >
+                        {getStatusLabel(problem.status)}
+                      </Badge>
+                      {problem.looking_for_cofounder && (
+                        <Badge variant="default" className="gap-1 bg-green-600 hover:bg-green-700 text-xs">
+                          <Users className="h-3 w-3" />
+                          Looking for Cofounder
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Кнопки действий */}
+                  <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
+                    {/* Кнопка пожаловаться - скрыта для автора */}
+                    {!isAuthor && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="gap-2 bg-transparent text-orange-600 hover:text-orange-700 hover:bg-orange-50 flex-1 sm:flex-none"
+                          >
+                            <Flag className="h-4 w-4" />
+                            <span className="hidden xs:inline">Report</span>
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="max-w-[95vw] sm:max-w-md">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Report Problem</AlertDialogTitle>
+                            <AlertDialogDescription className="text-sm">
+                              If you believe this problem violates our community guidelines or contains inappropriate content, 
+                              you can report it using Google Forms.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter className="flex flex-col sm:flex-row gap-2">
+                            <AlertDialogCancel className="mt-0 sm:mt-0">Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={handleReport}
+                              className="bg-orange-600 text-white hover:bg-orange-700"
+                            >
+                              <Flag className="h-4 w-4 mr-2" />
+                              Open Report Form
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+
+                    {/* Кнопки автора */}
+                    {isAuthor && (
+                      <div className="flex gap-2 w-full sm:w-auto">
+                        {/* Основные кнопки для десктопа */}
+                        <div className="hidden sm:flex gap-2 flex-1 sm:flex-none">
+                          <Link href={`/problems/${problem.id}/edit`} className="flex-1 sm:flex-none">
+                            <Button variant="outline" size="sm" className="gap-2 bg-transparent w-full sm:w-auto">
+                              <Edit className="h-4 w-4" />
+                              Edit
+                            </Button>
+                          </Link>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="outline" size="sm" className="gap-2 bg-transparent text-destructive hover:text-destructive hover:bg-destructive/10 w-full sm:w-auto">
+                                <Trash2 className="h-4 w-4" />
+                                Delete
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="max-w-[95vw] sm:max-w-md">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Problem</AlertDialogTitle>
+                                <AlertDialogDescription className="text-sm">
+                                  Are you sure you want to delete this problem? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter className="flex flex-col sm:flex-row gap-2">
+                                <AlertDialogCancel className="mt-0 sm:mt-0">Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={handleDelete}
+                                  disabled={isDeleting}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  {isDeleting ? "Deleting..." : "Delete"}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+
+                        {/* Dropdown меню для мобильных */}
+                        <div className="sm:hidden flex-1">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" size="sm" className="gap-2 bg-transparent w-full">
+                                <MoreVertical className="h-4 w-4" />
+                                <span>Actions</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56">
+                              <DropdownMenuItem asChild>
+                                <Link href={`/problems/${problem.id}/edit`} className="flex items-center gap-2 cursor-pointer">
+                                  <Edit className="h-4 w-4" />
+                                  Edit Problem
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                className="text-destructive focus:text-destructive cursor-pointer"
+                                onClick={() => document.querySelector('[data-delete-trigger]')?.click()}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                Delete Problem
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+
+                          {/* Скрытый триггер для диалога удаления */}
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <button data-delete-trigger className="hidden" />
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="max-w-[95vw] sm:max-w-md">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Problem</AlertDialogTitle>
+                                <AlertDialogDescription className="text-sm">
+                                  Are you sure you want to delete this problem? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter className="flex flex-col sm:flex-row gap-2">
+                                <AlertDialogCancel className="mt-0 sm:mt-0">Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={handleDelete}
+                                  disabled={isDeleting}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  {isDeleting ? "Deleting..." : "Delete"}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Upvote и мета-информация */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t">
+                  <div className="flex items-center gap-4">
+                    <Button
+                      variant={hasUpvoted ? "default" : "outline"}
+                      size="sm"
+                      className="flex-col gap-1 h-auto py-2 px-3 min-w-[60px]"
+                      onClick={handleUpvote}
+                      disabled={isUpvoting}
+                    >
+                      <ArrowBigUp className="h-5 w-5" />
+                      <span className="text-sm font-semibold">{upvotes}</span>
+                    </Button>
+
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        <span>{formatDate(problem.created_at)}</span>
+                      </div>
+                      
+                      {/* Кнопка поделиться */}
+                      <div className="relative">
+                        <DropdownMenu open={isShareOpen} onOpenChange={setIsShareOpen}>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
+                              <Share2 className="h-4 w-4" />
+                              <span className="hidden xs:inline">Share</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="w-48">
+                            <DropdownMenuItem onClick={copyToClipboard} className="cursor-pointer">
+                              <Copy className="h-4 w-4 mr-2" />
+                              Copy Link
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={shareOnTwitter} className="cursor-pointer">
+                              <Twitter className="h-4 w-4 mr-2" />
+                              Share on X
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={shareOnTelegram} className="cursor-pointer">
+                              <MessageCircle className="h-4 w-4 mr-2" />
+                              Share on Telegram
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent>
+              <div className="prose prose-slate max-w-none prose-sm sm:prose-base">
+                <p className="whitespace-pre-wrap text-foreground leading-relaxed break-words">
+                  {problem.description}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Author Card */}
+          <Card>
+            <CardHeader>
+              <h2 className="text-lg font-semibold">About the Author</h2>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                <Link 
+                  href={problem.profiles?.username ? `/user/${problem.profiles.username}` : "#"}
+                  className={problem.profiles?.username ? "cursor-pointer" : "cursor-default"}
+                >
+                  {/* Кастомный аватар без сжатия */}
+                  <div className="relative h-16 w-16 mx-auto sm:mx-0">
+                    <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-border bg-muted">
+                      {problem.profiles?.avatar_url ? (
+                        <img
+                          src={problem.profiles.avatar_url}
+                          alt="Profile avatar"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-muted">
+                          <span className="text-lg font-semibold text-muted-foreground">
+                            {getInitials(problem.profiles?.display_name || problem.profiles?.username)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+                <div className="flex-1 text-center sm:text-left">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-1 justify-center sm:justify-start">
+                    {problem.profiles?.username ? (
+                      <Link 
+                        href={`/user/${problem.profiles.username}`}
+                        className="font-semibold text-foreground hover:text-primary transition-colors break-words"
+                      >
+                        {problem.profiles.display_name || problem.profiles.username}
+                      </Link>
+                    ) : (
+                      <h3 className="font-semibold text-foreground break-words">
+                        {problem.profiles?.display_name || "Anonymous"}
+                      </h3>
+                    )}
                   </div>
                   
-                  {/* Кнопка поделиться */}
-                  <div className="relative">
-                    <DropdownMenu open={isShareOpen} onOpenChange={setIsShareOpen}>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
-                          <Share2 className="h-4 w-4" />
-                          <span className="hidden xs:inline">Share</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="w-48">
-                        <DropdownMenuItem onClick={copyToClipboard} className="cursor-pointer">
-                          <Copy className="h-4 w-4 mr-2" />
-                          Copy Link
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={shareOnTwitter} className="cursor-pointer">
-                          <Twitter className="h-4 w-4 mr-2" />
-                          Share on X
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={shareOnTelegram} className="cursor-pointer">
-                          <MessageCircle className="h-4 w-4 mr-2" />
-                          Share on Telegram
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardHeader>
+                  {problem.profiles?.username && (
+                    <Link 
+                      href={`/user/${problem.profiles.username}`}
+                      className="text-sm text-muted-foreground hover:text-primary transition-colors block break-words"
+                    >
+                      @{problem.profiles.username}
+                    </Link>
+                  )}
+                  
+                  {problem.profiles?.bio && (
+                    <p className="mt-2 text-sm text-muted-foreground break-words">{problem.profiles.bio}</p>
+                  )}
 
-        <CardContent>
-          <div className="prose prose-slate max-w-none prose-sm sm:prose-base">
-            <p className="whitespace-pre-wrap text-foreground leading-relaxed break-words">
-              {problem.description}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Author Card */}
-      <Card>
-        <CardHeader>
-          <h2 className="text-lg font-semibold">About the Author</h2>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-            <Link 
-              href={problem.profiles?.username ? `/user/${problem.profiles.username}` : "#"}
-              className={problem.profiles?.username ? "cursor-pointer" : "cursor-default"}
-            >
-              {/* Кастомный аватар без сжатия */}
-              <div className="relative h-16 w-16 mx-auto sm:mx-0">
-                <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-border bg-muted">
-                  {problem.profiles?.avatar_url ? (
-                    <img
-                      src={problem.profiles.avatar_url}
-                      alt="Profile avatar"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-muted">
-                      <span className="text-lg font-semibold text-muted-foreground">
-                        {getInitials(problem.profiles?.display_name || problem.profiles?.username)}
-                      </span>
+                  {problem.contact && (
+                    <div className="mt-4 pt-4 border-t">
+                      <h4 className="text-sm font-semibold text-foreground mb-2">Contact Information</h4>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground justify-center sm:justify-start">
+                        {getContactIcon(problem.contact)}
+                        <span className="font-mono break-all">{problem.contact}</span>
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
-            </Link>
-            <div className="flex-1 text-center sm:text-left">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-1 justify-center sm:justify-start">
-                {problem.profiles?.username ? (
-                  <Link 
-                    href={`/user/${problem.profiles.username}`}
-                    className="font-semibold text-foreground hover:text-primary transition-colors break-words"
-                  >
-                    {problem.profiles.display_name || problem.profiles.username}
-                  </Link>
-                ) : (
-                  <h3 className="font-semibold text-foreground break-words">
-                    {problem.profiles?.display_name || "Anonymous"}
-                  </h3>
-                )}
-              </div>
-              
-              {problem.profiles?.username && (
-                <Link 
-                  href={`/user/${problem.profiles.username}`}
-                  className="text-sm text-muted-foreground hover:text-primary transition-colors block break-words"
-                >
-                  @{problem.profiles.username}
-                </Link>
-              )}
-              
-              {problem.profiles?.bio && (
-                <p className="mt-2 text-sm text-muted-foreground break-words">{problem.profiles.bio}</p>
-              )}
+            </CardContent>
+          </Card>
 
-              {problem.contact && (
-                <div className="mt-4 pt-4 border-t">
-                  <h4 className="text-sm font-semibold text-foreground mb-2">Contact Information</h4>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground justify-center sm:justify-start">
-                    {getContactIcon(problem.contact)}
-                    <span className="font-mono break-all">{problem.contact}</span>
+          {/* Moderation Section */}
+          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+            <CardContent className="pt-6">
+              <div className="text-center space-y-4">
+                <div className="flex justify-center">
+                  <div className="p-3 bg-blue-100 rounded-full">
+                    <Shield className="h-8 w-8 text-blue-600" />
                   </div>
                 </div>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+                
+                <div className="space-y-2">
+                  <h3 className="text-xl font-bold text-foreground">
+                    Do you want to moderate problems with us?
+                  </h3>
+                  <p className="text-muted-foreground max-w-2xl mx-auto">
+                    Help us maintain a high-quality community by reviewing and moderating content. 
+                    Pass a test and we can discuss conditions of your work.
+                  </p>
+                </div>
 
-      {/* Moderation Section */}
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-        <CardContent className="pt-6">
-          <div className="text-center space-y-4">
-            <div className="flex justify-center">
-              <div className="p-3 bg-blue-100 rounded-full">
-                <Shield className="h-8 w-8 text-blue-600" />
+                <Button 
+                  asChild
+                  className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
+                  size="lg"
+                >
+                  <a 
+                    href="https://docs.google.com/forms/d/e/1FAIpQLSd2tJLo1tfTqwYeuOACX126ZoYWk9Iegl4CZHqozXNJSJSiMw/viewform?usp=dialog" 
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Shield className="h-4 w-4" />
+                    Pass a test
+                  </a>
+                </Button>
               </div>
-            </div>
-            
-            <div className="space-y-2">
-              <h3 className="text-xl font-bold text-foreground">
-                Do you want to moderate problems with us?
-              </h3>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                Help us maintain a high-quality community by reviewing and moderating content. 
-                Pass a test and we can discuss conditions of your work.
-              </p>
-            </div>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
 
-            <Button 
-              asChild
-              className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
-              size="lg"
-            >
-              <a 
-                href="https://docs.google.com/forms/d/e/1FAIpQLSd2tJLo1tfTqwYeuOACX126ZoYWk9Iegl4CZHqozXNJSJSiMw/viewform?usp=dialog" 
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Shield className="h-4 w-4" />
-                Pass a test
-              </a>
-            </Button>
+      {/* Footer */}
+      <footer className="border-t border-border bg-card/50 py-6 mt-auto">
+        <div className="container mx-auto px-4">
+          <div className="text-center text-muted-foreground text-sm">
+            © 2025 StartOrigin. All rights reserved.
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </footer>
     </div>
   )
 }
