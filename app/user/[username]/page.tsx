@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
@@ -26,6 +26,11 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
 
   if (!profile) {
     notFound()
+  }
+
+  // Если пользователь залогинен и зашел на свой собственный профиль - редиректим на /profile
+  if (user && profile.id === user.id) {
+    redirect("/profile")
   }
 
   // Fetch user's public problems
