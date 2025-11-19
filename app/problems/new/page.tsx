@@ -2,8 +2,16 @@ import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { ProblemForm } from "@/components/problem-form"
 import { Button } from "@/components/ui/button"
-import { Lightbulb, ArrowLeft } from "lucide-react"
+import { Lightbulb, ArrowLeft, Plus, LogOut, User } from "lucide-react"
 import Link from "next/link"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 export default async function NewProblemPage() {
   const supabase = await createClient()
@@ -12,6 +20,31 @@ export default async function NewProblemPage() {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) {
+    redirect("/auth/login")
+  }
+
+  // Fetch user profile for avatar
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("avatar_url, display_name, username")
+    .eq("id", user.id)
+    .single()
+
+  const getInitials = (name: string | null) => {
+    if (!name) return "U"
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2)
+  }
+
+  // Server action for logout
+  async function handleLogout() {
+    "use server"
+    const supabase = await createClient()
+    await supabase.auth.signOut()
     redirect("/auth/login")
   }
 
@@ -25,12 +58,88 @@ export default async function NewProblemPage() {
               <Lightbulb className="h-6 w-6 text-primary" />
               <span className="text-xl font-bold text-foreground">StartOrigin</span>
             </Link>
-            <Link href="/problems">
-              <Button variant="ghost" className="gap-2">
-                <ArrowLeft className="h-4 w-4" />
-                Back to Problems
-              </Button>
-            </Link>
+            
+            {/* Desktop Navigation - hidden on mobile */}
+            <div className="hidden md:flex items-center gap-4">
+              <Link href="/problems/new">
+                <Button className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Share Problem
+                </Button>
+              </Link>
+              
+              {/* Avatar Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={profile?.avatar_url || ""} />
+                      <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
+                        {getInitials(profile?.display_name || profile?.username)}
+                      </AvatarFallback>
+                    </Avatar>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
+                      <User className="h-4 w-4" />
+                      <span>Profile</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <form action={handleLogout} className="w-full">
+                      <button type="submit" className="flex items-center gap-2 w-full text-left cursor-pointer">
+                        <LogOut className="h-4 w-4" />
+                        <span>Sign Out</span>
+                      </button>
+                    </form>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            {/* Mobile Navigation - hidden on desktop */}
+            <div className="flex items-center gap-2 md:hidden">
+              {/* Mobile Plus Button */}
+              <Link href="/problems/new">
+                <Button size="icon" className="h-9 w-9">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </Link>
+              
+              {/* Mobile Avatar Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={profile?.avatar_url || ""} />
+                      <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
+                        {getInitials(profile?.display_name || profile?.username)}
+                      </AvatarFallback>
+                    </Avatar>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
+                      <User className="h-4 w-4" />
+                      <span>Profile</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <form action={handleLogout} className="w-full">
+                      <button type="submit" className="flex items-center gap-2 w-full text-left cursor-pointer">
+                        <LogOut className="h-4 w-4" />
+                        <span>Sign Out</span>
+                      </button>
+                    </form>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </nav>
         </div>
       </header>
@@ -38,6 +147,17 @@ export default async function NewProblemPage() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 flex-1">
         <div className="mx-auto max-w-3xl">
+          {/* Back Button */}
+          <div className="mb-6">
+            <Link href="/problems">
+              <Button variant="ghost" className="gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                <span className="hidden sm:inline">Back to Problems</span>
+                <span className="sm:hidden">Back</span>
+              </Button>
+            </Link>
+          </div>
+
           <div className="mb-8">
             <h1 className="mb-2 text-3xl font-bold text-foreground">Share a Problem</h1>
             <p className="text-muted-foreground">
