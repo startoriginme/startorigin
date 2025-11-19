@@ -3,7 +3,6 @@ import { ProblemsFeed } from "@/components/problems-feed"
 import { Button } from "@/components/ui/button"
 import { Lightbulb, Plus, ArrowRight, LogOut, User } from "lucide-react"
 import Link from "next/link"
-import { MobileMenu } from "@/components/mobile-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -132,13 +131,6 @@ export default async function ProblemsPage() {
               )}
             </div>
 
-            {/* Mobile Menu Button - hidden on desktop */}
-            <div className="md:hidden">
-              <MobileMenu user={user} />
-            </div>
-          </nav>
-        </div>
-      </header>
 
       {/* Minimal Hero Section */}
       <section className="border-b border-border bg-card/50">
