@@ -107,13 +107,6 @@ export default async function ProblemDetailPage({
             
             {/* Desktop Navigation - hidden on mobile */}
             <div className="hidden md:flex items-center gap-4">
-              <Link href="/problems">
-                <Button variant="ghost" className="gap-2">
-                  <ArrowLeft className="h-4 w-4" />
-                  Back to Problems
-                </Button>
-              </Link>
-              
               {user ? (
                 <>
                   <Link href="/problems/new">
@@ -168,13 +161,6 @@ export default async function ProblemDetailPage({
 
             {/* Mobile Navigation - hidden on desktop */}
             <div className="flex items-center gap-2 md:hidden">
-              <Link href="/problems">
-                <Button variant="ghost" size="sm" className="gap-2">
-                  <ArrowLeft className="h-4 w-4" />
-                  Back
-                </Button>
-              </Link>
-              
               {user ? (
                 <>
                   {/* Mobile Plus Button */}
@@ -234,6 +220,17 @@ export default async function ProblemDetailPage({
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 flex-1">
+        {/* Back Button */}
+        <div className="mb-6">
+          <Link href="/problems">
+            <Button variant="ghost" className="gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Back to Problems</span>
+              <span className="sm:hidden">Back</span>
+            </Button>
+          </Link>
+        </div>
+
         <ProblemDetail
           problem={problem}
           userId={user?.id}
@@ -251,4 +248,4 @@ export default async function ProblemDetailPage({
       </footer>
     </div>
   )
-}
+}  
