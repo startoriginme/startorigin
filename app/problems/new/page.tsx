@@ -53,11 +53,35 @@ export default async function NewProblemPage() {
       {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4">
-          <nav className="flex items-center justify-between">
+          {/* Logo and Back Button Row */}
+          <div className="flex items-center justify-between mb-4">
             <Link href="/" className="flex items-center gap-2">
               <Lightbulb className="h-6 w-6 text-primary" />
               <span className="text-xl font-bold text-foreground">StartOrigin</span>
             </Link>
+            
+            {/* Back Button - Desktop only */}
+            <div className="hidden md:block">
+              <Link href="/problems">
+                <Button variant="ghost" className="gap-2">
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to Problems
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          {/* Navigation Row */}
+          <nav className="flex items-center justify-between">
+            {/* Back Button - Mobile only */}
+            <div className="md:hidden">
+              <Link href="/problems">
+                <Button variant="ghost" className="gap-2">
+                  <ArrowLeft className="h-4 w-4" />
+                  Back
+                </Button>
+              </Link>
+            </div>
             
             {/* Desktop Navigation - hidden on mobile */}
             <div className="hidden md:flex items-center gap-4">
@@ -175,17 +199,6 @@ export default async function NewProblemPage() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 flex-1">
         <div className="mx-auto max-w-3xl">
-          {/* Back Button */}
-          <div className="mb-6">
-            <Link href="/problems">
-              <Button variant="ghost" className="gap-2">
-                <ArrowLeft className="h-4 w-4" />
-                <span className="hidden sm:inline">Back to Problems</span>
-                <span className="sm:hidden">Back</span>
-              </Button>
-            </Link>
-          </div>
-
           <div className="mb-8">
             <h1 className="mb-2 text-3xl font-bold text-foreground">Share a Problem</h1>
             <p className="text-muted-foreground">
