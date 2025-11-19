@@ -5,9 +5,15 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import { Lightbulb, Plus, LogOut, Calendar, MessageSquare, ArrowBigUp, Edit } from "lucide-react"
-import { ProfileMobileMenu } from "@/components/profile-mobile-menu"
+import { Lightbulb, Plus, LogOut, Calendar, MessageSquare, ArrowBigUp, Edit, User } from "lucide-react"
 import { ProblemCard } from "@/components/problem-card"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 export default async function ProfilePage() {
   const supabase = await createClient()
@@ -48,15 +54,16 @@ export default async function ProfilePage() {
       .slice(0, 2)
   }
 
-  const handleSignOut = async () => {
+  // Server action for logout
+  async function handleLogout() {
     "use server"
     const supabase = await createClient()
     await supabase.auth.signOut()
-    redirect("/")
+    redirect("/auth/login")
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4">
@@ -74,24 +81,85 @@ export default async function ProfilePage() {
                   Share Problem
                 </Button>
               </Link>
-              <form action={handleSignOut}>
-                <Button variant="outline" type="submit" className="gap-2 bg-transparent">
-                  <LogOut className="h-4 w-4" />
-                  Sign Out
-                </Button>
-              </form>
+              
+              {/* Avatar Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={profile?.avatar_url || ""} />
+                      <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
+                        {getInitials(profile?.display_name || profile?.username)}
+                      </AvatarFallback>
+                    </Avatar>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
+                      <User className="h-4 w-4" />
+                      <span>Profile</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <form action={handleLogout} className="w-full">
+                      <button type="submit" className="flex items-center gap-2 w-full text-left cursor-pointer">
+                        <LogOut className="h-4 w-4" />
+                        <span>Sign Out</span>
+                      </button>
+                    </form>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
-            {/* Mobile Menu Button - hidden on desktop */}
-            <div className="md:hidden">
-              <ProfileMobileMenu user={user} onSignOut={handleSignOut} />
+            {/* Mobile Navigation - hidden on desktop */}
+            <div className="flex items-center gap-2 md:hidden">
+              {/* Mobile Plus Button */}
+              <Link href="/problems/new">
+                <Button size="icon" className="h-9 w-9">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </Link>
+              
+              {/* Mobile Avatar Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={profile?.avatar_url || ""} />
+                      <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
+                        {getInitials(profile?.display_name || profile?.username)}
+                      </AvatarFallback>
+                    </Avatar>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
+                      <User className="h-4 w-4" />
+                      <span>Profile</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <form action={handleLogout} className="w-full">
+                      <button type="submit" className="flex items-center gap-2 w-full text-left cursor-pointer">
+                        <LogOut className="h-4 w-4" />
+                        <span>Sign Out</span>
+                      </button>
+                    </form>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </nav>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 flex-1">
         <div className="mx-auto max-w-4xl space-y-6">
           {/* Profile Card */}
           <Card>
