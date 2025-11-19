@@ -1,8 +1,15 @@
 import { createClient } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
-import { Lightbulb, ArrowRight, Users, Target, Zap, Globe } from "lucide-react"
+import { Lightbulb } from "lucide-react"
 import Link from "next/link"
 import { MobileMenu } from "@/components/mobile-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 export default async function AboutPage() {
   const supabase = await createClient()
@@ -12,37 +19,7 @@ export default async function AboutPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const features = [
-    {
-      icon: <Target className="h-8 w-8" />,
-      title: "Problem-First Approach",
-      description: "Start with the problem, not the solution. Validate real pain points before building."
-    },
-    {
-      icon: <Users className="h-8 w-8" />,
-      title: "Community Collaboration",
-      description: "Connect with innovators, founders, and problem-solvers from around the world."
-    },
-    {
-      icon: <Zap className="h-8 w-8" />,
-      title: "Rapid Validation",
-      description: "Quickly gauge interest and gather feedback on problems that matter to people."
-    },
-    {
-      icon: <Globe className="h-8 w-8" />,
-      title: "Global Perspective",
-      description: "Discover problems from different cultures, industries, and perspectives."
-    }
-  ]
-
-  const stats = [
-    { number: "100+", label: "Problems Shared" },
-    { number: "50+", label: "Active Innovators" },
-    { number: "24/7", label: "Global Access" },
-    { number: "0%", label: "Commission Fees" }
-  ]
-
-   return (
+  return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="border-b border-border bg-card">
@@ -55,17 +32,36 @@ export default async function AboutPage() {
             
             {/* Desktop Navigation - hidden on mobile */}
             <div className="hidden md:flex items-center gap-4">
+              <Link href="/about">
+                <Button variant="ghost">About</Button>
+              </Link>
               {user ? (
                 <>
                   <Link href="/problems/new">
                     <Button className="gap-2">
-                      <Plus className="h-4 w-4" />
                       Share Problem
                     </Button>
                   </Link>
-                  <Link href="/profile">
-                    <Button variant="outline">Profile</Button>
-                  </Link>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={user.user_metadata?.avatar_url} alt={user.user_metadata?.display_name || user.email} />
+                          <AvatarFallback>
+                            {user.user_metadata?.display_name?.[0] || user.email?.[0].toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem asChild>
+                        <Link href="/profile">Profile</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/auth/sign-out">Sign Out</Link>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </>
               ) : (
                 <>
@@ -87,174 +83,71 @@ export default async function AboutPage() {
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="border-b border-border bg-card/50">
-        <div className="container mx-auto px-4 py-16">
-          <div className="mx-auto max-w-4xl text-center">
-            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 mb-6">
-              <Lightbulb className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium">The Problem-Solving Platform</span>
-            </div>
-            <h1 className="mb-6 text-4xl font-bold text-foreground">
-              Where Great Ideas Begin
-            </h1>
-            <p className="mb-8 text-xl text-muted-foreground leading-relaxed">
-              StartOrigin is built on a simple belief: the most innovative solutions start with deeply understanding real problems. We're creating a space where problems find their perfect solvers.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/problems">
-                <Button size="lg" className="gap-2">
-                  Explore Problems
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-              {!user && (
-                <Link href="/auth/sign-up">
-                  <Button variant="outline" size="lg">
-                    Join Community
-                  </Button>
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Stats Section */}
-      <section className="border-b border-border bg-background py-12">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
-              <div key={index} className="text-center">
-                <div className="text-2xl md:text-3xl font-bold text-foreground mb-2">
-                  {stat.number}
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  {stat.label}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="border-b border-border bg-card/30 py-16">
-        <div className="container mx-auto px-4">
-          <div className="mx-auto max-w-3xl text-center mb-12">
-            <h2 className="text-3xl font-bold text-foreground mb-4">
-              Why StartOrigin?
-            </h2>
-            <p className="text-muted-foreground">
-              We're rethinking how innovation happens—starting with the problem, not the solution.
+      {/* About Content */}
+      <main className="container mx-auto px-4 py-8 flex-1">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-12">
+            <h1 className="text-4xl font-bold text-foreground mb-4">About StartOrigin</h1>
+            <p className="text-xl text-muted-foreground">
+              Empowering innovators to solve meaningful problems together
             </p>
           </div>
-          
-          <div className="grid md:grid-cols-2 gap-8">
-            {features.map((feature, index) => (
-              <div key={index} className="flex gap-4 p-6 rounded-lg border border-border bg-card/50">
-                <div className="flex-shrink-0 text-primary">
-                  {feature.icon}
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold text-foreground mb-2">
-                    {feature.title}
-                  </h3>
-                  <p className="text-muted-foreground">
-                    {feature.description}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* Mission Section */}
-      <section className="border-b border-border bg-background py-16">
-        <div className="container mx-auto px-4">
-          <div className="mx-auto max-w-4xl">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold text-foreground mb-4">
-                Our Mission
-              </h2>
-              <p className="text-xl text-muted-foreground">
-                To democratize innovation by connecting real problems with passionate solvers
+          <div className="grid md:grid-cols-2 gap-8 mb-12">
+            <div className="space-y-4">
+              <h2 className="text-2xl font-bold text-foreground">Our Mission</h2>
+              <p className="text-muted-foreground">
+                StartOrigin is a platform where innovators, entrepreneurs, and problem-solvers 
+                come together to share real-world problems and collaborate on innovative solutions.
+              </p>
+              <p className="text-muted-foreground">
+                We believe that the most meaningful innovations start with understanding 
+                the right problems to solve.
               </p>
             </div>
             
-            <div className="grid md:grid-cols-3 gap-8 text-center">
-              <div className="p-6">
-                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Target className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="font-semibold text-foreground mb-2">Problem Validation</h3>
-                <p className="text-muted-foreground text-sm">
-                  Ensure you're solving problems people actually care about
-                </p>
-              </div>
-              
-              <div className="p-6">
-                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Users className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="font-semibold text-foreground mb-2">Community Building</h3>
-                <p className="text-muted-foreground text-sm">
-                  Connect with like-minded innovators and potential cofounders
-                </p>
-              </div>
-              
-              <div className="p-6">
-                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Zap className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="font-semibold text-foreground mb-2">Rapid Iteration</h3>
-                <p className="text-muted-foreground text-sm">
-                  Get immediate feedback and iterate on your problem understanding
-                </p>
-              </div>
+            <div className="space-y-4">
+              <h2 className="text-2xl font-bold text-foreground">How It Works</h2>
+              <ul className="space-y-3 text-muted-foreground">
+                <li className="flex items-start">
+                  <span className="text-primary mr-2">•</span>
+                  Share problems you've encountered in your industry or daily life
+                </li>
+                <li className="flex items-start">
+                  <span className="text-primary mr-2">•</span>
+                  Discover problems shared by other community members
+                </li>
+                <li className="flex items-start">
+                  <span className="text-primary mr-2">•</span>
+                  Collaborate on solutions and form teams
+                </li>
+                <li className="flex items-start">
+                  <span className="text-primary mr-2">•</span>
+                  Turn ideas into real-world impact
+                </li>
+              </ul>
             </div>
           </div>
-        </div>
-      </section>
 
-      {/* CTA Section */}
-      <section className="bg-card/50 py-16">
-        <div className="container mx-auto px-4">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold text-foreground mb-4">
-              Ready to Start?
-            </h2>
-            <p className="text-muted-foreground mb-8">
-              Join innovators from around the world who are solving meaningful problems
+          <div className="bg-card border border-border rounded-lg p-8 text-center">
+            <h2 className="text-2xl font-bold text-foreground mb-4">Join Our Community</h2>
+            <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
+              Whether you're an entrepreneur, developer, designer, or simply someone with 
+              great ideas, StartOrigin provides the platform to connect, collaborate, and 
+              create meaningful change.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              {user ? (
-                <Link href="/problems/new">
-                  <Button size="lg" className="gap-2">
-                    Share Your First Problem
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-              ) : (
-                <>
-                  <Link href="/auth/sign-up">
-                    <Button size="lg" className="gap-2">
-                      Create Account
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                  <Link href="/problems">
-                    <Button variant="outline" size="lg">
-                      Browse Problems
-                    </Button>
-                  </Link>
-                </>
-              )}
-            </div>
+            {user ? (
+              <Link href="/problems">
+                <Button size="lg">Explore Problems</Button>
+              </Link>
+            ) : (
+              <Link href="/auth/sign-up">
+                <Button size="lg">Get Started</Button>
+              </Link>
+            )}
           </div>
         </div>
-      </section>
+      </main>
 
       {/* Footer */}
       <footer className="border-t border-border bg-card/50 py-6 mt-auto">
