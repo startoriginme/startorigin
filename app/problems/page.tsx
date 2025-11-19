@@ -1,9 +1,18 @@
 import { createClient } from "@/lib/supabase/server"
 import { ProblemsFeed } from "@/components/problems-feed"
 import { Button } from "@/components/ui/button"
-import { Lightbulb, Plus, ArrowRight } from "lucide-react"
+import { Lightbulb, Plus, ArrowRight, LogOut, User } from "lucide-react"
 import Link from "next/link"
 import { MobileMenu } from "@/components/mobile-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { logout } from "@/app/actions/auth"
 
 export default async function ProblemsPage() {
   const supabase = await createClient()
@@ -26,10 +35,30 @@ export default async function ProblemsPage() {
     console.error("Error fetching problems:", error)
   }
 
-  // Check if user is authenticated
+  // Check if user is authenticated and get profile
   const {
     data: { user },
   } = await supabase.auth.getUser()
+
+  let userProfile = null
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("avatar_url, display_name, username")
+      .eq("id", user.id)
+      .single()
+    userProfile = profile
+  }
+
+  const getInitials = (name: string | null) => {
+    if (!name) return "U"
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2)
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -52,9 +81,37 @@ export default async function ProblemsPage() {
                       Share Problem
                     </Button>
                   </Link>
-                  <Link href="/profile">
-                    <Button variant="outline">Profile</Button>
-                  </Link>
+                  
+                  {/* Avatar Dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                        <Avatar className="h-8 w-8 border-2 border-transparent hover:border-primary transition-colors">
+                          <AvatarImage src={userProfile?.avatar_url || ""} />
+                          <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
+                            {getInitials(userProfile?.display_name || userProfile?.username)}
+                          </AvatarFallback>
+                        </Avatar>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuItem asChild>
+                        <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
+                          <User className="h-4 w-4" />
+                          <span>Profile</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <form action={logout} className="w-full">
+                          <button type="submit" className="flex items-center gap-2 w-full text-left cursor-pointer">
+                            <LogOut className="h-4 w-4" />
+                            <span>Sign Out</span>
+                          </button>
+                        </form>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </>
               ) : (
                 <>
