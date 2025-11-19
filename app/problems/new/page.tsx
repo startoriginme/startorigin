@@ -2,7 +2,7 @@ import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { ProblemForm } from "@/components/problem-form"
 import { Button } from "@/components/ui/button"
-import { Lightbulb, ArrowLeft, Plus, LogOut, User } from "lucide-react"
+import { Lightbulb, Plus, LogOut, User } from "lucide-react"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -53,35 +53,11 @@ export default async function NewProblemPage() {
       {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4">
-          {/* Logo and Back Button Row */}
-          <div className="flex items-center justify-between mb-4">
+          <nav className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
               <Lightbulb className="h-6 w-6 text-primary" />
               <span className="text-xl font-bold text-foreground">StartOrigin</span>
             </Link>
-            
-            {/* Back Button - Desktop only */}
-            <div className="hidden md:block">
-              <Link href="/problems">
-                <Button variant="ghost" className="gap-2">
-                  <ArrowLeft className="h-4 w-4" />
-                  Back to Problems
-                </Button>
-              </Link>
-            </div>
-          </div>
-
-          {/* Navigation Row */}
-          <nav className="flex items-center justify-between">
-            {/* Back Button - Mobile only */}
-            <div className="md:hidden">
-              <Link href="/problems">
-                <Button variant="ghost" className="gap-2">
-                  <ArrowLeft className="h-4 w-4" />
-                  Back
-                </Button>
-              </Link>
-            </div>
             
             {/* Desktop Navigation - hidden on mobile */}
             <div className="hidden md:flex items-center gap-4">
