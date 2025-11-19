@@ -12,7 +12,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { logout } from "@/app/actions/auth"
 
 export default async function ProblemsPage() {
   const supabase = await createClient()
@@ -60,6 +59,14 @@ export default async function ProblemsPage() {
       .slice(0, 2)
   }
 
+  // Server action for logout
+  async function handleLogout() {
+    "use server"
+    const supabase = await createClient()
+    await supabase.auth.signOut()
+    redirect("/auth/login")
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
@@ -86,7 +93,7 @@ export default async function ProblemsPage() {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
-                        <Avatar className="h-8 w-8 border-2 border-transparent hover:border-primary transition-colors">
+                        <Avatar className="h-8 w-8">
                           <AvatarImage src={userProfile?.avatar_url || ""} />
                           <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
                             {getInitials(userProfile?.display_name || userProfile?.username)}
@@ -103,7 +110,7 @@ export default async function ProblemsPage() {
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <form action={logout} className="w-full">
+                        <form action={handleLogout} className="w-full">
                           <button type="submit" className="flex items-center gap-2 w-full text-left cursor-pointer">
                             <LogOut className="h-4 w-4" />
                             <span>Sign Out</span>
