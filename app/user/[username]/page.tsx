@@ -25,6 +25,17 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
   // Получаем текущего пользователя
   const { data: { user } } = await supabase.auth.getUser()
 
+  // Fetch current user's profile for avatar
+  let currentUserProfile = null
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("avatar_url, display_name, username")
+      .eq("id", user.id)
+      .single()
+    currentUserProfile = profile
+  }
+
   // Fetch user profile by username
   const { data: profile } = await supabase
     .from("profiles")
@@ -114,9 +125,9 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
                     <DropdownMenuTrigger asChild>
                       <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src={user?.user_metadata?.avatar_url || ""} />
+                          <AvatarImage src={currentUserProfile?.avatar_url || ""} />
                           <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
-                            {getInitials(user?.user_metadata?.display_name || user?.email)}
+                            {getInitials(currentUserProfile?.display_name || currentUserProfile?.username)}
                           </AvatarFallback>
                         </Avatar>
                       </button>
@@ -168,9 +179,9 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
                     <DropdownMenuTrigger asChild>
                       <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src={user?.user_metadata?.avatar_url || ""} />
+                          <AvatarImage src={currentUserProfile?.avatar_url || ""} />
                           <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
-                            {getInitials(user?.user_metadata?.display_name || user?.email)}
+                            {getInitials(currentUserProfile?.display_name || currentUserProfile?.username)}
                           </AvatarFallback>
                         </Avatar>
                       </button>
