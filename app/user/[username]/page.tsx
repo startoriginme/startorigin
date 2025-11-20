@@ -3,9 +3,16 @@ import { notFound, redirect } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { Lightbulb, Plus, ArrowLeft } from "lucide-react"
+import { Lightbulb, Plus, ArrowLeft, LogOut, User } from "lucide-react"
 import { ProblemCard } from "@/components/problem-card"
-import { MobileMenu } from "@/components/mobile-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface PublicProfilePageProps {
   params: Promise<{ username: string }>
@@ -72,6 +79,14 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
       .slice(0, 2)
   }
 
+  // Server action for logout
+  async function handleLogout() {
+    "use server"
+    const supabase = await createClient()
+    await supabase.auth.signOut()
+    redirect("/auth/login")
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
@@ -93,9 +108,37 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
                       Share Problem
                     </Button>
                   </Link>
-                  <Link href="/profile">
-                    <Button variant="outline">Profile</Button>
-                  </Link>
+                  
+                  {/* Avatar Dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={user?.user_metadata?.avatar_url || ""} />
+                          <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
+                            {getInitials(user?.user_metadata?.display_name || user?.email)}
+                          </AvatarFallback>
+                        </Avatar>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuItem asChild>
+                        <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
+                          <User className="h-4 w-4" />
+                          <span>Profile</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <form action={handleLogout} className="w-full">
+                          <button type="submit" className="flex items-center gap-2 w-full text-left cursor-pointer">
+                            <LogOut className="h-4 w-4" />
+                            <span>Sign Out</span>
+                          </button>
+                        </form>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </>
               ) : (
                 <>
@@ -109,9 +152,60 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
               )}
             </div>
 
-            {/* Mobile Menu Button - hidden on desktop */}
-            <div className="md:hidden">
-              <MobileMenu user={user} />
+            {/* Mobile Navigation - hidden on desktop */}
+            <div className="flex items-center gap-2 md:hidden">
+              {user ? (
+                <>
+                  {/* Mobile Plus Button */}
+                  <Link href="/problems/new">
+                    <Button size="icon" className="h-9 w-9">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                  
+                  {/* Mobile Avatar Dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={user?.user_metadata?.avatar_url || ""} />
+                          <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
+                            {getInitials(user?.user_metadata?.display_name || user?.email)}
+                          </AvatarFallback>
+                        </Avatar>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuItem asChild>
+                        <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
+                          <User className="h-4 w-4" />
+                          <span>Profile</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <form action={handleLogout} className="w-full">
+                          <button type="submit" className="flex items-center gap-2 w-full text-left cursor-pointer">
+                            <LogOut className="h-4 w-4" />
+                            <span>Sign Out</span>
+                          </button>
+                        </form>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
+              ) : (
+                <>
+                  <Link href="/auth/login">
+                    <Button variant="outline" size="sm">
+                      Sign In
+                    </Button>
+                  </Link>
+                  <Link href="/auth/sign-up">
+                    <Button size="sm">Get Started</Button>
+                  </Link>
+                </>
+              )}
             </div>
           </nav>
         </div>
