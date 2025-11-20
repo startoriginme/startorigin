@@ -202,7 +202,7 @@ export default async function ProblemsPage() {
         <div className="container mx-auto px-4 py-12">
           <div className="mx-auto max-w-2xl text-center">
             <h1 className="mb-4 text-3xl font-bold text-foreground">
-              Startup Potential Assessment β
+              Startup Potential Assessment (β)
 
             </h1>
             <p className="mb-6 text-muted-foreground">
@@ -210,7 +210,7 @@ export default async function ProblemsPage() {
             </p>
             <Link href="https://startorigin.me/test">
               <Button variant="outline" className="gap-2">
-                Launch!
+                Take the Test
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
