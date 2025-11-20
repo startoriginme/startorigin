@@ -193,7 +193,7 @@ export default async function NewProblemPage() {
                 size="sm" 
                 className="bg-teal-600 hover:bg-teal-700 text-white gap-2 w-full sm:w-auto text-xs py-1 h-8"
               >
-                StartOrigin.me/test
+                Take the Test
                 <ArrowRight className="h-3 w-3" />
               </Button>
             </Link>
