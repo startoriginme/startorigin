@@ -2,7 +2,7 @@ import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { ProblemForm } from "@/components/problem-form"
 import { Button } from "@/components/ui/button"
-import { Lightbulb, Plus, LogOut, User } from "lucide-react"
+import { Lightbulb, Plus, LogOut, User, ArrowRight } from "lucide-react"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -192,6 +192,26 @@ export default async function NewProblemPage() {
           <ProblemForm userId={user.id} />
         </div>
       </main>
+
+      {/* Test Section */}
+      <section className="border-t border-border bg-card/50 py-12">
+        <div className="container mx-auto px-4">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="mb-4 text-2xl font-bold text-foreground">
+              Want to build a solution yourself?
+            </h2>
+            <p className="mb-6 text-muted-foreground">
+              Pass a test to know your startup potential (Beta)
+            </p>
+            <Link href="https://startorigin.me/test">
+              <Button variant="outline" className="gap-2">
+                Take the Test
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
 
       {/* Footer */}
       <footer className="border-t border-border bg-card/50 py-6 mt-auto">
