@@ -9,19 +9,28 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import Link from "next/link"
-import { Lightbulb, ArrowLeft, Loader2, Upload, X, Image as ImageIcon } from "lucide-react"
+import { Lightbulb, ArrowLeft, Loader2, Upload, X, Image as ImageIcon, Plus, LogOut, User } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 export default function EditProfilePage() {
   const [displayName, setDisplayName] = useState("")
   const [username, setUsername] = useState("")
   const [bio, setBio] = useState("")
   const [avatarUrl, setAvatarUrl] = useState("")
-  const [customAvatarUrl, setCustomAvatarUrl] = useState("") // Новое состояние для кастомного URL
+  const [customAvatarUrl, setCustomAvatarUrl] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isDataLoading, setIsDataLoading] = useState(true)
   const [isUploading, setIsUploading] = useState(false)
+  const [user, setUser] = useState<any>(null)
+  const [userProfile, setUserProfile] = useState<any>(null)
   const router = useRouter()
 
   // Загружаем данные профиля при монтировании
@@ -29,24 +38,26 @@ export default function EditProfilePage() {
     const fetchProfile = async () => {
       const supabase = createClient()
       
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (!authUser) {
         router.push("/auth/login")
         return
       }
 
+      setUser(authUser)
+
       const { data: profile } = await supabase
         .from("profiles")
         .select("*")
-        .eq("id", user.id)
+        .eq("id", authUser.id)
         .single()
 
       if (profile) {
+        setUserProfile(profile)
         setDisplayName(profile.display_name || "")
         setUsername(profile.username || "")
         setBio(profile.bio || "")
         setAvatarUrl(profile.avatar_url || "")
-        // Не устанавливаем customAvatarUrl из базы данных
       }
       
       setIsDataLoading(false)
@@ -216,7 +227,7 @@ export default function EditProfilePage() {
       }
     }
     setAvatarUrl("")
-    setCustomAvatarUrl("") // Также очищаем кастомный URL
+    setCustomAvatarUrl("")
   }
 
   const getInitials = (name: string) => {
@@ -233,7 +244,7 @@ export default function EditProfilePage() {
   const applyCustomAvatarUrl = () => {
     if (customAvatarUrl.trim()) {
       setAvatarUrl(customAvatarUrl.trim())
-      setCustomAvatarUrl("") // Очищаем инпут после применения
+      setCustomAvatarUrl("")
     }
   }
 
@@ -319,6 +330,13 @@ export default function EditProfilePage() {
     }
   }
 
+  const handleLogout = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push("/auth/login")
+    router.refresh()
+  }
+
   if (isDataLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -328,7 +346,7 @@ export default function EditProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4">
@@ -337,19 +355,126 @@ export default function EditProfilePage() {
               <Lightbulb className="h-6 w-6 text-primary" />
               <span className="text-xl font-bold text-foreground">StartOrigin</span>
             </Link>
-            <Link href="/profile">
-              <Button variant="ghost" className="gap-2">
-                <ArrowLeft className="h-4 w-4" />
-                Back to Profile
-              </Button>
-            </Link>
+            
+            {/* Desktop Navigation - hidden on mobile */}
+            <div className="hidden md:flex items-center gap-4">
+              {user ? (
+                <>
+                  <Link href="/problems/new">
+                    <Button className="gap-2">
+                      <Plus className="h-4 w-4" />
+                      Share Problem
+                    </Button>
+                  </Link>
+                  
+                  {/* Avatar Dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={userProfile?.avatar_url || ""} />
+                          <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
+                            {getInitials(userProfile?.display_name || userProfile?.username || "U")}
+                          </AvatarFallback>
+                        </Avatar>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuItem asChild>
+                        <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
+                          <User className="h-4 w-4" />
+                          <span>Profile</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2 cursor-pointer">
+                        <LogOut className="h-4 w-4" />
+                        <span>Sign Out</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
+              ) : (
+                <>
+                  <Link href="/auth/login">
+                    <Button variant="outline">Sign In</Button>
+                  </Link>
+                  <Link href="/auth/sign-up">
+                    <Button>Get Started</Button>
+                  </Link>
+                </>
+              )}
+            </div>
+
+            {/* Mobile Navigation - hidden on desktop */}
+            <div className="flex items-center gap-2 md:hidden">
+              {user ? (
+                <>
+                  {/* Mobile Plus Button */}
+                  <Link href="/problems/new">
+                    <Button size="icon" className="h-9 w-9">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                  
+                  {/* Mobile Avatar Dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={userProfile?.avatar_url || ""} />
+                          <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
+                            {getInitials(userProfile?.display_name || userProfile?.username || "U")}
+                          </AvatarFallback>
+                        </Avatar>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuItem asChild>
+                        <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
+                          <User className="h-4 w-4" />
+                          <span>Profile</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2 cursor-pointer">
+                        <LogOut className="h-4 w-4" />
+                        <span>Sign Out</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
+              ) : (
+                <>
+                  <Link href="/auth/login">
+                    <Button variant="outline" size="sm">
+                      Sign In
+                    </Button>
+                  </Link>
+                  <Link href="/auth/sign-up">
+                    <Button size="sm">Get Started</Button>
+                  </Link>
+                </>
+              )}
+            </div>
           </nav>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 flex-1">
         <div className="mx-auto max-w-2xl">
+          {/* Back Button */}
+          <div className="mb-6">
+            <Link href="/profile">
+              <Button variant="ghost" className="gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                <span className="hidden sm:inline">Back to Profile</span>
+                <span className="sm:hidden">Back</span>
+              </Button>
+            </Link>
+          </div>
+
           <Card>
             <CardHeader>
               <CardTitle>Edit Profile</CardTitle>
@@ -379,7 +504,6 @@ export default function EditProfilePage() {
                             alt="Profile avatar"
                             className="w-full h-full object-cover"
                             onError={(e) => {
-                              // Если изображение не загружается, показываем инициалы
                               e.currentTarget.style.display = 'none'
                             }}
                           />
@@ -496,7 +620,7 @@ export default function EditProfilePage() {
                         <div className="flex gap-2">
                           <Input
                             placeholder="https://example.com/avatar.jpg"
-                            value={customAvatarUrl} // Используем отдельное состояние для инпута
+                            value={customAvatarUrl}
                             onChange={(e) => setCustomAvatarUrl(e.target.value)}
                             className="flex-1"
                           />
@@ -586,6 +710,15 @@ export default function EditProfilePage() {
           </Card>
         </div>
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-border bg-card/50 py-6 mt-auto">
+        <div className="container mx-auto px-4">
+          <div className="text-center text-muted-foreground text-sm">
+            © 2025 StartOrigin. All rights reserved.
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }
