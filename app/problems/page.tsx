@@ -94,7 +94,10 @@ export default async function ProblemsPage() {
                     <DropdownMenuTrigger asChild>
                       <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src={userProfile?.avatar_url || ""} />
+                          <AvatarImage 
+                            src={userProfile?.avatar_url || ""} 
+                            className="object-cover"
+                          />
                           <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
                             {getInitials(userProfile?.display_name || userProfile?.username)}
                           </AvatarFallback>
@@ -148,7 +151,10 @@ export default async function ProblemsPage() {
                     <DropdownMenuTrigger asChild>
                       <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src={userProfile?.avatar_url || ""} />
+                          <AvatarImage 
+                            src={userProfile?.avatar_url || ""} 
+                            className="object-cover"
+                          />
                           <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
                             {getInitials(userProfile?.display_name || userProfile?.username)}
                           </AvatarFallback>
