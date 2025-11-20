@@ -195,7 +195,7 @@ export default async function StartupAssessmentPage() {
 
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-foreground mb-2">
-              Startup Potential Assessment
+              Startup Potential Assessment (Beta)
             </h1>
             <p className="text-muted-foreground">
               Scientific model to evaluate your startup success potential based on 6 key factors
