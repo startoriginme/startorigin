@@ -460,7 +460,7 @@ export default function EditProfilePage() {
                   <Link href="/auth/sign-up">
                     <Button size="sm">Get Started</Button>
                   </Link>
-                </
+                </>
               )}
             </div>
           </nav>
