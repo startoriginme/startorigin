@@ -208,7 +208,7 @@ export default async function ProblemsPage() {
             <p className="mb-6 text-muted-foreground">
               Your AI Friend That Truly Understands You
             </p>
-            <Link href="https://chat.startorigin.me/">
+            <Link href="https://chat.startorigin.me/" target="_blank">
               <Button variant="outline" className="gap-2">
                 Start Now
                 <ArrowRight className="h-4 w-4" />
