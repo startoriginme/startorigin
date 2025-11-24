@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import { Lightbulb, Plus, LogOut, Calendar, MessageSquare, ArrowBigUp, Edit, User } from "lucide-react"
+import { Lightbulb, Plus, LogOut, Calendar, MessageSquare, ArrowBigUp, Edit, User, Check } from "lucide-react"
 import { ProblemCard } from "@/components/problem-card"
 import {
   DropdownMenu,
@@ -28,6 +28,10 @@ export default async function ProfilePage() {
 
   // Fetch user profile
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+
+  // Список подтвержденных пользователей
+  const verifiedUsers = ["startorigin", "winter", "nikolaev", "gerxog"]
+  const isVerifiedUser = profile?.username ? verifiedUsers.includes(profile.username) : false
 
   // Fetch user's problems with profiles data
   const { data: problems } = await supabase
@@ -199,11 +203,24 @@ export default async function ProfilePage() {
                       </div>
                     )}
                   </div>
+                  {/* Галочка верификации */}
+                  {isVerifiedUser && (
+                    <div className="absolute -bottom-1 -right-1 bg-blue-500 rounded-full p-1 border-2 border-background">
+                      <Check className="h-4 w-4 text-white" />
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1">
-                  <h2 className="text-2xl font-bold text-foreground">
-                    {profile?.display_name || profile?.username || "Anonymous"}
-                  </h2>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-2xl font-bold text-foreground break-words">
+                      {profile?.display_name || profile?.username || "Anonymous"}
+                    </h2>
+                    {isVerifiedUser && (
+                      <div className="text-blue-500 flex-shrink-0" title="Verified">
+                        <Check className="h-5 w-5" />
+                      </div>
+                    )}
+                  </div>
                   {profile?.username && <p className="text-muted-foreground">@{profile.username}</p>}
                   <p className="mt-2 text-sm text-muted-foreground">{user.email}</p>
                   {profile?.bio && <p className="mt-4 text-foreground">{profile.bio}</p>}
