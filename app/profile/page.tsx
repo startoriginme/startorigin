@@ -15,6 +15,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
+// Карта алиасов пользователей
+const userAliases: Record<string, string[]> = {
+  "nikolaev": ["maxnikolaev", "maxnklv", "azya", "nklv"],
+  "gerxog": ["admin"],
+  "startorigin": ["problems"],
+}
+
+// Функция для получения всех username пользователя (основной + алиасы)
+function getAllUsernames(mainUsername: string): string[] {
+  return [mainUsername, ...(userAliases[mainUsername] || [])]
+}
+
 export default async function ProfilePage() {
   const supabase = await createClient()
 
@@ -32,6 +44,9 @@ export default async function ProfilePage() {
   // Список подтвержденных пользователей
   const verifiedUsers = ["startorigin", "winter", "nikolaev", "gerxog"]
   const isVerifiedUser = profile?.username ? verifiedUsers.includes(profile.username) : false
+
+  // Получаем все username для отображения
+  const allUsernames = profile?.username ? getAllUsernames(profile.username) : []
 
   // Fetch user's problems with profiles data
   const { data: problems } = await supabase
@@ -221,7 +236,19 @@ export default async function ProfilePage() {
                       </div>
                     )}
                   </div>
-                  {profile?.username && <p className="text-muted-foreground">@{profile.username}</p>}
+                  
+                  {/* Отображаем все username через запятую */}
+                  {allUsernames.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1 mt-1">
+                      {allUsernames.map((userName, index) => (
+                        <span key={userName} className="text-muted-foreground">
+                          @{userName}
+                          {index < allUsernames.length - 1 && <span>, </span>}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  
                   <p className="mt-2 text-sm text-muted-foreground">{user.email}</p>
                   {profile?.bio && <p className="mt-4 text-foreground">{profile.bio}</p>}
                 </div>
