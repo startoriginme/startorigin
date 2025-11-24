@@ -58,6 +58,28 @@ type ProblemDetailProps = {
   initialHasUpvoted: boolean
 }
 
+// Карта алиасов пользователей
+const userAliases: Record<string, string[]> = {
+  "nikolaev": ["maxnikolaev", "maxnklv", "azya", "nklv"],
+  "gerxog": ["admin"],
+  "startorigin": ["problems"],
+}
+
+// Функция для получения основного username по алиасу
+function getMainUsername(username: string): string {
+  for (const [mainUsername, aliases] of Object.entries(userAliases)) {
+    if (mainUsername === username || aliases.includes(username)) {
+      return mainUsername
+    }
+  }
+  return username
+}
+
+// Функция для получения всех username пользователя (основной + алиасы)
+function getAllUsernames(mainUsername: string): string[] {
+  return [mainUsername, ...(userAliases[mainUsername] || [])]
+}
+
 // Функция для преобразования текста с упоминаниями в ссылки
 const parseMentions = (text: string) => {
   if (!text) return text;
@@ -77,10 +99,11 @@ const parseMentions = (text: string) => {
 
     // Добавляем ссылку для упоминания
     const username = match[1];
+    const mainUsername = getMainUsername(username)
     parts.push(
       <Link
         key={match.index}
-        href={`/user/${username}`}
+        href={`/user/${mainUsername}`}
         className="text-primary hover:text-primary/80 font-medium underline underline-offset-2 transition-colors"
         onClick={(e) => e.stopPropagation()}
       >
@@ -122,7 +145,13 @@ export function ProblemDetail({
   }, [])
 
   const isAuthor = userId === problem.author_id
-  const isVerifiedUser = problem.profiles?.username ? verifiedUsers.includes(problem.profiles.username) : false
+  
+  // Получаем основной username автора
+  const authorMainUsername = problem.profiles?.username ? getMainUsername(problem.profiles.username) : null
+  const isVerifiedUser = authorMainUsername ? verifiedUsers.includes(authorMainUsername) : false
+  
+  // Получаем все username автора для отображения
+  const authorAllUsernames = authorMainUsername ? getAllUsernames(authorMainUsername) : []
 
   const handleUpvote = async () => {
     if (!userId) {
@@ -493,8 +522,8 @@ export function ProblemDetail({
         <CardContent>
           <div className="flex items-start gap-4">
             <Link 
-              href={problem.profiles?.username ? `/user/${problem.profiles.username}` : "#"}
-              className={problem.profiles?.username ? "cursor-pointer" : "cursor-default"}
+              href={authorMainUsername ? `/user/${authorMainUsername}` : "#"}
+              className={authorMainUsername ? "cursor-pointer" : "cursor-default"}
             >
               {/* Кастомный аватар с галочкой верификации */}
               <div className="relative h-16 w-16">
@@ -523,12 +552,12 @@ export function ProblemDetail({
             </Link>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
-                {problem.profiles?.username ? (
+                {authorMainUsername ? (
                   <Link 
-                    href={`/user/${problem.profiles.username}`}
+                    href={`/user/${authorMainUsername}`}
                     className="font-semibold text-foreground hover:text-primary transition-colors break-words flex items-center gap-1"
                   >
-                    {problem.profiles.display_name || problem.profiles.username}
+                    {problem.profiles?.display_name || authorMainUsername}
                     {isVerifiedUser && (
                       <Check className="h-4 w-4 text-blue-500" title="Verified" />
                     )}
@@ -543,13 +572,16 @@ export function ProblemDetail({
                 )}
               </div>
               
-              {problem.profiles?.username && (
-                <Link 
-                  href={`/user/${problem.profiles.username}`}
-                  className="text-sm text-muted-foreground hover:text-primary transition-colors block break-words"
-                >
-                  @{problem.profiles.username}
-                </Link>
+              {/* Отображаем все username через запятую */}
+              {authorAllUsernames.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1 mb-2">
+                  {authorAllUsernames.map((userName, index) => (
+                    <span key={userName} className="text-sm text-muted-foreground">
+                      @{userName}
+                      {index < authorAllUsernames.length - 1 && <span>, </span>}
+                    </span>
+                  ))}
+                </div>
               )}
               
               {problem.profiles?.bio && (
