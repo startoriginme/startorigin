@@ -1,6 +1,11 @@
-import { createClient } from "@/lib/supabase/server"
+"use client"
+
+import { useState, useEffect } from "react"
+import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
-import { Lightbulb, Plus, LogOut, User } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Card, CardContent } from "@/components/ui/card"
+import { Lightbulb, Plus, LogOut, User, Search, Check, X, Crown, Star, ExternalLink } from "lucide-react"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -10,27 +15,47 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { redirect } from "next/navigation"
-import { UsernameSearch } from "@/components/username-search"
-import { TopUsernames } from "@/components/top-usernames"
+import { useRouter } from "next/navigation"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
-export default async function MarketplacePage() {
-  const supabase = await createClient()
+export default function MarketplacePage() {
+  const [user, setUser] = useState<any>(null)
+  const [userProfile, setUserProfile] = useState<any>(null)
+  const [username, setUsername] = useState("")
+  const [isChecking, setIsChecking] = useState(false)
+  const [result, setResult] = useState<{
+    available: boolean
+    price?: number
+    length: number
+  } | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedUsername, setSelectedUsername] = useState<{username: string, price: number} | null>(null)
+  
+  const router = useRouter()
+  const supabase = createClient()
 
-  // Check if user is authenticated and get profile
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      setUser(user)
 
-  let userProfile = null
-  if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("avatar_url, display_name, username")
-      .eq("id", user.id)
-      .single()
-    userProfile = profile
-  }
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("avatar_url, display_name, username")
+          .eq("id", user.id)
+          .single()
+        setUserProfile(profile)
+      }
+    }
+    fetchUser()
+  }, [supabase])
 
   const getInitials = (name: string | null) => {
     if (!name) return "U"
@@ -42,12 +67,54 @@ export default async function MarketplacePage() {
       .slice(0, 2)
   }
 
-  // Server action for logout
-  async function handleLogout() {
-    "use server"
-    const supabase = await createClient()
+  const calculatePrice = (length: number): number => {
+    if (length === 1) return 2000
+    if (length === 2) return 1750
+    if (length === 3) return 1500
+    if (length === 4) return 1250
+    if (length === 5) return 1000
+    if (length === 6) return 600
+    if (length === 7) return 400
+    if (length === 8) return 200
+    return 100
+  }
+
+  const checkUsername = async () => {
+    if (!username.trim()) return
+
+    setIsChecking(true)
+    
+    // Simulate API call to check username availability
+    setTimeout(() => {
+      const length = username.length
+      const isAvailable = Math.random() > 0.7 // 30% chance of being available for demo
+      
+      setResult({
+        available: isAvailable,
+        price: isAvailable ? calculatePrice(length) : undefined,
+        length
+      })
+      setIsChecking(false)
+    }, 1000)
+  }
+
+  const handlePurchase = () => {
+    setIsModalOpen(true)
+  }
+
+  const handleLogout = async () => {
     await supabase.auth.signOut()
-    redirect("/auth/login")
+    router.push("/auth/login")
+  }
+
+  const topUsernames = {
+    "1 Letter": ["x", "q", "z", "v", "k"],
+    "2 Letters": ["ai", "io", "me", "tv", "ex", "vc", "gg", "cc", "yy", "zz"],
+  }
+
+  const priceMap = {
+    1: 2000,
+    2: 1750,
   }
 
   return (
@@ -95,13 +162,9 @@ export default async function MarketplacePage() {
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <form action={handleLogout} className="w-full">
-                          <button type="submit" className="flex items-center gap-2 w-full text-left cursor-pointer">
-                            <LogOut className="h-4 w-4" />
-                            <span>Sign Out</span>
-                          </button>
-                        </form>
+                      <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+                        <LogOut className="h-4 w-4 mr-2" />
+                        <span>Sign Out</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -152,13 +215,9 @@ export default async function MarketplacePage() {
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <form action={handleLogout} className="w-full">
-                          <button type="submit" className="flex items-center gap-2 w-full text-left cursor-pointer">
-                            <LogOut className="h-4 w-4" />
-                            <span>Sign Out</span>
-                          </button>
-                        </form>
+                      <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+                        <LogOut className="h-4 w-4 mr-2" />
+                        <span>Sign Out</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -214,7 +273,69 @@ export default async function MarketplacePage() {
                 Search for any username and check its availability and price
               </p>
             </div>
-            <UsernameSearch />
+            
+            <div className="max-w-2xl mx-auto space-y-6">
+              <div className="flex gap-4">
+                <Input
+                  placeholder="Enter username..."
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value.toLowerCase())}
+                  onKeyPress={(e) => e.key === 'Enter' && checkUsername()}
+                  className="flex-1 text-lg h-12"
+                />
+                <Button 
+                  onClick={checkUsername} 
+                  disabled={isChecking || !username.trim()}
+                  className="h-12 px-6"
+                >
+                  {isChecking ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                  ) : (
+                    <Search className="h-4 w-4" />
+                  )}
+                  Check
+                </Button>
+              </div>
+
+              {result && (
+                <Card className={result.available ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-full ${result.available ? 'bg-green-100' : 'bg-red-100'}`}>
+                          {result.available ? (
+                            <Check className="h-6 w-6 text-green-600" />
+                          ) : (
+                            <X className="h-6 w-6 text-red-600" />
+                          )}
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-foreground">
+                            @{username}
+                          </h3>
+                          <p className={result.available ? "text-green-600" : "text-red-600"}>
+                            {result.available ? "Available for purchase!" : "Already taken"}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {result.available && result.price && (
+                        <div className="text-right">
+                          <div className="flex items-center gap-2 text-2xl font-bold text-foreground">
+                            <Star className="h-6 w-6 text-yellow-500" />
+                            {result.price}
+                          </div>
+                          <p className="text-sm text-muted-foreground">{result.length} letters</p>
+                          <Button onClick={handlePurchase} className="mt-2">
+                            Purchase
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </section>
 
           {/* Top Usernames Section */}
@@ -227,7 +348,37 @@ export default async function MarketplacePage() {
                 Exclusive short usernames available for purchase
               </p>
             </div>
-            <TopUsernames />
+            
+            <div className="space-y-8">
+              {Object.entries(topUsernames).map(([category, usernames]) => (
+                <div key={category}>
+                  <h3 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
+                    <Crown className="h-5 w-5 text-yellow-500" />
+                    {category} Usernames
+                  </h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                    {usernames.map((username) => {
+                      const price = priceMap[username.length as keyof typeof priceMap]
+                      return (
+                        <Card 
+                          key={username} 
+                          className="cursor-pointer hover:shadow-md transition-shadow border-yellow-200"
+                          onClick={() => setSelectedUsername({ username, price })}
+                        >
+                          <CardContent className="p-4 text-center">
+                            <div className="font-mono font-bold text-lg mb-2">@{username}</div>
+                            <div className="flex items-center justify-center gap-1 text-yellow-600">
+                              <Star className="h-4 w-4" />
+                              <span className="font-semibold">{price}</span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
           </section>
 
           {/* Pricing Info Section */}
@@ -299,6 +450,92 @@ export default async function MarketplacePage() {
           </div>
         </div>
       </footer>
+
+      {/* Purchase Modal */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Crown className="h-5 w-5 text-yellow-500" />
+              Purchase @{username}
+            </DialogTitle>
+            <DialogDescription>
+              Contact our CEO to complete your username purchase
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="bg-muted p-4 rounded-lg">
+              <div className="flex justify-between items-center mb-2">
+                <span className="font-semibold">Username:</span>
+                <span>@{username}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="font-semibold">Price:</span>
+                <span className="flex items-center gap-1">
+                  <Star className="h-4 w-4 text-yellow-500" />
+                  {result?.price} Telegram Stars
+                </span>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Message our CEO on Telegram to complete the purchase:
+              </p>
+              <Button asChild className="w-full gap-2">
+                <a href="https://t.me/maxnklv" target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-4 w-4" />
+                  Contact @maxnklv on Telegram
+                </a>
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Top Username Purchase Modal */}
+      <Dialog open={!!selectedUsername} onOpenChange={() => setSelectedUsername(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Crown className="h-5 w-5 text-yellow-500" />
+              Purchase @{selectedUsername?.username}
+            </DialogTitle>
+            <DialogDescription>
+              Contact our CEO to complete your username purchase
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="bg-muted p-4 rounded-lg">
+              <div className="flex justify-between items-center mb-2">
+                <span className="font-semibold">Username:</span>
+                <span>@{selectedUsername?.username}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="font-semibold">Price:</span>
+                <span className="flex items-center gap-1">
+                  <Star className="h-4 w-4 text-yellow-500" />
+                  {selectedUsername?.price} Telegram Stars
+                </span>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Message our CEO on Telegram to complete the purchase:
+              </p>
+              <Button asChild className="w-full gap-2">
+                <a href="https://t.me/maxnklv" target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-4 w-4" />
+                  Contact @maxnklv on Telegram
+                </a>
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
