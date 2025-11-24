@@ -491,13 +491,13 @@ export function ProblemDetail({
           <h2 className="text-lg font-semibold">About the Author</h2>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+          <div className="flex items-start gap-4">
             <Link 
               href={problem.profiles?.username ? `/user/${problem.profiles.username}` : "#"}
               className={problem.profiles?.username ? "cursor-pointer" : "cursor-default"}
             >
               {/* Кастомный аватар с галочкой верификации */}
-              <div className="relative h-16 w-16 mx-auto sm:mx-0">
+              <div className="relative h-16 w-16">
                 <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-border bg-muted">
                   {problem.profiles?.avatar_url ? (
                     <img
@@ -521,8 +521,8 @@ export function ProblemDetail({
                 )}
               </div>
             </Link>
-            <div className="flex-1 text-center sm:text-left">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-1 justify-center sm:justify-start">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
                 {problem.profiles?.username ? (
                   <Link 
                     href={`/user/${problem.profiles.username}`}
@@ -559,7 +559,7 @@ export function ProblemDetail({
               {problem.contact && (
                 <div className="mt-4 pt-4 border-t">
                   <h4 className="text-sm font-semibold text-foreground mb-2">Contact Information</h4>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground justify-center sm:justify-start">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     {getContactIcon(problem.contact)}
                     <span className="font-mono break-all">{problem.contact}</span>
                   </div>
