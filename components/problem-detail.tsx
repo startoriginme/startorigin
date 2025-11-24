@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical, Share2, Copy, Twitter, MessageCircle, Flag, Shield } from "lucide-react"
+import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical, Share2, Copy, Twitter, MessageCircle, Flag, Shield, Check } from "lucide-react"
 import Link from "next/link"
 import {
   AlertDialog,
@@ -99,6 +99,9 @@ const parseMentions = (text: string) => {
   return parts.length > 0 ? parts : text;
 };
 
+// Список подтвержденных пользователей
+const verifiedUsers = ["startorigin", "nikolaev", "winter"]
+
 export function ProblemDetail({ 
   problem, 
   userId, 
@@ -119,6 +122,7 @@ export function ProblemDetail({
   }, [])
 
   const isAuthor = userId === problem.author_id
+  const isVerifiedUser = problem.profiles?.username ? verifiedUsers.includes(problem.profiles.username) : false
 
   const handleUpvote = async () => {
     if (!userId) {
@@ -492,7 +496,7 @@ export function ProblemDetail({
               href={problem.profiles?.username ? `/user/${problem.profiles.username}` : "#"}
               className={problem.profiles?.username ? "cursor-pointer" : "cursor-default"}
             >
-              {/* Кастомный аватар без сжатия */}
+              {/* Кастомный аватар с галочкой верификации */}
               <div className="relative h-16 w-16 mx-auto sm:mx-0">
                 <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-border bg-muted">
                   {problem.profiles?.avatar_url ? (
@@ -509,6 +513,12 @@ export function ProblemDetail({
                     </div>
                   )}
                 </div>
+                {/* Галочка верификации */}
+                {isVerifiedUser && (
+                  <div className="absolute -bottom-1 -right-1 bg-blue-500 rounded-full p-0.5 border-2 border-background">
+                    <Check className="h-3 w-3 text-white" />
+                  </div>
+                )}
               </div>
             </Link>
             <div className="flex-1 text-center sm:text-left">
@@ -516,13 +526,19 @@ export function ProblemDetail({
                 {problem.profiles?.username ? (
                   <Link 
                     href={`/user/${problem.profiles.username}`}
-                    className="font-semibold text-foreground hover:text-primary transition-colors break-words"
+                    className="font-semibold text-foreground hover:text-primary transition-colors break-words flex items-center gap-1"
                   >
                     {problem.profiles.display_name || problem.profiles.username}
+                    {isVerifiedUser && (
+                      <Check className="h-4 w-4 text-blue-500" title="Verified" />
+                    )}
                   </Link>
                 ) : (
-                  <h3 className="font-semibold text-foreground break-words">
+                  <h3 className="font-semibold text-foreground break-words flex items-center gap-1">
                     {problem.profiles?.display_name || "Anonymous"}
+                    {isVerifiedUser && (
+                      <Check className="h-4 w-4 text-blue-500" title="Verified" />
+                    )}
                   </h3>
                 )}
               </div>
