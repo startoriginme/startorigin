@@ -100,7 +100,7 @@ const parseMentions = (text: string) => {
 };
 
 // Список подтвержденных пользователей
-const verifiedUsers = ["startorigin", "nikolaev", "winter"]
+const verifiedUsers = ["startorigin", "nikolaev", "winter", "gerxog"]
 
 export function ProblemDetail({ 
   problem, 
