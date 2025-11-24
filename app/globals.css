@@ -30,33 +30,18 @@
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
   --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
   
-  /* Enhanced Liquid Glass Colors */
-  --glass-bg: rgba(255, 255, 255, 0.08);
-  --glass-border: rgba(255, 255, 255, 0.15);
-  --glass-shadow: rgba(0, 0, 0, 0.15);
-  
-  /* Мятная цветовая палитра */
-  --mint-primary: oklch(0.85 0.2 180);
-  --mint-secondary: oklch(0.8 0.18 170);
-  --mint-accent: oklch(0.9 0.15 190);
-  --mint-light: oklch(0.95 0.1 180);
-  --mint-dark: oklch(0.7 0.22 180);
-  
-  /* Liquid эффекты */
-  --liquid-shine: linear-gradient(
-    120deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.4) 50%,
-    transparent 100%
-  );
-  
-  --mint-gradient: linear-gradient(
-    135deg,
-    var(--mint-light) 0%,
-    var(--mint-primary) 50%,
-    var(--mint-secondary) 100%
-  );
+  /* Mint color for button hover */
+  --mint: oklch(0.85 0.1 180);
+  --mint-foreground: oklch(0.2 0.05 180);
 }
 
 .dark {
@@ -79,20 +64,26 @@
   --border: oklch(0.269 0 0);
   --input: oklch(0.269 0 0);
   --ring: oklch(0.439 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.269 0 0);
+  --sidebar-ring: oklch(0.439 0 0);
   
-  /* Enhanced Dark Mode */
-  --glass-bg: rgba(0, 0, 0, 0.2);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-shadow: rgba(0, 0, 0, 0.4);
-  
-  --mint-primary: oklch(0.7 0.25 180);
-  --mint-secondary: oklch(0.65 0.23 170);
-  --mint-accent: oklch(0.75 0.2 190);
-  --mint-light: oklch(0.8 0.15 180);
-  --mint-dark: oklch(0.6 0.27 180);
+  /* Mint color for dark mode */
+  --mint: oklch(0.7 0.15 180);
+  --mint-foreground: oklch(0.95 0.02 180);
 }
 
-@theme {
+@theme inline {
   --font-sans: 'Montserrat', sans-serif;
   --font-mono: 'Geist Mono', 'Geist Mono Fallback';
   --color-background: var(--background);
@@ -119,382 +110,73 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-mint: var(--mint);
+  --color-mint-foreground: var(--mint-foreground);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 }
 
 @layer base {
   * {
-    border-color: var(--border);
-    outline-color: color-mix(in oklch, var(--ring) 50%, transparent);
+    @apply border-border outline-ring/50;
   }
-  
   body {
-    background: var(--background);
-    color: var(--foreground);
+    @apply bg-background text-foreground;
     font-family: 'Montserrat', sans-serif;
-    background: 
-      radial-gradient(circle at 20% 80%, var(--mint-light) 0%, transparent 50%),
-      radial-gradient(circle at 80% 20%, var(--mint-secondary) 0%, transparent 50%),
-      linear-gradient(135deg, var(--mint-primary) 0%, var(--background) 70%);
-    min-height: 100vh;
   }
 }
 
 @layer components {
-  /* === ENHANCED LIQUID GLASS === */
-  .super-liquid-glass {
-    background: var(--glass-bg);
-    backdrop-filter: blur(30px) saturate(200%) brightness(1.1);
-    -webkit-backdrop-filter: blur(30px) saturate(200%) brightness(1.1);
-    border: 1px solid var(--glass-border);
-    border-radius: calc(var(--radius) * 2);
-    position: relative;
-    overflow: hidden;
-    box-shadow: 
-      0 20px 40px var(--glass-shadow),
-      inset 0 1px 0 rgba(255, 255, 255, 0.3),
-      inset 0 -1px 0 rgba(0, 0, 0, 0.1);
-    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  /* Button hover effects with mint color */
+  .btn-hover-mint {
+    @apply transition-colors duration-200;
   }
-
-  .super-liquid-glass::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -150%;
-    width: 150%;
-    height: 100%;
-    background: var(--liquid-shine);
-    transform: skewX(-25deg);
-    transition: left 1s ease-in-out;
-    animation: liquidShine 6s ease-in-out infinite;
+  
+  .btn-hover-mint:hover {
+    background-color: var(--mint) !important;
+    color: var(--mint-foreground) !important;
+    border-color: var(--mint) !important;
   }
-
-  .super-liquid-glass::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: calc(var(--radius) * 2);
-    padding: 2px;
-    background: var(--mint-gradient);
-    -webkit-mask: 
-      linear-gradient(#fff 0 0) content-box, 
-      linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    opacity: 0.6;
-    animation: mintPulse 4s ease-in-out infinite;
-  }
-
-  .super-liquid-glass:hover {
-    transform: translateY(-5px);
-    box-shadow: 
-      0 30px 60px var(--glass-shadow),
-      0 0 30px var(--mint-primary),
-      inset 0 1px 0 rgba(255, 255, 255, 0.4);
-  }
-
-  @keyframes liquidShine {
-    0%, 100% { left: -150%; }
-    50% { left: 150%; }
-  }
-
-  @keyframes mintPulse {
-    0%, 100% { 
-      opacity: 0.6;
-      filter: hue-rotate(0deg);
-    }
-    50% { 
-      opacity: 0.8;
-      filter: hue-rotate(10deg);
-    }
-  }
-
-  /* === МЯТНАЯ ШКАЛА ЗАГРУЗКИ === */
-  .mint-progress-container {
-    background: var(--glass-bg);
-    backdrop-filter: blur(30px) saturate(200%) brightness(1.1);
-    -webkit-backdrop-filter: blur(30px) saturate(200%) brightness(1.1);
-    border: 1px solid var(--glass-border);
-    border-radius: calc(var(--radius) * 2);
-    height: 8px;
-    overflow: visible;
-    padding: 2px;
-    position: relative;
-  }
-
-  .mint-progress-bar {
-    height: 100%;
-    background: var(--mint-gradient);
-    border-radius: var(--radius);
-    position: relative;
-    overflow: hidden;
-    transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
-    box-shadow: 
-      0 0 20px var(--mint-primary),
-      inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  }
-
-  .mint-progress-bar::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      rgba(255, 255, 255, 0.6),
-      transparent
-    );
-    animation: progressShine 2s ease-in-out infinite;
-  }
-
-  @keyframes progressShine {
-    0% { left: -100%; }
-    100% { left: 100%; }
-  }
-
-  /* === УЛУЧШЕННЫЕ МЯТНЫЕ ХОВЕРЫ === */
-  .btn-mint-liquid {
-    background: var(--glass-bg);
-    backdrop-filter: blur(30px) saturate(200%) brightness(1.1);
-    -webkit-backdrop-filter: blur(30px) saturate(200%) brightness(1.1);
-    border: 1px solid var(--glass-border);
-    border-radius: calc(var(--radius) * 2);
-    padding: 14px 28px;
-    color: var(--foreground);
-    font-weight: 700;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .btn-mint-liquid::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -150%;
-    width: 150%;
-    height: 100%;
-    background: var(--liquid-shine);
-    transform: skewX(-25deg);
-    transition: left 1s ease-in-out;
-  }
-
-  .btn-mint-liquid::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: calc(var(--radius) * 2);
-    padding: 2px;
-    background: var(--mint-gradient);
-    -webkit-mask: 
-      linear-gradient(#fff 0 0) content-box, 
-      linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    opacity: 0.6;
-  }
-
-  .btn-mint-liquid:hover {
-    background: var(--mint-primary);
-    color: white;
-    transform: translateY(-3px) scale(1.05);
-    box-shadow: 
-      0 25px 50px var(--glass-shadow),
-      0 0 30px var(--mint-primary),
-      0 0 60px var(--mint-primary);
-  }
-
-  .btn-mint-liquid:hover::before {
-    left: 150%;
-  }
-
-  /* Мятные ховеры для всех кнопок */
+  
+  /* Apply mint hover to all buttons */
   button:not([data-no-mint-hover]):hover,
   .btn:hover,
   [type='button']:hover,
   [type='submit']:hover,
   [type='reset']:hover {
-    background-color: var(--mint-primary) !important;
-    color: var(--mint-light) !important;
-    border-color: var(--mint-primary) !important;
-    transform: translateY(-2px);
-    box-shadow: 
-      0 8px 25px var(--mint-primary),
-      inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  }
-
-  /* === LIQUID GLASS CARD === */
-  .liquid-glass-card {
-    background: var(--glass-bg);
-    backdrop-filter: blur(30px) saturate(200%) brightness(1.1);
-    -webkit-backdrop-filter: blur(30px) saturate(200%) brightness(1.1);
-    border: 1px solid var(--glass-border);
-    border-radius: calc(var(--radius) * 2);
-    padding: 2.5rem;
-    position: relative;
-    overflow: hidden;
-    box-shadow: 
-      0 20px 40px var(--glass-shadow),
-      inset 0 1px 0 rgba(255, 255, 255, 0.3),
-      inset 0 -1px 0 rgba(0, 0, 0, 0.1);
-    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
-  }
-
-  .liquid-glass-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -150%;
-    width: 150%;
-    height: 100%;
-    background: var(--liquid-shine);
-    transform: skewX(-25deg);
-    transition: left 1s ease-in-out;
-    animation: liquidShine 6s ease-in-out infinite;
-  }
-
-  .liquid-glass-card::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: calc(var(--radius) * 2);
-    padding: 2px;
-    background: var(--mint-gradient);
-    -webkit-mask: 
-      linear-gradient(#fff 0 0) content-box, 
-      linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    opacity: 0.6;
-    animation: mintFlow 2s ease-in-out infinite;
-  }
-
-  .liquid-glass-card:hover::before {
-    animation-duration: 3s;
-  }
-
-  .liquid-glass-card:hover::after {
-    opacity: 1;
-  }
-
-  @keyframes mintFlow {
-    0%, 100% { 
-      background: var(--mint-gradient);
-    }
-    50% { 
-      background: linear-gradient(
-        135deg,
-        var(--mint-secondary),
-        var(--mint-primary),
-        var(--mint-accent)
-      );
-    }
-  }
-
-  /* === МЯТНЫЙ ТЕКСТ С LIQUID ЭФФЕКТОМ === */
-  .mint-liquid-text {
-    background: var(--mint-gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    background-size: 200% 200%;
-    animation: 
-      mintTextShift 6s ease-in-out infinite,
-      textFloat 4s ease-in-out infinite;
-    position: relative;
-    display: inline-block;
-  }
-
-  @keyframes mintTextShift {
-    0%, 100% { 
-      background-position: 0% 50%;
-      filter: hue-rotate(0deg);
-    }
-    50% { 
-      background-position: 100% 50%;
-      filter: hue-rotate(15deg);
-    }
-  }
-
-  @keyframes textFloat {
-    0%, 100% { 
-      transform: translateY(0px); 
-    }
-    50% { 
-      transform: translateY(-3px); 
-    }
+    background-color: var(--mint) !important;
+    color: var(--mint-foreground) !important;
+    border-color: var(--mint) !important;
   }
 }
 
 @layer utilities {
-  /* Utility Classes */
-  .backdrop-blur-glass {
-    backdrop-filter: blur(30px) saturate(200%);
-    -webkit-backdrop-filter: blur(30px) saturate(200%);
-  }
-
-  .glass-border-mint {
-    border: 1px solid var(--glass-border);
-  }
-
-  .mint-glow {
-    box-shadow: 
-      0 0 30px var(--mint-primary),
-      0 8px 32px var(--glass-shadow);
-  }
-
-  .text-mint-gradient {
-    background: var(--mint-gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .bg-mint-glass {
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-  }
-
-  /* Hover effects */
-  .hover-mint-lift:hover {
-    transform: translateY(-5px);
-    transition: transform 0.3s ease;
-  }
-
-  .hover-mint-glow:hover {
-    box-shadow: 
-      0 0 25px var(--mint-primary),
-      0 10px 40px var(--glass-shadow);
-  }
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .super-liquid-glass {
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+  /* Utility class for explicit mint hover */
+  .hover-mint:hover {
+    background-color: var(--mint) !important;
+    color: var(--mint-foreground) !important;
+    border-color: var(--mint) !important;
   }
   
-  .liquid-glass-card {
-    padding: 1.5rem;
+  .text-mint {
+    color: var(--mint);
   }
   
-  .btn-mint-liquid {
-    padding: 12px 24px;
+  .bg-mint {
+    background-color: var(--mint);
   }
-}
+  
+  .border-mint {
+    border-color: var(--mint);
+  }
+} 
