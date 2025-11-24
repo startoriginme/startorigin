@@ -58,6 +58,47 @@ type ProblemDetailProps = {
   initialHasUpvoted: boolean
 }
 
+// Функция для преобразования текста с упоминаниями в ссылки
+const parseMentions = (text: string) => {
+  if (!text) return text;
+  
+  // Регулярное выражение для поиска упоминаний вида @username
+  const mentionRegex = /@([a-zA-Z0-9_-]+)/g;
+  
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = mentionRegex.exec(text)) !== null) {
+    // Добавляем текст до упоминания
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+
+    // Добавляем ссылку для упоминания
+    const username = match[1];
+    parts.push(
+      <Link
+        key={match.index}
+        href={`/user/${username}`}
+        className="text-primary hover:text-primary/80 font-medium underline underline-offset-2 transition-colors"
+        onClick={(e) => e.stopPropagation()}
+      >
+        @{username}
+      </Link>
+    );
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Добавляем оставшийся текст
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : text;
+};
+
 export function ProblemDetail({ 
   problem, 
   userId, 
@@ -433,9 +474,9 @@ export function ProblemDetail({
 
         <CardContent>
           <div className="prose prose-slate max-w-none prose-sm sm:prose-base">
-            <p className="whitespace-pre-wrap text-foreground leading-relaxed break-words">
-              {problem.description}
-            </p>
+            <div className="whitespace-pre-wrap text-foreground leading-relaxed break-words">
+              {parseMentions(problem.description)}
+            </div>
           </div>
         </CardContent>
       </Card>
