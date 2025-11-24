@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowBigUp, Calendar, Users } from "lucide-react"
+import { ArrowBigUp, Calendar, Users, Check } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -33,12 +33,17 @@ type ProblemCardProps = {
   userId?: string
 }
 
+// Список подтвержденных пользователей
+const verifiedUsers = ["startorigin", "nikolaev", "winter"]
+
 export function ProblemCard({ problem, userId }: ProblemCardProps) {
   const [upvotes, setUpvotes] = useState(problem.upvotes)
   const [isUpvoted, setIsUpvoted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [hasCheckedUpvote, setHasCheckedUpvote] = useState(false)
   const router = useRouter()
+
+  const isVerifiedUser = problem.profiles?.username ? verifiedUsers.includes(problem.profiles.username) : false
 
   useEffect(() => {
     const checkUpvoteStatus = async () => {
@@ -203,8 +208,8 @@ export function ProblemCard({ problem, userId }: ProblemCardProps) {
       <CardFooter className="flex items-center justify-between border-t pt-4">
         {/* Автор и дата */}
         <div className="flex items-center gap-3 min-w-0 flex-1">
-          {/* Кастомный аватар без сжатия */}
-          <div className="h-8 w-8 flex-shrink-0">
+          {/* Кастомный аватар с галочкой верификации */}
+          <div className="relative h-8 w-8 flex-shrink-0">
             <div className="h-8 w-8 rounded-full overflow-hidden border border-border bg-muted">
               {problem.profiles?.avatar_url ? (
                 <img
@@ -220,11 +225,22 @@ export function ProblemCard({ problem, userId }: ProblemCardProps) {
                 </div>
               )}
             </div>
+            {/* Галочка верификации */}
+            {isVerifiedUser && (
+              <div className="absolute -bottom-0.5 -right-0.5 bg-blue-500 rounded-full p-0.5 border border-background">
+                <Check className="h-2 w-2 text-white" />
+              </div>
+            )}
           </div>
           <div className="text-sm min-w-0 flex-1">
-            <p className="font-medium text-foreground truncate">
-              {problem.profiles?.display_name || problem.profiles?.username || "Anonymous"}
-            </p>
+            <div className="flex items-center gap-1">
+              <p className="font-medium text-foreground truncate flex items-center gap-1">
+                {problem.profiles?.display_name || problem.profiles?.username || "Anonymous"}
+                {isVerifiedUser && (
+                  <Check className="h-3 w-3 text-blue-500 flex-shrink-0" title="Verified" />
+                )}
+              </p>
+            </div>
             <div className="flex items-center gap-1 text-muted-foreground">
               <Calendar className="h-3 w-3 flex-shrink-0" />
               <span className="truncate">{formatDate(problem.created_at)}</span>
