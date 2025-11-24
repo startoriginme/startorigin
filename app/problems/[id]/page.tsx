@@ -13,6 +13,39 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { redirect } from "next/navigation"
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+
+// Создаем публичный клиент Supabase без проверки аутентификации
+async function createPublicSupabase() {
+  const cookieStore = await cookies()
+
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
+          } catch {
+            // Игнорируем ошибки установки кук
+          }
+        },
+      },
+    }
+  )
+}
 
 export default async function ProblemDetailPage({
   params,
@@ -20,9 +53,11 @@ export default async function ProblemDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const supabase = await createClient()
+  
+  // Используем публичный клиент для получения данных проблемы
+  const publicSupabase = await createPublicSupabase()
 
-  const { data: problem, error } = await supabase
+  const { data: problem, error } = await publicSupabase
     .from("problems")
     .select(
       `*,
@@ -41,20 +76,22 @@ export default async function ProblemDetailPage({
     notFound()
   }
 
-  // Получаем пользователя, но не требуем аутентификации
+  // Для пользовательских данных используем обычный клиент в try-catch
   let user = null
   let userProfile = null
   let hasUpvoted = false
 
   try {
+    // Пытаемся получить данные пользователя, но не падаем при ошибке
+    const regularSupabase = await createClient()
     const {
       data: { user: authUser },
-    } = await supabase.auth.getUser()
+    } = await regularSupabase.auth.getUser()
     user = authUser
 
     if (user) {
       // Получаем профиль пользователя
-      const { data: profile } = await supabase
+      const { data: profile } = await regularSupabase
         .from("profiles")
         .select("avatar_url, display_name, username")
         .eq("id", user.id)
@@ -62,7 +99,7 @@ export default async function ProblemDetailPage({
       userProfile = profile
 
       // Проверяем апвоут только если пользователь авторизован
-      const { data: upvote } = await supabase
+      const { data: upvote } = await regularSupabase
         .from("upvotes")
         .select("id")
         .eq("problem_id", id)
@@ -73,7 +110,7 @@ export default async function ProblemDetailPage({
     }
   } catch (error) {
     // Игнорируем ошибки аутентификации - страница доступна без логина
-    console.log("Auth error, but page is still accessible:", error)
+    console.log("User is not authenticated, but page is still accessible")
   }
 
   const getInitials = (name: string | null) => {
@@ -86,7 +123,7 @@ export default async function ProblemDetailPage({
       .slice(0, 2)
   }
 
-  // Server action for logout
+  // Server action for logout (только для залогиненных пользователей)
   async function handleLogout() {
     "use server"
     const supabase = await createClient()
