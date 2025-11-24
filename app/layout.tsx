@@ -7,7 +7,7 @@ import { Suspense } from "react"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Explore Problems - StartOrigin",
+  title: "StartOrigin",
   description: "A platform for innovators to share problems and collaborate on solutions",
   generator: 'v0.app',
   icons: {
