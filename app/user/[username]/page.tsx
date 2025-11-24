@@ -22,10 +22,10 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
   const { username } = await params
   const supabase = await createClient()
 
-  // Получаем текущего пользователя
+  // Получаем текущего пользователя (но не редиректим если не залогинен)
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Fetch current user's profile for avatar
+  // Fetch current user's profile for avatar (только если пользователь залогинен)
   let currentUserProfile = null
   if (user) {
     const { data: profile } = await supabase
@@ -47,10 +47,8 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
     notFound()
   }
 
-  // Если пользователь залогинен и зашел на свой собственный профиль - редиректим на /profile
-  if (user && profile.id === user.id) {
-    redirect("/profile")
-  }
+  // УБРАНО: проверка на редирект если пользователь зашел на свой профиль
+  // Теперь пользователь может просматривать любой публичный профиль, включая свой
 
   // Fetch user's public problems
   const { data: problems } = await supabase
@@ -90,7 +88,7 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
       .slice(0, 2)
   }
 
-  // Server action for logout
+  // Server action for logout (только для залогиненных пользователей)
   async function handleLogout() {
     "use server"
     const supabase = await createClient()
@@ -298,7 +296,7 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
                     <ProblemCard 
                       key={problem.id} 
                       problem={problem} 
-                      userId={user?.id} // Передаем ID пользователя
+                      userId={user?.id} // Передаем ID пользователя (может быть undefined)
                       initialHasUpvoted={userUpvotes.has(problem.id)} // Передаем информацию о лайках
                     />
                   ))}
