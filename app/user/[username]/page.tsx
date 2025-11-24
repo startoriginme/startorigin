@@ -47,8 +47,9 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
     notFound()
   }
 
-  // Проверяем, является ли пользователь верифицированным (@startorigin)
-  const isVerifiedUser = profile.username === "startorigin" && profile.email === "nikomax212@yandex.ru"
+  // Для получения email нужно использовать admin API или проверять только по username
+  // Так как email в таблице profiles обычно не хранится
+  const isVerifiedUser = profile.username === "startorigin"
 
   // Fetch user's public problems
   const { data: problems } = await supabase
