@@ -47,9 +47,9 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
     notFound()
   }
 
-  // Для получения email нужно использовать admin API или проверять только по username
-  // Так как email в таблице profiles обычно не хранится
-  const isVerifiedUser = profile.username === "startorigin"
+  // Список подтвержденных пользователей
+  const verifiedUsers = ["startorigin", "nikolaev", "winter"]
+  const isVerifiedUser = verifiedUsers.includes(profile.username)
 
   // Fetch user's public problems
   const { data: problems } = await supabase
@@ -278,7 +278,7 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
                       {profile?.display_name || profile?.username || "Anonymous"}
                     </h2>
                     {isVerifiedUser && (
-                      <div className="flex items-center gap-1 text-blue-500" title="Verified User">
+                      <div className="text-blue-500" title="Verified">
                         <Check className="h-5 w-5" />
                       </div>
                     )}
