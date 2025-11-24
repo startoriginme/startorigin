@@ -25,6 +25,21 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
   // Получаем текущего пользователя (но не редиректим если не залогинен)
   const { data: { user } } = await supabase.auth.getUser()
 
+  // Если пользователь залогинен и пытается посмотреть свой профиль - редиректим на /profile
+  if (user) {
+    // Сначала получаем username текущего пользователя
+    const { data: currentUserProfile } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", user.id)
+      .single()
+
+    // Если username совпадает - редиректим
+    if (currentUserProfile?.username === username) {
+      redirect("/profile")
+    }
+  }
+
   // Fetch current user's profile for avatar (только если пользователь залогинен)
   let currentUserProfile = null
   if (user) {
@@ -273,12 +288,12 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
                   )}
                 </div>
                 <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-2xl font-bold text-foreground">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-2xl font-bold text-foreground break-words">
                       {profile?.display_name || profile?.username || "Anonymous"}
                     </h2>
                     {isVerifiedUser && (
-                      <div className="text-blue-500" title="Verified">
+                      <div className="text-blue-500 flex-shrink-0" title="Verified">
                         <Check className="h-5 w-5" />
                       </div>
                     )}
