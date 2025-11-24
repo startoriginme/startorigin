@@ -20,6 +20,7 @@ const userAliases: Record<string, string[]> = {
   "nikolaev": ["maxnikolaev", "maxnklv", "azya", "nklv"],
   "gerxog": ["admin"],
   "startorigin": ["problems"],
+  "winter": ["zima", "vlkv"],
 }
 
 // Функция для получения всех username пользователя (основной + алиасы)
