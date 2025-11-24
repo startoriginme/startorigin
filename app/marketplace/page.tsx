@@ -24,6 +24,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
+// Список занятых username, которые не нужно проверять в базе
+const RESERVED_USERNAMES = [
+  "azya", "maxnklv", "maxnikolaev", "nklv", "zima", "vlkv", "bolt", "admin", "problems"
+]
+
 export default function MarketplacePage() {
   const [user, setUser] = useState<any>(null)
   const [userProfile, setUserProfile] = useState<any>(null)
@@ -84,18 +89,53 @@ export default function MarketplacePage() {
 
     setIsChecking(true)
     
-    // Simulate API call to check username availability
-    setTimeout(() => {
-      const length = username.length
-      const isAvailable = Math.random() > 0.7 // 30% chance of being available for demo
+    try {
+      // Сначала проверяем в списке зарезервированных
+      const isReserved = RESERVED_USERNAMES.includes(username.toLowerCase())
       
+      if (isReserved) {
+        setResult({
+          available: false,
+          length: username.length
+        })
+        setIsChecking(false)
+        return
+      }
+
+      // Затем проверяем в базе данных
+      const { data: existingProfile, error } = await supabase
+        .from("profiles")
+        .select("username")
+        .eq("username", username.toLowerCase())
+        .single()
+
+      // Если есть ошибка и это не "не найдено", значит реальная ошибка
+      if (error && error.code !== 'PGRST116') {
+        console.error("Error checking username:", error)
+        setResult({
+          available: false,
+          length: username.length
+        })
+        return
+      }
+
+      // Если профиль найден - username занят
+      const isAvailable = !existingProfile
+
       setResult({
         available: isAvailable,
-        price: isAvailable ? calculatePrice(length) : undefined,
-        length
+        price: isAvailable ? calculatePrice(username.length) : undefined,
+        length: username.length
       })
+    } catch (error) {
+      console.error("Error checking username:", error)
+      setResult({
+        available: false,
+        length: username.length
+      })
+    } finally {
       setIsChecking(false)
-    }, 1000)
+    }
   }
 
   const handlePurchase = () => {
