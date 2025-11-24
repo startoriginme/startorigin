@@ -280,7 +280,6 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
                     {isVerifiedUser && (
                       <div className="flex items-center gap-1 text-blue-500" title="Verified User">
                         <Check className="h-5 w-5" />
-                        <span className="text-sm font-medium">Verified</span>
                       </div>
                     )}
                   </div>
