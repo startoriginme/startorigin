@@ -1,9 +1,9 @@
- import { createClient } from "@/lib/supabase/server"
+import { createClient } from "@/lib/supabase/server"
 import { notFound, redirect } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { Lightbulb, Plus, ArrowLeft, LogOut, User } from "lucide-react"
+import { Lightbulb, Plus, ArrowLeft, LogOut, User, Check } from "lucide-react"
 import { ProblemCard } from "@/components/problem-card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -47,8 +47,8 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
     notFound()
   }
 
-  // УБРАНО: проверка на редирект если пользователь зашел на свой профиль
-  // Теперь пользователь может просматривать любой публичный профиль, включая свой
+  // Проверяем, является ли пользователь верифицированным (@startorigin)
+  const isVerifiedUser = profile.username === "startorigin" && profile.email === "nikomax212@yandex.ru"
 
   // Fetch user's public problems
   const { data: problems } = await supabase
@@ -264,11 +264,25 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
                       </div>
                     )}
                   </div>
+                  {/* Галочка верификации */}
+                  {isVerifiedUser && (
+                    <div className="absolute -bottom-1 -right-1 bg-blue-500 rounded-full p-1 border-2 border-background">
+                      <Check className="h-4 w-4 text-white" />
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1">
-                  <h2 className="text-2xl font-bold text-foreground">
-                    {profile?.display_name || profile?.username || "Anonymous"}
-                  </h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-2xl font-bold text-foreground">
+                      {profile?.display_name || profile?.username || "Anonymous"}
+                    </h2>
+                    {isVerifiedUser && (
+                      <div className="flex items-center gap-1 text-blue-500" title="Verified User">
+                        <Check className="h-5 w-5" />
+                        <span className="text-sm font-medium">Verified</span>
+                      </div>
+                    )}
+                  </div>
                   {profile?.username && (
                     <p className="text-muted-foreground">@{profile.username}</p>
                   )}
@@ -321,4 +335,4 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
       </footer>
     </div>
   )
-}  
+}
