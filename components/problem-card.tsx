@@ -34,7 +34,7 @@ type ProblemCardProps = {
 }
 
 // Список подтвержденных пользователей
-const verifiedUsers = ["startorigin", "nikolaev", "winter"]
+const verifiedUsers = ["startorigin", "nikolaev", "winter", "gerxog"]
 
 export function ProblemCard({ problem, userId }: ProblemCardProps) {
   const [upvotes, setUpvotes] = useState(problem.upvotes)
