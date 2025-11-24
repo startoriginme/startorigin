@@ -63,7 +63,7 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
   }
 
   // Список подтвержденных пользователей
-  const verifiedUsers = ["startorigin", "nikolaev", "winter"]
+  const verifiedUsers = ["startorigin", "nikolaev", "winter", "gerxog"]
   const isVerifiedUser = verifiedUsers.includes(profile.username)
 
   // Fetch user's public problems
