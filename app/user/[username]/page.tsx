@@ -19,6 +19,47 @@ interface PublicProfilePageProps {
   params: Promise<{ username: string }>
 }
 
+// Функция для преобразования текста с упоминаниями в ссылки (case-insensitive)
+const parseMentions = (text: string) => {
+  if (!text) return text;
+  
+  // Регулярное выражение для поиска упоминаний вида @username (case-insensitive)
+  const mentionRegex = /@([a-zA-Z0-9_-]+)/gi;
+  
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = mentionRegex.exec(text)) !== null) {
+    // Добавляем текст до упоминания
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+
+    // Добавляем ссылку для упоминания
+    const username = match[1].toLowerCase(); // Приводим к нижнему регистру для URL
+    parts.push(
+      <Link
+        key={match.index}
+        href={`/user/${username}`}
+        className="text-primary hover:text-primary/80 font-medium underline underline-offset-2 transition-colors"
+        onClick={(e) => e.stopPropagation()}
+      >
+        @{match[1]} {/* Сохраняем оригинальное написание в тексте */}
+      </Link>
+    );
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Добавляем оставшийся текст
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : text;
+};
+
 export default async function PublicProfilePage({ params }: PublicProfilePageProps) {
   const { username } = await params
   const supabase = await createClient()
@@ -299,7 +340,9 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
                   {/* Дополнительная информация профиля */}
                   <div className="space-y-3">
                     {profile?.bio && (
-                      <p className="text-foreground leading-relaxed">{profile.bio}</p>
+                      <div className="text-foreground leading-relaxed">
+                        {parseMentions(profile.bio)}
+                      </div>
                     )}
 
                     {/* Контактная информация */}
