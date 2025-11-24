@@ -20,7 +20,7 @@ interface PublicProfilePageProps {
 
 // Карта алиасов пользователей
 const userAliases: Record<string, string[]> = {
-  "nikolaev": ["maxnikolaev", "nikolaevmax", "maximnikolaev", "azya"],
+  "nikolaev": ["maxnikolaev", "maxnklv", "azya"],
   // Можно добавить других пользователей с алиасами здесь
 }
 
