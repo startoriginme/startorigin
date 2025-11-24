@@ -1,12 +1,11 @@
-import { createClient } from "@/lib/supabase/server"
+ import { createClient } from "@/lib/supabase/server"
 import { notFound, redirect } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { Lightbulb, Plus, ArrowLeft, LogOut, User, Users, Mail, Phone, MapPin, Calendar } from "lucide-react"
+import { Lightbulb, Plus, ArrowLeft, LogOut, User } from "lucide-react"
 import { ProblemCard } from "@/components/problem-card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,6 +47,9 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
     notFound()
   }
 
+  // УБРАНО: проверка на редирект если пользователь зашел на свой профиль
+  // Теперь пользователь может просматривать любой публичный профиль, включая свой
+
   // Fetch user's public problems
   const { data: problems } = await supabase
     .from("problems")
@@ -84,19 +86,6 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
       .join("")
       .toUpperCase()
       .slice(0, 2)
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    })
-  }
-
-  const getContactIcon = (contact: string) => {
-    if (contact.includes("+") || /^\d+$/.test(contact)) return <Phone className="h-4 w-4" />
-    return <Mail className="h-4 w-4" />
   }
 
   // Server action for logout (только для залогиненных пользователей)
@@ -257,9 +246,9 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
               <CardTitle>Profile</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col sm:flex-row items-start gap-6">
+              <div className="flex items-start gap-6">
                 {/* Кастомный аватар без сжатия */}
-                <div className="relative h-24 w-24 mx-auto sm:mx-0">
+                <div className="relative h-24 w-24">
                   <div className="h-24 w-24 rounded-full overflow-hidden border-2 border-border bg-muted">
                     {profile?.avatar_url ? (
                       <img
@@ -276,67 +265,16 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
                     )}
                   </div>
                 </div>
-                
-                <div className="flex-1 text-center sm:text-left">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2 justify-center sm:justify-start">
-                    <h2 className="text-2xl font-bold text-foreground">
-                      {profile?.display_name || profile?.username || "Anonymous"}
-                    </h2>
-                    
-                    {/* Бейдж "Ищу сооснователя" */}
-                    {profile?.looking_for_cofounder && (
-                      <Badge variant="default" className="gap-1 bg-green-600 hover:bg-green-700 text-xs">
-                        <Users className="h-3 w-3" />
-                        Looking for Cofounder
-                      </Badge>
-                    )}
-                  </div>
-                  
+                <div className="flex-1">
+                  <h2 className="text-2xl font-bold text-foreground">
+                    {profile?.display_name || profile?.username || "Anonymous"}
+                  </h2>
                   {profile?.username && (
-                    <p className="text-muted-foreground mb-4">@{profile.username}</p>
+                    <p className="text-muted-foreground">@{profile.username}</p>
                   )}
-
-                  {/* Дополнительная информация профиля */}
-                  <div className="space-y-3">
-                    {profile?.bio && (
-                      <p className="text-foreground leading-relaxed">{profile.bio}</p>
-                    )}
-
-                    {/* Контактная информация */}
-                    {(profile?.contact_email || profile?.contact_phone || profile?.location) && (
-                      <div className="pt-3 border-t border-border">
-                        <h3 className="text-sm font-semibold text-foreground mb-2">Contact Information</h3>
-                        <div className="space-y-2 text-sm text-muted-foreground">
-                          {profile.contact_email && (
-                            <div className="flex items-center gap-2 justify-center sm:justify-start">
-                              <Mail className="h-4 w-4" />
-                              <span className="break-all">{profile.contact_email}</span>
-                            </div>
-                          )}
-                          {profile.contact_phone && (
-                            <div className="flex items-center gap-2 justify-center sm:justify-start">
-                              <Phone className="h-4 w-4" />
-                              <span className="font-mono break-all">{profile.contact_phone}</span>
-                            </div>
-                          )}
-                          {profile.location && (
-                            <div className="flex items-center gap-2 justify-center sm:justify-start">
-                              <MapPin className="h-4 w-4" />
-                              <span>{profile.location}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Дата регистрации */}
-                    {profile?.created_at && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground justify-center sm:justify-start">
-                        <Calendar className="h-4 w-4" />
-                        <span>Joined {formatDate(profile.created_at)}</span>
-                      </div>
-                    )}
-                  </div>
+                  {profile?.bio && (
+                    <p className="mt-4 text-foreground">{profile.bio}</p>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -366,11 +304,6 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
               ) : (
                 <div className="py-8 text-center text-muted-foreground">
                   <p>No problems shared yet.</p>
-                  {profile?.looking_for_cofounder && (
-                    <p className="mt-2 text-sm">
-                      This user is looking for cofounders but hasn't shared any problems yet.
-                    </p>
-                  )}
                 </div>
               )}
             </CardContent>
