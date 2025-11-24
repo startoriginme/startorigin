@@ -19,47 +19,6 @@ interface PublicProfilePageProps {
   params: Promise<{ username: string }>
 }
 
-// Компонент для отображения био с упоминаниями (Client Component)
-function BioWithMentions({ text }: { text: string }) {
-  if (!text) return null;
-
-  // Регулярное выражение для поиска упоминаний вида @username (case-insensitive)
-  const mentionRegex = /@([a-zA-Z0-9_-]+)/gi;
-  
-  const parts = [];
-  let lastIndex = 0;
-  let match;
-
-  while ((match = mentionRegex.exec(text)) !== null) {
-    // Добавляем текст до упоминания
-    if (match.index > lastIndex) {
-      parts.push(text.slice(lastIndex, match.index));
-    }
-
-    // Добавляем ссылку для упоминания
-    const username = match[1].toLowerCase();
-    parts.push(
-      <Link
-        key={match.index}
-        href={`/user/${username}`}
-        className="text-primary hover:text-primary/80 font-medium underline underline-offset-2 transition-colors"
-        onClick={(e) => e.stopPropagation()}
-      >
-        @{match[1]}
-      </Link>
-    );
-
-    lastIndex = match.index + match[0].length;
-  }
-
-  // Добавляем оставшийся текст
-  if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex));
-  }
-
-  return <div className="text-foreground leading-relaxed">{parts}</div>;
-}
-
 export default async function PublicProfilePage({ params }: PublicProfilePageProps) {
   const { username } = await params
   const supabase = await createClient()
@@ -340,7 +299,7 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
                   {/* Дополнительная информация профиля */}
                   <div className="space-y-3">
                     {profile?.bio && (
-                      <BioWithMentions text={profile.bio} />
+                      <p className="text-foreground leading-relaxed">{profile.bio}</p>
                     )}
 
                     {/* Контактная информация */}
@@ -429,4 +388,4 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
       </footer>
     </div>
   )
-}
+}  
