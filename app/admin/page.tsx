@@ -148,9 +148,12 @@ export default function AdminPage() {
 
       if (error) throw error
       setUserProfile(data)
+      // Автоматически заполняем поле username в форме
+      setNewAlias(prev => ({ ...prev, username: data.username }))
     } catch (err) {
       console.error("Error searching user:", err)
       setUserProfile(null)
+      alert("User not found. Please check the username.")
     }
   }
 
@@ -185,23 +188,61 @@ export default function AdminPage() {
   const handleAddAlias = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!newAlias.alias || !newAlias.username) {
-      alert("Please fill in both alias and username")
+    if (!newAlias.alias) {
+      alert("Please fill in alias")
       return
     }
 
     const supabase = createClient()
 
     try {
-      // Сначала находим пользователя по username
-      const { data: userData, error: userError } = await supabase
-        .from("profiles")
+      let userId = ""
+
+      // Если пользователь найден через поиск, используем его ID
+      if (userProfile) {
+        userId = userProfile.id
+      } 
+      // Иначе пытаемся найти пользователя по username из формы
+      else if (newAlias.username) {
+        const { data: userData, error: userError } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("username", newAlias.username.toLowerCase())
+          .single()
+
+        if (userError || !userData) {
+          alert("User not found. Please check the username or use the search function.")
+          return
+        }
+        userId = userData.id
+      } 
+      // Если ни одного способа нет
+      else {
+        alert("Please either search for a user first or provide a username")
+        return
+      }
+
+      // Проверяем, не существует ли уже такой алиас
+      const { data: existingAlias, error: checkError } = await supabase
+        .from("user_aliases")
         .select("id")
-        .eq("username", newAlias.username.toLowerCase())
+        .eq("alias", newAlias.alias.toLowerCase())
         .single()
 
-      if (userError || !userData) {
-        alert("User not found. Please check the username.")
+      if (!checkError && existingAlias) {
+        alert("This alias already exists. Please choose a different one.")
+        return
+      }
+
+      // Проверяем, не является ли алиас чьим-то основным username
+      const { data: existingUser, error: userCheckError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("username", newAlias.alias.toLowerCase())
+        .single()
+
+      if (!userCheckError && existingUser) {
+        alert("This alias matches an existing username. Please choose a different one.")
         return
       }
 
@@ -210,10 +251,16 @@ export default function AdminPage() {
         .from("user_aliases")
         .insert({
           alias: newAlias.alias.toLowerCase(),
-          user_id: userData.id
+          user_id: userId
         })
 
-      if (error) throw error
+      if (error) {
+        if (error.code === '23505') { // Unique violation
+          alert("This alias already exists. Please choose a different one.")
+          return
+        }
+        throw error
+      }
 
       setNewAlias({ alias: "", username: "" })
       setUserProfile(null)
@@ -436,18 +483,30 @@ export default function AdminPage() {
                   </div>
 
                   {userProfile && (
-                    <div className="p-4 border rounded-lg bg-muted/50">
-                      <h4 className="font-semibold">User Found:</h4>
-                      <p>Display Name: {userProfile.display_name || "Not set"}</p>
-                      <p>Username: {userProfile.username || "Not set"}</p>
-                      <p className="text-sm text-muted-foreground">ID: {userProfile.id}</p>
+                    <div className="p-4 border border-green-200 rounded-lg bg-green-50 mt-2">
+                      <h4 className="font-semibold text-green-800">User Found:</h4>
+                      <p className="text-green-700">Display Name: {userProfile.display_name || "Not set"}</p>
+                      <p className="text-green-700">Username: {userProfile.username || "Not set"}</p>
+                      <p className="text-sm text-green-600">ID: {userProfile.id}</p>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => {
+                          setUserProfile(null)
+                          setNewAlias({ ...newAlias, username: "" })
+                        }}
+                        className="mt-2"
+                      >
+                        Clear Search
+                      </Button>
                     </div>
                   )}
 
                   <form onSubmit={handleAddAlias}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="alias">New Alias</Label>
+                        <Label htmlFor="alias">New Alias *</Label>
                         <Input
                           id="alias"
                           placeholder="Enter new alias (without @)"
@@ -457,13 +516,18 @@ export default function AdminPage() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="username">Main Username</Label>
+                        <Label htmlFor="username">
+                          Main Username {!userProfile && "*"}
+                          {userProfile && <span className="text-green-600 ml-1">✓ Found via search</span>}
+                        </Label>
                         <Input
                           id="username"
-                          placeholder="Enter main username (without @)"
-                          value={newAlias.username || searchUsername}
+                          placeholder={userProfile ? userProfile.username : "Enter main username"}
+                          value={userProfile ? userProfile.username : newAlias.username}
                           onChange={(e) => setNewAlias({ ...newAlias, username: e.target.value })}
-                          required
+                          required={!userProfile}
+                          disabled={!!userProfile}
+                          className={userProfile ? "bg-green-50 border-green-200" : ""}
                         />
                       </div>
                     </div>
