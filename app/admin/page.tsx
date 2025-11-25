@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Trash2, Shield, Lightbulb, UserPlus, Users } from "lucide-react"
+import { Trash2, Shield, Lightbulb, UserPlus, Users, Search } from "lucide-react"
 import Link from "next/link"
 import {
   AlertDialog,
@@ -61,6 +61,8 @@ export default function AdminPage() {
   const [deletingAliasId, setDeletingAliasId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<"problems" | "aliases">("problems")
   const [newAlias, setNewAlias] = useState({ alias: "", userId: "" })
+  const [searchUserId, setSearchUserId] = useState("")
+  const [userProfile, setUserProfile] = useState<any>(null)
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -132,6 +134,26 @@ export default function AdminPage() {
     }
   }
 
+  const searchUser = async () => {
+    if (!searchUserId) return
+
+    const supabase = createClient()
+
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", searchUserId)
+        .single()
+
+      if (error) throw error
+      setUserProfile(data)
+    } catch (err) {
+      console.error("Error searching user:", err)
+      setUserProfile(null)
+    }
+  }
+
   const handleDelete = async (problemId: string) => {
     setDeletingId(problemId)
 
@@ -181,6 +203,8 @@ export default function AdminPage() {
       if (error) throw error
 
       setNewAlias({ alias: "", userId: "" })
+      setUserProfile(null)
+      setSearchUserId("")
       loadAliases()
       alert("Alias added successfully!")
       
@@ -380,34 +404,62 @@ export default function AdminPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleAddAlias} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="alias">Alias</Label>
+                <div className="space-y-4">
+                  {/* Search User */}
+                  <div className="space-y-2">
+                    <Label htmlFor="searchUserId">Find User by ID</Label>
+                    <div className="flex gap-2">
                       <Input
-                        id="alias"
-                        placeholder="Enter alias (without @)"
-                        value={newAlias.alias}
-                        onChange={(e) => setNewAlias({ ...newAlias, alias: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="userId">User ID</Label>
-                      <Input
-                        id="userId"
+                        id="searchUserId"
                         placeholder="Enter user UUID"
-                        value={newAlias.userId}
-                        onChange={(e) => setNewAlias({ ...newAlias, userId: e.target.value })}
-                        required
+                        value={searchUserId}
+                        onChange={(e) => setSearchUserId(e.target.value)}
                       />
+                      <Button type="button" onClick={searchUser} className="gap-2">
+                        <Search className="h-4 w-4" />
+                        Search
+                      </Button>
                     </div>
                   </div>
-                  <Button type="submit" className="gap-2">
-                    <UserPlus className="h-4 w-4" />
-                    Add Alias
-                  </Button>
-                </form>
+
+                  {userProfile && (
+                    <div className="p-4 border rounded-lg bg-muted/50">
+                      <h4 className="font-semibold">User Found:</h4>
+                      <p>Display Name: {userProfile.display_name || "Not set"}</p>
+                      <p>Username: {userProfile.username || "Not set"}</p>
+                      <p className="text-sm text-muted-foreground">ID: {userProfile.id}</p>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleAddAlias}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="alias">Alias</Label>
+                        <Input
+                          id="alias"
+                          placeholder="Enter alias (without @)"
+                          value={newAlias.alias}
+                          onChange={(e) => setNewAlias({ ...newAlias, alias: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="userId">User ID</Label>
+                        <Input
+                          id="userId"
+                          placeholder="Enter user UUID"
+                          value={newAlias.userId || searchUserId}
+                          onChange={(e) => setNewAlias({ ...newAlias, userId: e.target.value })}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <Button type="submit" className="gap-2 mt-4">
+                      <UserPlus className="h-4 w-4" />
+                      Add Alias
+                    </Button>
+                  </form>
+                </div>
               </CardContent>
             </Card>
 
@@ -438,6 +490,9 @@ export default function AdminPage() {
                           </div>
                           <div className="text-xs text-muted-foreground">
                             User ID: {alias.user_id}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Added: {formatDate(alias.created_at)}
                           </div>
                         </div>
                         <AlertDialog>
