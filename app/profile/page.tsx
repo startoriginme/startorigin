@@ -15,6 +15,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
+// Карта алиасов пользователей
+const userAliases: Record<string, string[]> = {
+  "nikolaev": ["azya", "nklv"],
+  "gerxog": ["admin"],
+  "startorigin": ["problems"],
+  "winter": ["zima", "vlkv", "bolt"],
+  
+}
+
+// Функция для получения всех username пользователя (основной + алиасы)
+function getAllUsernames(mainUsername: string): string[] {
+  return [mainUsername, ...(userAliases[mainUsername] || [])]
+}
 
 // Функция для получения алиасов из базы данных
 async function getDatabaseAliases(userId: string): Promise<string[]> {
