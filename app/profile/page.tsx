@@ -201,9 +201,9 @@ export default async function ProfilePage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="flex items-start gap-6">
+              <div className="flex flex-col items-center text-center gap-4">
                 {/* Кастомный аватар без сжатия */}
-                <div className="relative h-24 w-24">
+                <div className="relative">
                   <div className="h-24 w-24 rounded-full overflow-hidden border-2 border-border bg-muted">
                     {profile?.avatar_url ? (
                       <img
@@ -226,8 +226,9 @@ export default async function ProfilePage() {
                     </div>
                   )}
                 </div>
-                <div className="flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
+                
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center justify-center gap-2">
                     <h2 className="text-2xl font-bold text-foreground break-words">
                       {profile?.display_name || profile?.username || "Anonymous"}
                     </h2>
@@ -240,7 +241,7 @@ export default async function ProfilePage() {
                   
                   {/* Отображаем все username через запятую */}
                   {allUsernames.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-1 mt-1">
+                    <div className="flex flex-wrap items-center justify-center gap-1">
                       {allUsernames.map((userName, index) => (
                         <span key={userName} className="text-muted-foreground">
                           @{userName}
@@ -250,8 +251,11 @@ export default async function ProfilePage() {
                     </div>
                   )}
                   
-                  <p className="mt-2 text-sm text-muted-foreground">{user.email}</p>
-                  {profile?.bio && <p className="mt-4 text-foreground">{profile.bio}</p>}
+                  <p className="text-sm text-muted-foreground">{user.email}</p>
+                  
+                  {profile?.bio && (
+                    <p className="mt-4 text-foreground max-w-2xl">{profile.bio}</p>
+                  )}
                 </div>
               </div>
             </CardContent>
