@@ -631,7 +631,7 @@ export default function MarketplacePage() {
 
               <Link href="/" className="flex items-center gap-2">
                 <Lightbulb className="h-6 w-6 text-primary" />
-                <span className="text-xl font-bold text-foreground hidden sm:block">StartOrigin</span>
+                <span className="text-xl font-bold text-foreground">StartOrigin</span>
               </Link>
             </div>
             
@@ -863,8 +863,9 @@ export default function MarketplacePage() {
                             size="sm" 
                             variant="outline"
                             onClick={() => handleTransferAlias(alias)}
+                            className="text-xs"
                           >
-                            <Users className="h-3 w-3 sm:h-4 sm:w-4" />
+                            Запросить Transfer
                           </Button>
                         </div>
                       </div>
@@ -912,7 +913,7 @@ export default function MarketplacePage() {
         </div>
       </footer>
 
-      {/* Модальные окна остаются без изменений */}
+      {/* Модальные окна */}
       {/* Purchase Modal */}
       <Dialog open={isPurchaseModalOpen} onOpenChange={setIsPurchaseModalOpen}>
         <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
@@ -1051,10 +1052,10 @@ export default function MarketplacePage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Users className="h-5 w-5 text-green-600" />
-              Transfer @{transferForm.username}
+              Запросить Transfer @{transferForm.username}
             </DialogTitle>
             <DialogDescription>
-              Transfer this alias to another user
+              Запросить transfer этого алиаса другому пользователю
             </DialogDescription>
           </DialogHeader>
           
@@ -1114,7 +1115,7 @@ export default function MarketplacePage() {
               disabled={!transferForm.newOwnerId || isSubmitting}
               variant="destructive"
             >
-              {isSubmitting ? "Transferring..." : "Confirm Transfer"}
+              {isSubmitting ? "Запрашивается..." : "Запросить Transfer"}
             </Button>
 
             <div className="text-xs text-muted-foreground text-center">
