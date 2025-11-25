@@ -60,8 +60,8 @@ export default function AdminPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [deletingAliasId, setDeletingAliasId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<"problems" | "aliases">("problems")
-  const [newAlias, setNewAlias] = useState({ alias: "", userId: "" })
-  const [searchUserId, setSearchUserId] = useState("")
+  const [newAlias, setNewAlias] = useState({ alias: "", username: "" })
+  const [searchUsername, setSearchUsername] = useState("")
   const [userProfile, setUserProfile] = useState<any>(null)
 
   useEffect(() => {
@@ -135,7 +135,7 @@ export default function AdminPage() {
   }
 
   const searchUser = async () => {
-    if (!searchUserId) return
+    if (!searchUsername) return
 
     const supabase = createClient()
 
@@ -143,7 +143,7 @@ export default function AdminPage() {
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
-        .eq("id", searchUserId)
+        .eq("username", searchUsername.toLowerCase())
         .single()
 
       if (error) throw error
@@ -185,26 +185,39 @@ export default function AdminPage() {
   const handleAddAlias = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!newAlias.alias || !newAlias.userId) {
-      alert("Please fill in both alias and user ID")
+    if (!newAlias.alias || !newAlias.username) {
+      alert("Please fill in both alias and username")
       return
     }
 
     const supabase = createClient()
 
     try {
+      // Сначала находим пользователя по username
+      const { data: userData, error: userError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("username", newAlias.username.toLowerCase())
+        .single()
+
+      if (userError || !userData) {
+        alert("User not found. Please check the username.")
+        return
+      }
+
+      // Затем добавляем алиас
       const { error } = await supabase
         .from("user_aliases")
         .insert({
           alias: newAlias.alias.toLowerCase(),
-          user_id: newAlias.userId
+          user_id: userData.id
         })
 
       if (error) throw error
 
-      setNewAlias({ alias: "", userId: "" })
+      setNewAlias({ alias: "", username: "" })
       setUserProfile(null)
-      setSearchUserId("")
+      setSearchUsername("")
       loadAliases()
       alert("Alias added successfully!")
       
@@ -407,13 +420,13 @@ export default function AdminPage() {
                 <div className="space-y-4">
                   {/* Search User */}
                   <div className="space-y-2">
-                    <Label htmlFor="searchUserId">Find User by ID</Label>
+                    <Label htmlFor="searchUsername">Find User by Username</Label>
                     <div className="flex gap-2">
                       <Input
-                        id="searchUserId"
-                        placeholder="Enter user UUID"
-                        value={searchUserId}
-                        onChange={(e) => setSearchUserId(e.target.value)}
+                        id="searchUsername"
+                        placeholder="Enter username (without @)"
+                        value={searchUsername}
+                        onChange={(e) => setSearchUsername(e.target.value)}
                       />
                       <Button type="button" onClick={searchUser} className="gap-2">
                         <Search className="h-4 w-4" />
@@ -434,22 +447,22 @@ export default function AdminPage() {
                   <form onSubmit={handleAddAlias}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="alias">Alias</Label>
+                        <Label htmlFor="alias">New Alias</Label>
                         <Input
                           id="alias"
-                          placeholder="Enter alias (without @)"
+                          placeholder="Enter new alias (without @)"
                           value={newAlias.alias}
                           onChange={(e) => setNewAlias({ ...newAlias, alias: e.target.value })}
                           required
                         />
                       </div>
                       <div>
-                        <Label htmlFor="userId">User ID</Label>
+                        <Label htmlFor="username">Main Username</Label>
                         <Input
-                          id="userId"
-                          placeholder="Enter user UUID"
-                          value={newAlias.userId || searchUserId}
-                          onChange={(e) => setNewAlias({ ...newAlias, userId: e.target.value })}
+                          id="username"
+                          placeholder="Enter main username (without @)"
+                          value={newAlias.username || searchUsername}
+                          onChange={(e) => setNewAlias({ ...newAlias, username: e.target.value })}
                           required
                         />
                       </div>
