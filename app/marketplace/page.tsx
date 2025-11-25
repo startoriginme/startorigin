@@ -292,6 +292,8 @@ export default function MarketplacePage() {
 
       // Сначала ищем в основных профилях
       let profileData = null
+      let foundVia = ""
+      
       const { data: mainProfile, error: mainError } = await supabase
         .from("profiles")
         .select("id, username, display_name")
@@ -300,16 +302,27 @@ export default function MarketplacePage() {
 
       if (!mainError && mainProfile) {
         profileData = mainProfile
+        foundVia = "main profile"
       } else {
         // Если не нашли в основных профилях, ищем в алиасах
         const { data: aliasData, error: aliasError } = await supabase
           .from("user_aliases")
-          .select("user_id, profiles!user_aliases_user_id_fkey(id, username, display_name)")
+          .select("user_id")
           .eq("alias", searchUsername)
           .single()
 
-        if (!aliasError && aliasData?.profiles) {
-          profileData = aliasData.profiles
+        if (!aliasError && aliasData) {
+          // Теперь получаем информацию о пользователе по user_id
+          const { data: userData, error: userError } = await supabase
+            .from("profiles")
+            .select("id, username, display_name")
+            .eq("id", aliasData.user_id)
+            .single()
+
+          if (!userError && userData) {
+            profileData = userData
+            foundVia = "alias"
+          }
         }
       }
 
@@ -317,6 +330,7 @@ export default function MarketplacePage() {
         toast.error("User not found", {
           description: "Please check the username and try again."
         })
+        setTransferForm(prev => ({ ...prev, newOwnerId: "" }))
         return
       }
 
@@ -326,13 +340,14 @@ export default function MarketplacePage() {
       }))
 
       toast.success("User found", {
-        description: `Ready to transfer to @${profileData.username}`
+        description: `Found @${profileData.username} ${foundVia === "alias" ? "(via alias)" : ""}`
       })
     } catch (error) {
       console.error("Error searching user:", error)
       toast.error("Search failed", {
         description: "Error searching for user. Please try again."
       })
+      setTransferForm(prev => ({ ...prev, newOwnerId: "" }))
     } finally {
       setIsSearchingUser(false)
     }
@@ -579,10 +594,10 @@ export default function MarketplacePage() {
         <div className="container mx-auto px-4 py-4">
           <nav className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              {/* Бургер меню */}
+              {/* Бургер меню для всех устройств */}
               <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="md:hidden">
+                  <Button variant="ghost" size="icon">
                     <Menu className="h-5 w-5" />
                   </Button>
                 </SheetTrigger>
@@ -614,42 +629,19 @@ export default function MarketplacePage() {
                 </SheetContent>
               </Sheet>
 
-              {/* Бургер меню для десктопа */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="hidden md:flex">
-                    <Menu className="h-5 w-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-48">
-                  <DropdownMenuItem asChild>
-                    <Link href="/about" className="flex items-center gap-2 cursor-pointer">
-                      <User className="h-4 w-4" />
-                      <span>About</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/marketplace" className="flex items-center gap-2 cursor-pointer">
-                      <Crown className="h-4 w-4" />
-                      <span>Marketplace</span>
-                    </Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
               <Link href="/" className="flex items-center gap-2">
                 <Lightbulb className="h-6 w-6 text-primary" />
-                <span className="text-xl font-bold text-foreground">StartOrigin</span>
+                <span className="text-xl font-bold text-foreground hidden sm:block">StartOrigin</span>
               </Link>
             </div>
             
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               {user ? (
                 <>
                   <Link href="/problems/new">
                     <Button className="gap-2">
                       <Plus className="h-4 w-4" />
-                      Share Problem
+                      <span className="hidden sm:inline">Share Problem</span>
                     </Button>
                   </Link>
                   
@@ -685,11 +677,26 @@ export default function MarketplacePage() {
               ) : (
                 <>
                   <Link href="/auth/login">
-                    <Button variant="outline">Sign In</Button>
+                    <Button variant="outline" size="sm" className="hidden sm:flex">Sign In</Button>
                   </Link>
                   <Link href="/auth/sign-up">
-                    <Button>Get Started</Button>
+                    <Button size="sm" className="hidden sm:flex">Get Started</Button>
                   </Link>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="sm:hidden">
+                        <User className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem asChild>
+                        <Link href="/auth/login" className="cursor-pointer">Sign In</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/auth/sign-up" className="cursor-pointer">Get Started</Link>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </>
               )}
             </div>
@@ -698,15 +705,15 @@ export default function MarketplacePage() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8 flex-1">
-        <div className="max-w-2xl mx-auto space-y-8">
+      <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 flex-1">
+        <div className="max-w-2xl mx-auto space-y-6 sm:space-y-8">
           {/* Hero Section */}
-          <div className="text-center space-y-4">
-            <Crown className="h-12 w-12 text-yellow-500 mx-auto" />
-            <h1 className="text-3xl font-bold text-foreground">
+          <div className="text-center space-y-3 sm:space-y-4">
+            <Crown className="h-10 w-10 sm:h-12 sm:w-12 text-yellow-500 mx-auto" />
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
               Username Marketplace
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm sm:text-base text-muted-foreground">
               Buy, sell, and transfer exclusive usernames
             </p>
           </div>
@@ -719,11 +726,13 @@ export default function MarketplacePage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value.toLowerCase())}
                 onKeyPress={(e) => e.key === 'Enter' && checkUsername()}
-                className="flex-1"
+                className="flex-1 text-sm sm:text-base"
               />
               <Button 
                 onClick={checkUsername} 
                 disabled={isChecking || !username.trim()}
+                size="sm"
+                className="sm:px-4"
               >
                 {isChecking ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
@@ -735,21 +744,21 @@ export default function MarketplacePage() {
 
             {result && (
               <Card className={result.available ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}>
-                <CardContent className="p-4">
+                <CardContent className="p-3 sm:p-4">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-full ${result.available ? 'bg-green-100' : 'bg-red-100'}`}>
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className={`p-1.5 sm:p-2 rounded-full ${result.available ? 'bg-green-100' : 'bg-red-100'}`}>
                         {result.available ? (
-                          <Check className="h-5 w-5 text-green-600" />
+                          <Check className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
                         ) : (
-                          <X className="h-5 w-5 text-red-600" />
+                          <X className="h-4 w-4 sm:h-5 sm:w-5 text-red-600" />
                         )}
                       </div>
-                      <div>
-                        <h3 className="font-semibold text-foreground">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-semibold text-foreground text-sm sm:text-base truncate">
                           @{username}
                         </h3>
-                        <p className={result.available ? "text-green-600" : "text-red-600"}>
+                        <p className={`text-xs sm:text-sm ${result.available ? "text-green-600" : "text-red-600"}`}>
                           {result.forSale 
                             ? "For sale!" 
                             : result.isAlias 
@@ -760,7 +769,7 @@ export default function MarketplacePage() {
                           }
                         </p>
                         {result.currentOwner && !result.forSale && (
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-muted-foreground truncate">
                             Current owner: @{result.currentOwner}
                           </p>
                         )}
@@ -768,12 +777,12 @@ export default function MarketplacePage() {
                     </div>
                     
                     {result.available && result.price && (
-                      <div className="text-right">
-                        <div className="flex items-center gap-1 text-lg font-bold text-foreground">
-                          <Star className="h-4 w-4 text-yellow-500" />
+                      <div className="text-right pl-2">
+                        <div className="flex items-center gap-1 text-base sm:text-lg font-bold text-foreground">
+                          <Star className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-500" />
                           {result.price}
                         </div>
-                        <Button onClick={handlePurchase} size="sm" className="mt-1">
+                        <Button onClick={handlePurchase} size="sm" className="mt-1 text-xs">
                           {result.forSale ? "Purchase" : "Contact to Buy"}
                         </Button>
                       </div>
@@ -786,23 +795,23 @@ export default function MarketplacePage() {
 
           {/* My Listings Section */}
           {user && myListings.length > 0 && (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <h3 className="text-lg font-semibold text-foreground">My Active Listings</h3>
-              <div className="grid gap-3">
+              <div className="grid gap-2 sm:gap-3">
                 {myListings.map((listing) => (
                   <Card key={listing.id} className="border-orange-200">
-                    <CardContent className="p-4">
+                    <CardContent className="p-3 sm:p-4">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Tag className="h-5 w-5 text-orange-600" />
-                          <div>
-                            <h4 className="font-semibold">@{listing.username}</h4>
-                            <p className="text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                          <Tag className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600 flex-shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-semibold text-sm sm:text-base truncate">@{listing.username}</h4>
+                            <p className="text-xs sm:text-sm text-muted-foreground truncate">
                               {listing.price} stars • {listing.contact_info}
                             </p>
                           </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-1 sm:gap-2 flex-shrink-0">
                           <Button 
                             size="sm" 
                             variant="outline"
@@ -812,7 +821,7 @@ export default function MarketplacePage() {
                               username: listing.username
                             })}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
                         </div>
                       </div>
@@ -825,27 +834,28 @@ export default function MarketplacePage() {
 
           {/* Sell Your Aliases Section */}
           {user && userAliases.length > 0 && (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <h3 className="text-lg font-semibold text-foreground">My Aliases</h3>
-              <div className="grid gap-3">
+              <div className="grid gap-2 sm:gap-3">
                 {userAliases.map((alias) => (
                   <Card key={alias} className="border-blue-200">
-                    <CardContent className="p-4">
+                    <CardContent className="p-3 sm:p-4">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Tag className="h-5 w-5 text-blue-600" />
-                          <div>
-                            <h4 className="font-semibold">@{alias}</h4>
-                            <p className="text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                          <Tag className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 flex-shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-semibold text-sm sm:text-base truncate">@{alias}</h4>
+                            <p className="text-xs sm:text-sm text-muted-foreground">
                               Your alias • Suggested price: {calculatePrice(alias.length)} stars
                             </p>
                           </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-1 sm:gap-2 flex-shrink-0">
                           <Button 
                             size="sm" 
                             variant="outline"
                             onClick={() => handleSellAlias(alias)}
+                            className="text-xs"
                           >
                             Sell
                           </Button>
@@ -854,7 +864,7 @@ export default function MarketplacePage() {
                             variant="outline"
                             onClick={() => handleTransferAlias(alias)}
                           >
-                            <Users className="h-4 w-4" />
+                            <Users className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
                         </div>
                       </div>
@@ -867,9 +877,9 @@ export default function MarketplacePage() {
 
           {/* Pricing Info */}
           <Card>
-            <CardContent className="p-4">
-              <h3 className="font-semibold text-foreground mb-3">Pricing Guide</h3>
-              <div className="space-y-2 text-sm">
+            <CardContent className="p-3 sm:p-4">
+              <h3 className="font-semibold text-foreground mb-2 sm:mb-3 text-sm sm:text-base">Pricing Guide</h3>
+              <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
                 {[
                   { length: "1-2 letters", price: "2000-1750 stars" },
                   { length: "3-4 letters", price: "1500-1250 stars" },
@@ -886,7 +896,7 @@ export default function MarketplacePage() {
           </Card>
 
           {/* Disclaimer */}
-          <div className="text-center text-xs text-muted-foreground border-t pt-4">
+          <div className="text-center text-xs text-muted-foreground border-t pt-3 sm:pt-4">
             <p>StartOrigin is not responsible for second-hand username sales.</p>
             <p>All transactions are between buyers and sellers directly.</p>
           </div>
@@ -894,17 +904,18 @@ export default function MarketplacePage() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-border bg-card/50 py-6 mt-auto">
+      <footer className="border-t border-border bg-card/50 py-4 sm:py-6 mt-auto">
         <div className="container mx-auto px-4">
-          <div className="text-center text-muted-foreground text-sm">
+          <div className="text-center text-muted-foreground text-xs sm:text-sm">
             © 2025 StartOrigin. All rights reserved.
           </div>
         </div>
       </footer>
 
+      {/* Модальные окна остаются без изменений */}
       {/* Purchase Modal */}
       <Dialog open={isPurchaseModalOpen} onOpenChange={setIsPurchaseModalOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Crown className="h-5 w-5 text-yellow-500" />
@@ -979,7 +990,7 @@ export default function MarketplacePage() {
 
       {/* Sell Modal */}
       <Dialog open={isSellModalOpen} onOpenChange={setIsSellModalOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Tag className="h-5 w-5 text-blue-600" />
@@ -1036,7 +1047,7 @@ export default function MarketplacePage() {
 
       {/* Transfer Modal */}
       <Dialog open={isTransferModalOpen} onOpenChange={setIsTransferModalOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Users className="h-5 w-5 text-green-600" />
@@ -1085,6 +1096,14 @@ export default function MarketplacePage() {
               <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                 <p className="text-sm text-green-800">
                   ✓ User found: @{transferForm.newOwnerUsername}
+                </p>
+              </div>
+            )}
+
+            {!transferForm.newOwnerId && transferForm.newOwnerUsername && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <p className="text-sm text-yellow-800">
+                  User not found. Please check the username and try again.
                 </p>
               </div>
             )}
