@@ -21,7 +21,6 @@ const userAliases: Record<string, string[]> = {
   "gerxog": ["tech"],
   "startorigin": ["problems"],
   "winter": ["zima", "vlkv", "bolt"],
-  
 }
 
 // Функция для получения всех username пользователя (основной + алиасы)
@@ -87,6 +86,10 @@ export default async function ProfilePage() {
   // Fetch user profile
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
 
+  if (!profile) {
+    redirect("/auth/login")
+  }
+
   // Список подтвержденных пользователей
   const verifiedUsers = ["startorigin", "winter", "nikolaev", "gerxog"]
   const isVerifiedUser = profile?.username ? verifiedUsers.includes(profile.username) : false
@@ -129,7 +132,7 @@ export default async function ProfilePage() {
     redirect("/auth/login")
   }
 
-return (
+  return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="border-b border-border bg-card">
@@ -157,11 +160,11 @@ return (
                       <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
                         <Avatar className="h-8 w-8">
                           <AvatarImage 
-                            src={userProfile?.avatar_url || ""} 
+                            src={profile?.avatar_url || ""} 
                             className="object-cover"
                           />
                           <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
-                            {getInitials(userProfile?.display_name || userProfile?.username)}
+                            {getInitials(profile?.display_name || profile?.username)}
                           </AvatarFallback>
                         </Avatar>
                       </button>
