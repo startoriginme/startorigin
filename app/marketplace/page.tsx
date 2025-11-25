@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
-import { Lightbulb, Plus, LogOut, User, Search, Check, X, Crown, Star, ExternalLink } from "lucide-react"
+import { Lightbulb, Plus, LogOut, User, Search, Check, X, Crown, Star, ExternalLink, Tag } from "lucide-react"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -38,9 +38,13 @@ export default function MarketplacePage() {
     available: boolean
     price?: number
     length: number
+    forSale?: boolean
+    sellerContact?: string
+    sellerPrice?: number
   } | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [selectedUsername, setSelectedUsername] = useState<{username: string, price: number} | null>(null)
+  const [selectedUsername, setSelectedUsername] = useState<{username: string, price: number, sellerContact?: string} | null>(null)
+  const [userAliases, setUserAliases] = useState<string[]>([])
   
   const router = useRouter()
   const supabase = createClient()
@@ -57,6 +61,13 @@ export default function MarketplacePage() {
           .eq("id", user.id)
           .single()
         setUserProfile(profile)
+
+        // Загружаем алиасы пользователя
+        const { data: aliases } = await supabase
+          .from("user_aliases")
+          .select("alias")
+          .eq("user_id", user.id)
+        setUserAliases(aliases?.map(a => a.alias) || [])
       }
     }
     fetchUser()
@@ -102,7 +113,28 @@ export default function MarketplacePage() {
         return
       }
 
-      // Затем проверяем в базе данных
+      // Проверяем, продается ли username
+      const { data: marketplaceData } = await supabase
+        .from("username_marketplace")
+        .select("*")
+        .eq("username", username.toLowerCase())
+        .eq("status", "active")
+        .single()
+
+      if (marketplaceData) {
+        setResult({
+          available: true,
+          price: marketplaceData.price,
+          length: username.length,
+          forSale: true,
+          sellerContact: marketplaceData.contact_info,
+          sellerPrice: marketplaceData.price
+        })
+        setIsChecking(false)
+        return
+      }
+
+      // Затем проверяем в базе данных профилей
       const { data: existingProfile, error } = await supabase
         .from("profiles")
         .select("username")
@@ -125,7 +157,8 @@ export default function MarketplacePage() {
       setResult({
         available: isAvailable,
         price: isAvailable ? calculatePrice(username.length) : undefined,
-        length: username.length
+        length: username.length,
+        forSale: false
       })
     } catch (error) {
       console.error("Error checking username:", error)
@@ -139,22 +172,32 @@ export default function MarketplacePage() {
   }
 
   const handlePurchase = () => {
+    if (result?.forSale) {
+      setSelectedUsername({
+        username,
+        price: result.sellerPrice!,
+        sellerContact: result.sellerContact
+      })
+    } else {
+      setSelectedUsername({
+        username,
+        price: result?.price || calculatePrice(username.length)
+      })
+    }
+    setIsModalOpen(true)
+  }
+
+  const handleSellAlias = (alias: string) => {
+    setSelectedUsername({
+      username: alias,
+      price: calculatePrice(alias.length)
+    })
     setIsModalOpen(true)
   }
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push("/auth/login")
-  }
-
-  const topUsernames = {
-    "1 Letter": ["x", "q", "z", "v", "k"],
-    "2 Letters": ["ai", "io", "me", "tv", "ex", "vc", "gg", "cc", "yy", "zz"],
-  }
-
-  const priceMap = {
-    1: 2000,
-    2: 1750,
   }
 
   return (
@@ -168,8 +211,7 @@ export default function MarketplacePage() {
               <span className="text-xl font-bold text-foreground">StartOrigin</span>
             </Link>
             
-            {/* Desktop Navigation - hidden on mobile */}
-            <div className="hidden md:flex items-center gap-4">
+            <div className="flex items-center gap-4">
               {user ? (
                 <>
                   <Link href="/problems/new">
@@ -179,7 +221,6 @@ export default function MarketplacePage() {
                     </Button>
                   </Link>
                   
-                  {/* Avatar Dropdown */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
@@ -220,265 +261,141 @@ export default function MarketplacePage() {
                 </>
               )}
             </div>
-
-            {/* Mobile Navigation - hidden on desktop */}
-            <div className="flex items-center gap-2 md:hidden">
-              {user ? (
-                <>
-                  {/* Mobile Plus Button */}
-                  <Link href="/problems/new">
-                    <Button size="icon" className="h-9 w-9">
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                  
-                  {/* Mobile Avatar Dropdown */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage 
-                            src={userProfile?.avatar_url || ""} 
-                            className="object-cover"
-                          />
-                          <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
-                            {getInitials(userProfile?.display_name || userProfile?.username)}
-                          </AvatarFallback>
-                        </Avatar>
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuItem asChild>
-                        <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
-                          <User className="h-4 w-4" />
-                          <span>Profile</span>
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
-                        <LogOut className="h-4 w-4 mr-2" />
-                        <span>Sign Out</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </>
-              ) : (
-                <>
-                  <Link href="/auth/login">
-                    <Button variant="outline" size="sm">
-                      Sign In
-                    </Button>
-                  </Link>
-                  <Link href="/auth/sign-up">
-                    <Button size="sm">Get Started</Button>
-                  </Link>
-                </>
-              )}
-            </div>
           </nav>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="border-b border-border bg-card/50">
-        <div className="container mx-auto px-4 py-12">
-          <div className="mx-auto max-w-4xl text-center">
-            <div className="flex justify-center mb-4">
-              <Crown className="h-12 w-12 text-yellow-500" />
-            </div>
-            <h1 className="mb-4 text-4xl font-bold text-foreground">
-              Premium Username Marketplace
-            </h1>
-            <p className="mb-6 text-xl text-muted-foreground">
-              Get exclusive usernames with Telegram Stars
-            </p>
-            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-              <Star className="h-4 w-4 text-yellow-500" />
-              <span>Powered by Telegram Stars</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 flex-1">
-        <div className="mx-auto max-w-6xl space-y-12">
-          {/* Username Search Section */}
-          <section>
-            <div className="mb-8 text-center">
-              <h2 className="text-3xl font-bold text-foreground mb-4">
-                Find Your Perfect Username
-              </h2>
-              <p className="text-muted-foreground text-lg">
-                Search for any username and check its availability and price
-              </p>
-            </div>
-            
-            <div className="max-w-2xl mx-auto space-y-6">
-              <div className="flex gap-4">
-                <Input
-                  placeholder="Enter username..."
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value.toLowerCase())}
-                  onKeyPress={(e) => e.key === 'Enter' && checkUsername()}
-                  className="flex-1 text-lg h-12"
-                />
-                <Button 
-                  onClick={checkUsername} 
-                  disabled={isChecking || !username.trim()}
-                  className="h-12 px-6"
-                >
-                  {isChecking ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                  ) : (
-                    <Search className="h-4 w-4" />
-                  )}
-                  Check
-                </Button>
-              </div>
+        <div className="max-w-2xl mx-auto space-y-8">
+          {/* Hero Section */}
+          <div className="text-center space-y-4">
+            <Crown className="h-12 w-12 text-yellow-500 mx-auto" />
+            <h1 className="text-3xl font-bold text-foreground">
+              Username Marketplace
+            </h1>
+            <p className="text-muted-foreground">
+              Buy and sell exclusive usernames with Telegram Stars
+            </p>
+          </div>
 
-              {result && (
-                <Card className={result.available ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-full ${result.available ? 'bg-green-100' : 'bg-red-100'}`}>
-                          {result.available ? (
-                            <Check className="h-6 w-6 text-green-600" />
-                          ) : (
-                            <X className="h-6 w-6 text-red-600" />
-                          )}
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-foreground">
-                            @{username}
-                          </h3>
-                          <p className={result.available ? "text-green-600" : "text-red-600"}>
-                            {result.available ? "Available for purchase!" : "Already taken"}
-                          </p>
-                        </div>
+          {/* Search Section */}
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                placeholder="Search username..."
+                value={username}
+                onChange={(e) => setUsername(e.target.value.toLowerCase())}
+                onKeyPress={(e) => e.key === 'Enter' && checkUsername()}
+                className="flex-1"
+              />
+              <Button 
+                onClick={checkUsername} 
+                disabled={isChecking || !username.trim()}
+              >
+                {isChecking ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                ) : (
+                  <Search className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+
+            {result && (
+              <Card className={result.available ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-full ${result.available ? 'bg-green-100' : 'bg-red-100'}`}>
+                        {result.available ? (
+                          <Check className="h-5 w-5 text-green-600" />
+                        ) : (
+                          <X className="h-5 w-5 text-red-600" />
+                        )}
                       </div>
-                      
-                      {result.available && result.price && (
-                        <div className="text-right">
-                          <div className="flex items-center gap-2 text-2xl font-bold text-foreground">
-                            <Star className="h-6 w-6 text-yellow-500" />
-                            {result.price}
-                          </div>
-                          <p className="text-sm text-muted-foreground">{result.length} letters</p>
-                          <Button onClick={handlePurchase} className="mt-2">
-                            Purchase
-                          </Button>
-                        </div>
-                      )}
+                      <div>
+                        <h3 className="font-semibold text-foreground">
+                          @{username}
+                        </h3>
+                        <p className={result.available ? "text-green-600" : "text-red-600"}>
+                          {result.forSale ? "For sale!" : result.available ? "Available for purchase!" : "Already taken"}
+                        </p>
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </section>
-
-          {/* Top Usernames Section */}
-          <section>
-            <div className="mb-8 text-center">
-              <h2 className="text-3xl font-bold text-foreground mb-4">
-                Premium Usernames
-              </h2>
-              <p className="text-muted-foreground text-lg">
-                Exclusive short usernames available for purchase
-              </p>
-            </div>
-            
-            <div className="space-y-8">
-              {Object.entries(topUsernames).map(([category, usernames]) => (
-                <div key={category}>
-                  <h3 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
-                    <Crown className="h-5 w-5 text-yellow-500" />
-                    {category} Usernames
-                  </h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-                    {usernames.map((username) => {
-                      const price = priceMap[username.length as keyof typeof priceMap]
-                      return (
-                        <Card 
-                          key={username} 
-                          className="cursor-pointer hover:shadow-md transition-shadow border-yellow-200"
-                          onClick={() => setSelectedUsername({ username, price })}
-                        >
-                          <CardContent className="p-4 text-center">
-                            <div className="font-mono font-bold text-lg mb-2">@{username}</div>
-                            <div className="flex items-center justify-center gap-1 text-yellow-600">
-                              <Star className="h-4 w-4" />
-                              <span className="font-semibold">{price}</span>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      )
-                    })}
+                    
+                    {result.available && result.price && (
+                      <div className="text-right">
+                        <div className="flex items-center gap-1 text-lg font-bold text-foreground">
+                          <Star className="h-4 w-4 text-yellow-500" />
+                          {result.price}
+                        </div>
+                        <Button onClick={handlePurchase} size="sm" className="mt-1">
+                          {result.forSale ? "Purchase" : "Contact to Buy"}
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
-            </div>
-          </section>
+                </CardContent>
+              </Card>
+            )}
+          </div>
 
-          {/* Pricing Info Section */}
-          <section className="bg-muted/50 rounded-lg p-8">
-            <div className="text-center mb-8">
-              <h3 className="text-2xl font-bold text-foreground mb-4">
-                Pricing Structure
-              </h3>
-              <p className="text-muted-foreground">
-                All prices are in Telegram Stars
-              </p>
+          {/* Sell Your Aliases Section */}
+          {user && userAliases.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-foreground">Sell Your Aliases</h3>
+              <div className="grid gap-3">
+                {userAliases.map((alias) => (
+                  <Card key={alias} className="border-blue-200">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Tag className="h-5 w-5 text-blue-600" />
+                          <div>
+                            <h4 className="font-semibold">@{alias}</h4>
+                            <p className="text-sm text-muted-foreground">Your alias</p>
+                          </div>
+                        </div>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleSellAlias(alias)}
+                        >
+                          Sell
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 max-w-4xl mx-auto">
-              {[
-                { length: "1 letter", price: "2000", stars: "⭐⭐⭐⭐⭐" },
-                { length: "2 letters", price: "1750", stars: "⭐⭐⭐⭐" },
-                { length: "3 letters", price: "1500", stars: "⭐⭐⭐" },
-                { length: "4 letters", price: "1250", stars: "⭐⭐⭐" },
-                { length: "5 letters", price: "1000", stars: "⭐⭐" },
-                { length: "6 letters", price: "600", stars: "⭐⭐" },
-                { length: "7 letters", price: "400", stars: "⭐" },
-                { length: "8 letters", price: "200", stars: "⭐" },
-                { length: "9+ letters", price: "100", stars: "⭐" },
-              ].map((item, index) => (
-                <div key={index} className="text-center p-4 bg-background rounded-lg border">
-                  <div className="text-2xl font-bold text-foreground mb-2">{item.length}</div>
-                  <div className="text-lg font-semibold text-primary mb-1">{item.price} stars</div>
-                  <div className="text-yellow-500 text-sm">{item.stars}</div>
-                </div>
-              ))}
-            </div>
-          </section>
+          )}
 
-          {/* How It Works Section */}
-          <section className="text-center">
-            <h3 className="text-2xl font-bold text-foreground mb-8">How It Works</h3>
-            <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-              <div className="space-y-4">
-                <div className="w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center mx-auto text-lg font-bold">1</div>
-                <h4 className="font-semibold text-foreground">Search Username</h4>
-                <p className="text-muted-foreground text-sm">
-                  Check if your desired username is available
-                </p>
+          {/* Pricing Info */}
+          <Card>
+            <CardContent className="p-4">
+              <h3 className="font-semibold text-foreground mb-3">Pricing Guide</h3>
+              <div className="space-y-2 text-sm">
+                {[
+                  { length: "1-2 letters", price: "2000-1750 stars" },
+                  { length: "3-4 letters", price: "1500-1250 stars" },
+                  { length: "5-6 letters", price: "1000-600 stars" },
+                  { length: "7+ letters", price: "400-100 stars" },
+                ].map((item, index) => (
+                  <div key={index} className="flex justify-between">
+                    <span className="text-muted-foreground">{item.length}</span>
+                    <span className="font-medium">{item.price}</span>
+                  </div>
+                ))}
               </div>
-              <div className="space-y-4">
-                <div className="w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center mx-auto text-lg font-bold">2</div>
-                <h4 className="font-semibold text-foreground">See Price</h4>
-                <p className="text-muted-foreground text-sm">
-                  Get the price in Telegram Stars based on username length
-                </p>
-              </div>
-              <div className="space-y-4">
-                <div className="w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center mx-auto text-lg font-bold">3</div>
-                <h4 className="font-semibold text-foreground">Contact CEO</h4>
-                <p className="text-muted-foreground text-sm">
-                  Message our CEO on Telegram to complete purchase
-                </p>
-              </div>
-            </div>
-          </section>
+            </CardContent>
+          </Card>
+
+          {/* Disclaimer */}
+          <div className="text-center text-xs text-muted-foreground border-t pt-4">
+            <p>StartOrigin is not responsible for second-hand username sales.</p>
+            <p>All transactions are between buyers and sellers directly.</p>
+          </div>
         </div>
       </main>
 
@@ -497,10 +414,13 @@ export default function MarketplacePage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Crown className="h-5 w-5 text-yellow-500" />
-              Purchase @{username}
+              {result?.forSale ? "Purchase @" + username : "Contact to Buy @" + username}
             </DialogTitle>
             <DialogDescription>
-              Contact our CEO to complete your username purchase
+              {result?.forSale 
+                ? "Contact the seller to complete your purchase"
+                : "Contact our team to purchase this username"
+              }
             </DialogDescription>
           </DialogHeader>
           
@@ -517,61 +437,41 @@ export default function MarketplacePage() {
                   {result?.price} Telegram Stars
                 </span>
               </div>
+              {result?.forSale && result.sellerContact && (
+                <div className="flex justify-between items-center mt-2">
+                  <span className="font-semibold">Seller Contact:</span>
+                  <span className="text-sm">{result.sellerContact}</span>
+                </div>
+              )}
             </div>
             
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">
-                Message our CEO on Telegram to complete the purchase:
+                {result?.forSale 
+                  ? "Contact the seller directly to arrange the transfer:"
+                  : "Message @maxnklv on Telegram to purchase this username:"
+                }
               </p>
               <Button asChild className="w-full gap-2">
-                <a href="https://t.me/maxnklv" target="_blank" rel="noopener noreferrer">
+                <a 
+                  href={result?.forSale && result.sellerContact?.includes('@') 
+                    ? `https://t.me/${result.sellerContact.replace('@', '')}`
+                    : "https://t.me/maxnklv"
+                  } 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                >
                   <ExternalLink className="h-4 w-4" />
-                  Contact @maxnklv on Telegram
+                  {result?.forSale 
+                    ? `Contact ${result.sellerContact}`
+                    : "Contact @maxnklv on Telegram"
+                  }
                 </a>
               </Button>
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
-      {/* Top Username Purchase Modal */}
-      <Dialog open={!!selectedUsername} onOpenChange={() => setSelectedUsername(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Crown className="h-5 w-5 text-yellow-500" />
-              Purchase @{selectedUsername?.username}
-            </DialogTitle>
-            <DialogDescription>
-              Contact our CEO to complete your username purchase
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="bg-muted p-4 rounded-lg">
-              <div className="flex justify-between items-center mb-2">
-                <span className="font-semibold">Username:</span>
-                <span>@{selectedUsername?.username}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="font-semibold">Price:</span>
-                <span className="flex items-center gap-1">
-                  <Star className="h-4 w-4 text-yellow-500" />
-                  {selectedUsername?.price} Telegram Stars
-                </span>
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">
-                Message our CEO on Telegram to complete the purchase:
-              </p>
-              <Button asChild className="w-full gap-2">
-                <a href="https://t.me/maxnklv" target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="h-4 w-4" />
-                  Contact @maxnklv on Telegram
-                </a>
-              </Button>
+            <div className="text-xs text-muted-foreground text-center">
+              <p>StartOrigin is not responsible for second-hand transactions.</p>
             </div>
           </div>
         </DialogContent>
