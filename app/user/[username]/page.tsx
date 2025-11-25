@@ -24,7 +24,6 @@ const userAliases: Record<string, string[]> = {
   "gerxog": ["admin"],
   "startorigin": ["problems"],
   "winter": ["zima", "vlkv", "bolt"]
-  // Можно добавить других пользователей с алиасами здесь
 }
 
 // Функция для получения основного username по алиасу
@@ -40,6 +39,50 @@ function getMainUsername(username: string): string {
 // Функция для получения всех username пользователя (основной + алиасы)
 function getAllUsernames(mainUsername: string): string[] {
   return [mainUsername, ...(userAliases[mainUsername] || [])]
+}
+
+// Функция для получения алиасов из базы данных
+async function getDatabaseAliases(userId: string): Promise<string[]> {
+  const supabase = await createClient()
+  
+  try {
+    const { data, error } = await supabase
+      .from("user_aliases")
+      .select("alias")
+      .eq("user_id", userId)
+
+    if (error) {
+      console.error("Error fetching database aliases:", error)
+      return []
+    }
+
+    return data?.map(item => item.alias) || []
+  } catch (err) {
+    console.error("Error fetching database aliases:", err)
+    return []
+  }
+}
+
+// Функция для объединения статических и базы данных алиасов
+async function getAllUsernamesCombined(mainUsername: string, userId: string): Promise<string[]> {
+  const staticAliases = getAllUsernames(mainUsername)
+  
+  try {
+    const databaseAliases = await getDatabaseAliases(userId)
+    
+    // Объединяем и убираем дубликаты
+    const allAliases = [...staticAliases]
+    databaseAliases.forEach(alias => {
+      if (!allAliases.includes(alias)) {
+        allAliases.push(alias)
+      }
+    })
+    
+    return allAliases
+  } catch (err) {
+    console.error("Error combining aliases:", err)
+    return staticAliases
+  }
 }
 
 export default async function PublicProfilePage({ params }: PublicProfilePageProps) {
@@ -61,14 +104,14 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
       .eq("id", user.id)
       .single()
 
-    // Получаем все username текущего пользователя (включая алиасы)
-    const currentUserAllUsernames = currentUserProfile?.username 
-      ? getAllUsernames(currentUserProfile.username)
-      : []
+    if (currentUserProfile?.username) {
+      // Получаем все username текущего пользователя (включая алиасы из базы данных)
+      const currentUserAllUsernames = await getAllUsernamesCombined(currentUserProfile.username, user.id)
 
-    // Если запрашиваемый username совпадает с любым из username текущего пользователя - редиректим
-    if (currentUserAllUsernames.includes(username)) {
-      redirect("/profile")
+      // Если запрашиваемый username совпадает с любым из username текущего пользователя - редиректим
+      if (currentUserAllUsernames.includes(username)) {
+        redirect("/profile")
+      }
     }
   }
 
@@ -98,8 +141,8 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
   const verifiedUsers = ["startorigin", "nikolaev", "winter", "gerxog"]
   const isVerifiedUser = verifiedUsers.includes(mainUsername)
 
-  // Получаем все username для отображения
-  const allUsernames = getAllUsernames(mainUsername)
+  // Получаем все username для отображения (статические + из базы данных)
+  const allUsernames = await getAllUsernamesCombined(mainUsername, profile.id)
 
   // Fetch user's public problems
   const { data: problems } = await supabase
