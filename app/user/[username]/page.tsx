@@ -18,8 +18,9 @@ interface PublicProfilePageProps {
   params: Promise<{ username: string }>
 }
 
+// Карта алиасов пользователей
 const userAliases: Record<string, string[]> = {
-  "nikolaev": ["azya", "nklv"],
+  "nikolaev": ["maxnikolaev", "maxnklv", "azya", "nklv"],
   "gerxog": ["admin"],
   "startorigin": ["problems"],
   "winter": ["zima", "vlkv", "bolt"]
@@ -84,6 +85,60 @@ async function getAllUsernamesCombined(mainUsername: string, userId: string): Pr
   }
 }
 
+// Функция для получения профиля по username или алиасу
+async function getProfileByUsernameOrAlias(username: string) {
+  const supabase = await createClient()
+  
+  // Сначала ищем в базе данных по алиасам
+  const { data: aliasData, error: aliasError } = await supabase
+    .from("user_aliases")
+    .select("user_id")
+    .eq("alias", username)
+    .single()
+
+  if (!aliasError && aliasData) {
+    // Если нашли в алиасах, получаем профиль пользователя
+    const { data: profileData, error: profileError } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", aliasData.user_id)
+      .single()
+
+    if (!profileError && profileData) {
+      return profileData
+    }
+  }
+
+  // Если не нашли в алиасах, ищем по основному username
+  const { data: profileData, error: profileError } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("username", username)
+    .single()
+
+  if (!profileError && profileData) {
+    return profileData
+  }
+
+  // Если не нашли в базе, проверяем статическую карту
+  for (const [mainUsername, aliases] of Object.entries(userAliases)) {
+    if (mainUsername === username || aliases.includes(username)) {
+      // Ищем профиль по основному username
+      const { data: staticProfileData, error: staticError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("username", mainUsername)
+        .single()
+
+      if (!staticError && staticProfileData) {
+        return staticProfileData
+      }
+    }
+  }
+
+  return null
+}
+
 export default async function PublicProfilePage({ params }: PublicProfilePageProps) {
   const { username } = await params
   const supabase = await createClient()
@@ -91,57 +146,46 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
   // Получаем текущего пользователя (но не редиректим если не залогинен)
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Получаем основной username (на случай если передан алиас)
-  const mainUsername = getMainUsername(username)
+  // Получаем профиль по username или алиасу
+  const profile = await getProfileByUsernameOrAlias(username)
+
+  if (!profile) {
+    notFound()
+  }
+
+  // Получаем основной username из профиля
+  const mainUsername = profile.username
 
   // Если пользователь залогинен и пытается посмотреть свой профиль - редиректим на /profile
-  if (user) {
-    // Сначала получаем username текущего пользователя
-    const { data: currentUserProfile } = await supabase
-      .from("profiles")
-      .select("username")
-      .eq("id", user.id)
-      .single()
+  if (user && mainUsername) {
+    // Получаем все username текущего пользователя (включая алиасы из базы данных)
+    const currentUserAllUsernames = await getAllUsernamesCombined(mainUsername, user.id)
 
-    if (currentUserProfile?.username) {
-      // Получаем все username текущего пользователя (включая алиасы из базы данных)
-      const currentUserAllUsernames = await getAllUsernamesCombined(currentUserProfile.username, user.id)
-
-      // Если запрашиваемый username совпадает с любым из username текущего пользователя - редиректим
-      if (currentUserAllUsernames.includes(username)) {
-        redirect("/profile")
-      }
+    // Если запрашиваемый username совпадает с любым из username текущего пользователя - редиректим
+    if (currentUserAllUsernames.includes(username)) {
+      redirect("/profile")
     }
   }
 
   // Fetch current user's profile for avatar (только если пользователь залогинен)
   let currentUserProfile = null
   if (user) {
-    const { data: profile } = await supabase
+    const { data: currentProfile } = await supabase
       .from("profiles")
       .select("avatar_url, display_name, username")
       .eq("id", user.id)
       .single()
-    currentUserProfile = profile
-  }
-
-  // Fetch user profile by main username (используем основной username для поиска в базе)
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("username", mainUsername)
-    .single()
-
-  if (!profile) {
-    notFound()
+    currentUserProfile = currentProfile
   }
 
   // Список подтвержденных пользователей (используем основной username)
   const verifiedUsers = ["startorigin", "nikolaev", "winter", "gerxog"]
-  const isVerifiedUser = verifiedUsers.includes(mainUsername)
+  const isVerifiedUser = mainUsername ? verifiedUsers.includes(mainUsername) : false
 
   // Получаем все username для отображения (статические + из базы данных)
-  const allUsernames = await getAllUsernamesCombined(mainUsername, profile.id)
+  const allUsernames = mainUsername 
+    ? await getAllUsernamesCombined(mainUsername, profile.id)
+    : []
 
   // Fetch user's public problems
   const { data: problems } = await supabase
