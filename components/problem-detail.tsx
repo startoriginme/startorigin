@@ -81,6 +81,54 @@ function getAllUsernames(mainUsername: string): string[] {
   return [mainUsername, ...(userAliases[mainUsername] || [])]
 }
 
+// Функция для получения алиасов из базы данных
+async function getDatabaseAliases(userId: string): Promise<string[]> {
+  const supabase = createClient()
+  
+  try {
+    const { data, error } = await supabase
+      .from("user_aliases")
+      .select("alias")
+      .eq("user_id", userId)
+
+    if (error) {
+      console.error("Error fetching database aliases:", error)
+      return []
+    }
+
+    return data?.map(item => item.alias) || []
+  } catch (err) {
+    console.error("Error fetching database aliases:", err)
+    return []
+  }
+}
+
+// Функция для объединения статических и базы данных алиасов
+async function getAllUsernamesCombined(mainUsername: string, userId?: string): Promise<string[]> {
+  const staticAliases = getAllUsernames(mainUsername)
+  
+  if (!userId) {
+    return staticAliases
+  }
+
+  try {
+    const databaseAliases = await getDatabaseAliases(userId)
+    
+    // Объединяем и убираем дубликаты
+    const allAliases = [...staticAliases]
+    databaseAliases.forEach(alias => {
+      if (!allAliases.includes(alias)) {
+        allAliases.push(alias)
+      }
+    })
+    
+    return allAliases
+  } catch (err) {
+    console.error("Error combining aliases:", err)
+    return staticAliases
+  }
+}
+
 // Функция для преобразования текста с упоминаниями в ссылки
 const parseMentions = (text: string) => {
   if (!text) return text;
@@ -137,6 +185,7 @@ export function ProblemDetail({
   const [isUpvoting, setIsUpvoting] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isShareOpen, setIsShareOpen] = useState(false)
+  const [authorAllUsernames, setAuthorAllUsernames] = useState<string[]>([])
   
   const router = useRouter()
   const { toast } = useToast()
@@ -145,14 +194,27 @@ export function ProblemDetail({
     setIsClient(true)
   }, [])
 
+  useEffect(() => {
+    const fetchAuthorAliases = async () => {
+      if (problem.profiles?.username && problem.author_id) {
+        const usernames = await getAllUsernamesCombined(
+          problem.profiles.username, 
+          problem.author_id
+        )
+        setAuthorAllUsernames(usernames)
+      } else if (problem.profiles?.username) {
+        setAuthorAllUsernames(getAllUsernames(problem.profiles.username))
+      }
+    }
+    
+    fetchAuthorAliases()
+  }, [problem.profiles?.username, problem.author_id])
+
   const isAuthor = userId === problem.author_id
   
   // Получаем основной username автора
   const authorMainUsername = problem.profiles?.username ? getMainUsername(problem.profiles.username) : null
   const isVerifiedUser = authorMainUsername ? verifiedUsers.includes(authorMainUsername) : false
-  
-  // Получаем все username автора для отображения
-  const authorAllUsernames = authorMainUsername ? getAllUsernames(authorMainUsername) : []
 
   const handleUpvote = async () => {
     if (!userId) {
