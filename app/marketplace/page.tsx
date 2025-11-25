@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
-import { Lightbulb, Plus, LogOut, User, Search, Check, X, Crown, Star, ExternalLink, Tag, Trash2, Users, Mail } from "lucide-react"
+import { Lightbulb, Plus, LogOut, User, Search, Check, X, Crown, Star, ExternalLink, Tag, Trash2, Users, Mail, Menu } from "lucide-react"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -35,6 +35,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from "@/components/ui/sheet"
 
 // Список занятых username, которые не нужно проверять в базе
 const RESERVED_USERNAMES = [
@@ -76,6 +81,7 @@ export default function MarketplacePage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSearchingUser, setIsSearchingUser] = useState(false)
   const [removeListingDialog, setRemoveListingDialog] = useState<{open: boolean, listingId: string, username: string}>({open: false, listingId: "", username: ""})
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   
   const router = useRouter()
   const supabase = createClient()
@@ -298,7 +304,7 @@ export default function MarketplacePage() {
         // Если не нашли в основных профилях, ищем в алиасах
         const { data: aliasData, error: aliasError } = await supabase
           .from("user_aliases")
-          .select("profiles(id, username, display_name)")
+          .select("user_id, profiles!user_aliases_user_id_fkey(id, username, display_name)")
           .eq("alias", searchUsername)
           .single()
 
@@ -572,10 +578,70 @@ export default function MarketplacePage() {
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4">
           <nav className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <Lightbulb className="h-6 w-6 text-primary" />
-              <span className="text-xl font-bold text-foreground">StartOrigin</span>
-            </Link>
+            <div className="flex items-center gap-4">
+              {/* Бургер меню */}
+              <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon" className="md:hidden">
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-[240px] sm:w-[280px]">
+                  <div className="flex flex-col gap-6 py-6">
+                    <div className="flex items-center gap-2 px-2">
+                      <Lightbulb className="h-6 w-6 text-primary" />
+                      <span className="text-xl font-bold">StartOrigin</span>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Link 
+                        href="/about" 
+                        className="flex items-center gap-2 px-2 py-2 text-sm rounded-lg hover:bg-accent"
+                        onClick={() => setSidebarOpen(false)}
+                      >
+                        <User className="h-4 w-4" />
+                        About
+                      </Link>
+                      <Link 
+                        href="/marketplace" 
+                        className="flex items-center gap-2 px-2 py-2 text-sm rounded-lg hover:bg-accent bg-accent"
+                        onClick={() => setSidebarOpen(false)}
+                      >
+                        <Crown className="h-4 w-4" />
+                        Marketplace
+                      </Link>
+                    </div>
+                  </div>
+                </SheetContent>
+              </Sheet>
+
+              {/* Бургер меню для десктопа */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="hidden md:flex">
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48">
+                  <DropdownMenuItem asChild>
+                    <Link href="/about" className="flex items-center gap-2 cursor-pointer">
+                      <User className="h-4 w-4" />
+                      <span>About</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/marketplace" className="flex items-center gap-2 cursor-pointer">
+                      <Crown className="h-4 w-4" />
+                      <span>Marketplace</span>
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <Link href="/" className="flex items-center gap-2">
+                <Lightbulb className="h-6 w-6 text-primary" />
+                <span className="text-xl font-bold text-foreground">StartOrigin</span>
+              </Link>
+            </div>
             
             <div className="flex items-center gap-4">
               {user ? (
