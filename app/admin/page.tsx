@@ -22,7 +22,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { adminDeleteProblem } from "./actions"
 
 const ADMIN_PASSWORD = "RealAdminStartOriginModeration"
 
@@ -96,17 +95,28 @@ export default function AdminPage() {
     setDeletingId(problemId)
 
     try {
-      const result = await adminDeleteProblem(problemId, password)
+      // Используем прямой запрос к Supabase вместо серверного действия
+      const supabase = createClient()
+      
+      // Сначала удаляем связанные записи (upvotes)
+      await supabase
+        .from("upvotes")
+        .delete()
+        .eq("problem_id", problemId)
 
-      if (!result.success) {
-        alert(`Failed to delete problem: ${result.error}`)
-        return
-      }
+      // Затем удаляем саму проблему
+      const { error } = await supabase
+        .from("problems")
+        .delete()
+        .eq("id", problemId)
 
-      // Remove from local state
+      if (error) throw error
+
+      // Удаляем из локального состояния
       setProblems(problems.filter((p) => p.id !== problemId))
+      
     } catch (err) {
-      console.error("[v0] Error deleting problem:", err)
+      console.error("Error deleting problem:", err)
       alert("Failed to delete problem")
     } finally {
       setDeletingId(null)
