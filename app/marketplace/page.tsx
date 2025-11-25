@@ -53,11 +53,13 @@ export default function MarketplacePage() {
     sellerContact?: string
     sellerPrice?: number
     listingId?: string
+    currentOwner?: string
+    isAlias?: boolean
   } | null>(null)
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false)
   const [isSellModalOpen, setIsSellModalOpen] = useState(false)
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false)
-  const [selectedUsername, setSelectedUsername] = useState<{username: string, price: number, sellerContact?: string, listingId?: string} | null>(null)
+  const [selectedUsername, setSelectedUsername] = useState<{username: string, price: number, sellerContact?: string, listingId?: string, currentOwner?: string} | null>(null)
   const [userAliases, setUserAliases] = useState<string[]>([])
   const [myListings, setMyListings] = useState<any[]>([])
   const [sellForm, setSellForm] = useState({
@@ -72,6 +74,7 @@ export default function MarketplacePage() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSearchingUser, setIsSearchingUser] = useState(false)
+  const [removeListingDialog, setRemoveListingDialog] = useState<{open: boolean, listingId: string, username: string}>({open: false, listingId: "", username: ""})
   
   const router = useRouter()
   const supabase = createClient()
@@ -141,8 +144,10 @@ export default function MarketplacePage() {
     setIsChecking(true)
     
     try {
+      const searchUsername = username.toLowerCase()
+
       // Сначала проверяем в списке зарезервированных
-      const isReserved = RESERVED_USERNAMES.includes(username.toLowerCase())
+      const isReserved = RESERVED_USERNAMES.includes(searchUsername)
       
       if (isReserved) {
         setResult({
@@ -153,11 +158,11 @@ export default function MarketplacePage() {
         return
       }
 
-      // Проверяем, продается ли username
+      // Проверяем, продается ли username на маркетплейсе
       const { data: marketplaceData, error: marketplaceError } = await supabase
         .from("username_marketplace")
-        .select("*")
-        .eq("username", username.toLowerCase())
+        .select("*, profiles(username)")
+        .eq("username", searchUsername)
         .eq("status", "active")
         .single()
 
@@ -169,7 +174,26 @@ export default function MarketplacePage() {
           forSale: true,
           sellerContact: marketplaceData.contact_info,
           sellerPrice: marketplaceData.price,
-          listingId: marketplaceData.id
+          listingId: marketplaceData.id,
+          currentOwner: marketplaceData.profiles?.username
+        })
+        setIsChecking(false)
+        return
+      }
+
+      // Проверяем в таблице алиасов пользователей
+      const { data: aliasData, error: aliasError } = await supabase
+        .from("user_aliases")
+        .select("*, profiles(username)")
+        .eq("alias", searchUsername)
+        .single()
+
+      if (!aliasError && aliasData) {
+        setResult({
+          available: false,
+          length: username.length,
+          currentOwner: aliasData.profiles?.username,
+          isAlias: true
         })
         setIsChecking(false)
         return
@@ -179,7 +203,7 @@ export default function MarketplacePage() {
       const { data: existingProfile, error } = await supabase
         .from("profiles")
         .select("username")
-        .eq("username", username.toLowerCase())
+        .eq("username", searchUsername)
         .single()
 
       // Если есть ошибка и это не "не найдено", значит реальная ошибка
@@ -218,7 +242,8 @@ export default function MarketplacePage() {
         username,
         price: result.sellerPrice!,
         sellerContact: result.sellerContact,
-        listingId: result.listingId
+        listingId: result.listingId,
+        currentOwner: result.currentOwner
       })
     } else {
       setSelectedUsername({
@@ -350,95 +375,97 @@ export default function MarketplacePage() {
         setResult(null)
         setUsername("")
       }
+      
+      setRemoveListingDialog({open: false, listingId: "", username: ""})
     } catch (error) {
       console.error("Error removing listing:", error)
       alert("Failed to remove listing")
     }
   }
 
-const handleTransfer = async () => {
-  if (!transferForm.newOwnerId) {
-    alert("Please search and select a user first")
-    return
-  }
-
-  setIsSubmitting(true)
-  try {
-    // Сначала проверяем, что новый владелец существует
-    const { data: newOwner, error: ownerError } = await supabase
-      .from("profiles")
-      .select("id, username")
-      .eq("id", transferForm.newOwnerId)
-      .single()
-
-    if (ownerError || !newOwner) {
-      alert("New owner not found")
+  const handleTransfer = async () => {
+    if (!transferForm.newOwnerId) {
+      alert("Please search and select a user first")
       return
     }
 
-    // Удаляем алиас у текущего пользователя
-    const { error: deleteError } = await supabase
-      .from("user_aliases")
-      .delete()
-      .eq("alias", transferForm.username.toLowerCase())
-      .eq("user_id", user.id)
+    setIsSubmitting(true)
+    try {
+      // Сначала проверяем, что новый владелец существует
+      const { data: newOwner, error: ownerError } = await supabase
+        .from("profiles")
+        .select("id, username")
+        .eq("id", transferForm.newOwnerId)
+        .single()
 
-    if (deleteError) {
-      console.error("Error deleting alias from current owner:", deleteError)
-      throw deleteError
-    }
+      if (ownerError || !newOwner) {
+        alert("New owner not found")
+        return
+      }
 
-    // Добавляем алиас новому пользователю
-    const { error: insertError } = await supabase
-      .from("user_aliases")
-      .insert({
-        alias: transferForm.username.toLowerCase(),
-        user_id: transferForm.newOwnerId
-      })
+      // Удаляем алиас у текущего пользователя
+      const { error: deleteError } = await supabase
+        .from("user_aliases")
+        .delete()
+        .eq("alias", transferForm.username.toLowerCase())
+        .eq("user_id", user.id)
 
-    if (insertError) {
-      console.error("Error adding alias to new owner:", insertError)
-      
-      // Если не удалось добавить новому владельцу, возвращаем алиас старому
-      await supabase
+      if (deleteError) {
+        console.error("Error deleting alias from current owner:", deleteError)
+        throw deleteError
+      }
+
+      // Добавляем алиас новому пользователю
+      const { error: insertError } = await supabase
         .from("user_aliases")
         .insert({
           alias: transferForm.username.toLowerCase(),
-          user_id: user.id
+          user_id: transferForm.newOwnerId
         })
+
+      if (insertError) {
+        console.error("Error adding alias to new owner:", insertError)
+        
+        // Если не удалось добавить новому владельцу, возвращаем алиас старому
+        await supabase
+          .from("user_aliases")
+          .insert({
+            alias: transferForm.username.toLowerCase(),
+            user_id: user.id
+          })
+        
+        throw insertError
+      }
+
+      // Если username был в продаже, удаляем listing
+      const existingListing = myListings.find(l => l.username === transferForm.username)
+      if (existingListing) {
+        await supabase
+          .from("username_marketplace")
+          .update({ status: 'cancelled' })
+          .eq('username', transferForm.username.toLowerCase())
+          .eq('seller_id', user.id)
+      }
+
+      alert(`Username @${transferForm.username} successfully transferred to @${newOwner.username}!`)
+      setIsTransferModalOpen(false)
+      setTransferForm({ username: "", newOwnerUsername: "", newOwnerId: "" })
       
-      throw insertError
+      // Обновляем данные
+      const { data: aliases } = await supabase
+        .from("user_aliases")
+        .select("alias")
+        .eq("user_id", user.id)
+      setUserAliases(aliases?.map(a => a.alias) || [])
+      await fetchMyListings(user.id)
+
+    } catch (error) {
+      console.error("Error transferring username:", error)
+      alert("Failed to transfer username. Please try again.")
+    } finally {
+      setIsSubmitting(false)
     }
-
-    // Если username был в продаже, удаляем listing
-    const existingListing = myListings.find(l => l.username === transferForm.username)
-    if (existingListing) {
-      await supabase
-        .from("username_marketplace")
-        .update({ status: 'cancelled' })
-        .eq('username', transferForm.username.toLowerCase())
-        .eq('seller_id', user.id)
-    }
-
-    alert(`Username @${transferForm.username} successfully transferred to @${newOwner.username}!`)
-    setIsTransferModalOpen(false)
-    setTransferForm({ username: "", newOwnerUsername: "", newOwnerId: "" })
-    
-    // Обновляем данные
-    const { data: aliases } = await supabase
-      .from("user_aliases")
-      .select("alias")
-      .eq("user_id", user.id)
-    setUserAliases(aliases?.map(a => a.alias) || [])
-    await fetchMyListings(user.id)
-
-  } catch (error) {
-    console.error("Error transferring username:", error)
-    alert("Failed to transfer username. Please try again.")
-  } finally {
-    setIsSubmitting(false)
   }
-}
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -563,8 +590,20 @@ const handleTransfer = async () => {
                           @{username}
                         </h3>
                         <p className={result.available ? "text-green-600" : "text-red-600"}>
-                          {result.forSale ? "For sale!" : result.available ? "Available for purchase!" : "Already taken"}
+                          {result.forSale 
+                            ? "For sale!" 
+                            : result.isAlias 
+                              ? `Alias owned by @${result.currentOwner}`
+                              : result.available 
+                                ? "Available for purchase!" 
+                                : "Already taken"
+                          }
                         </p>
+                        {result.currentOwner && !result.forSale && (
+                          <p className="text-xs text-muted-foreground">
+                            Current owner: @{result.currentOwner}
+                          </p>
+                        )}
                       </div>
                     </div>
                     
@@ -607,7 +646,11 @@ const handleTransfer = async () => {
                           <Button 
                             size="sm" 
                             variant="outline"
-                            onClick={() => handleRemoveListing(listing.id, listing.username)}
+                            onClick={() => setRemoveListingDialog({
+                              open: true, 
+                              listingId: listing.id, 
+                              username: listing.username
+                            })}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -732,6 +775,12 @@ const handleTransfer = async () => {
                 <div className="flex justify-between items-center mt-2">
                   <span className="font-semibold">Seller Contact:</span>
                   <span className="text-sm">{result.sellerContact}</span>
+                </div>
+              )}
+              {result?.currentOwner && (
+                <div className="flex justify-between items-center mt-2">
+                  <span className="font-semibold">Current Owner:</span>
+                  <span className="text-sm">@{result.currentOwner}</span>
                 </div>
               )}
             </div>
@@ -896,6 +945,28 @@ const handleTransfer = async () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Remove Listing Confirmation Dialog */}
+      <AlertDialog open={removeListingDialog.open} onOpenChange={(open) => setRemoveListingDialog({...removeListingDialog, open})}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Listing</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove @{removeListingDialog.username} from the marketplace?
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => handleRemoveListing(removeListingDialog.listingId, removeListingDialog.username)}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Remove Listing
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
