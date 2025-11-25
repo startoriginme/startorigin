@@ -105,11 +105,7 @@ async function getProfileByUsernameOrAlias(username: string) {
       .single()
 
     if (!profileError && profileData) {
-      return {
-        ...profileData,
-        isAlias: true, // Помечаем что это найденный через алиас
-        requestedAlias: username // Сохраняем запрошенный алиас
-      }
+      return profileData
     }
   }
 
@@ -121,11 +117,7 @@ async function getProfileByUsernameOrAlias(username: string) {
     .single()
 
   if (!profileError && profileData) {
-    return {
-      ...profileData,
-      isAlias: false,
-      requestedAlias: username
-    }
+    return profileData
   }
 
   // Если не нашли в базе, проверяем статическую карту
@@ -139,11 +131,7 @@ async function getProfileByUsernameOrAlias(username: string) {
         .single()
 
       if (!staticError && staticProfileData) {
-        return {
-          ...staticProfileData,
-          isAlias: true,
-          requestedAlias: username
-        }
+        return staticProfileData
       }
     }
   }
@@ -165,20 +153,9 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
     notFound()
   }
 
-  // Определяем основной username для проверки верификации и редиректа
-  // Если профиль найден через алиас, используем его основной username
-  // Если профиль найден напрямую, используем запрошенный username
-  const mainUsername = profile.isAlias ? profile.username : profile.requestedAlias
-
-  // Если пользователь залогинен и пытается посмотреть свой профиль - редиректим на /profile
-  if (user && mainUsername) {
-    // Получаем все username текущего пользователя (включая алиасы из базы данных)
-    const currentUserAllUsernames = await getAllUsernamesCombined(mainUsername, user.id)
-
-    // Если запрашиваемый username совпадает с любым из username текущего пользователя - редиректим
-    if (currentUserAllUsernames.includes(username)) {
-      redirect("/profile")
-    }
+  // Если пользователь залогинен и пытается посмотреть СВОЙ профиль - редиректим на /profile
+  if (user && user.id === profile.id) {
+    redirect("/profile")
   }
 
   // Fetch current user's profile for avatar (только если пользователь залогинен)
@@ -192,7 +169,7 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
     currentUserProfile = currentProfile
   }
 
-  // Список подтвержденных пользователей (используем основной username профиля)
+  // Список подтвержденных пользователей (используем username профиля)
   const verifiedUsers = ["startorigin", "nikolaev", "winter", "gerxog"]
   const isVerifiedUser = profile.username ? verifiedUsers.includes(profile.username) : false
 
