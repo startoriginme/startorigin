@@ -223,7 +223,8 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
     await supabase.auth.signOut()
     redirect("/auth/login")
   }
-return (
+
+  return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="border-b border-border bg-card">
@@ -251,11 +252,11 @@ return (
                       <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
                         <Avatar className="h-8 w-8">
                           <AvatarImage 
-                            src={userProfile?.avatar_url || ""} 
+                            src={currentUserProfile?.avatar_url || ""} 
                             className="object-cover"
                           />
                           <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
-                            {getInitials(userProfile?.display_name || userProfile?.username)}
+                            {getInitials(currentUserProfile?.display_name || currentUserProfile?.username)}
                           </AvatarFallback>
                         </Avatar>
                       </button>
@@ -268,9 +269,13 @@ return (
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
-                        <LogOut className="h-4 w-4 mr-2" />
-                        <span>Sign Out</span>
+                      <DropdownMenuItem asChild>
+                        <form action={handleLogout} className="w-full">
+                          <button type="submit" className="flex items-center gap-2 w-full text-left cursor-pointer">
+                            <LogOut className="h-4 w-4" />
+                            <span>Sign Out</span>
+                          </button>
+                        </form>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -329,7 +334,7 @@ return (
                 {/* Кастомный аватар без сжатия */}
                 <div className="relative">
                   <div className="h-24 w-24 rounded-full overflow-hidden border-2 border-border bg-muted">
-                    {profile?.avatar_url ? (
+                    {profile.avatar_url ? (
                       <img
                         src={profile.avatar_url}
                         alt="Profile avatar"
@@ -338,7 +343,7 @@ return (
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-muted">
                         <span className="text-2xl font-semibold text-muted-foreground">
-                          {getInitials(profile?.display_name || profile?.username)}
+                          {getInitials(profile.display_name || profile.username)}
                         </span>
                       </div>
                     )}
@@ -354,7 +359,7 @@ return (
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center justify-center gap-2">
                     <h2 className="text-2xl font-bold text-foreground break-words">
-                      {profile?.display_name || profile?.username || "Anonymous"}
+                      {profile.display_name || profile.username || "Anonymous"}
                     </h2>
                     {isVerifiedUser && (
                       <div className="text-blue-500 flex-shrink-0" title="Verified">
@@ -373,7 +378,7 @@ return (
                     ))}
                   </div>
                   
-                  {profile?.bio && (
+                  {profile.bio && (
                     <p className="mt-4 text-foreground max-w-2xl">{profile.bio}</p>
                   )}
                 </div>
@@ -397,8 +402,8 @@ return (
                     <ProblemCard 
                       key={problem.id} 
                       problem={problem} 
-                      userId={user?.id} // Передаем ID пользователя (может быть undefined)
-                      initialHasUpvoted={userUpvotes.has(problem.id)} // Передаем информацию о лайках
+                      userId={user?.id}
+                      initialHasUpvoted={userUpvotes.has(problem.id)}
                     />
                   ))}
                 </div>
