@@ -28,6 +28,50 @@ function getAllUsernames(mainUsername: string): string[] {
   return [mainUsername, ...(userAliases[mainUsername] || [])]
 }
 
+// Функция для получения алиасов из базы данных
+async function getDatabaseAliases(userId: string): Promise<string[]> {
+  const supabase = await createClient()
+  
+  try {
+    const { data, error } = await supabase
+      .from("user_aliases")
+      .select("alias")
+      .eq("user_id", userId)
+
+    if (error) {
+      console.error("Error fetching database aliases:", error)
+      return []
+    }
+
+    return data?.map(item => item.alias) || []
+  } catch (err) {
+    console.error("Error fetching database aliases:", err)
+    return []
+  }
+}
+
+// Функция для объединения статических и базы данных алиасов
+async function getAllUsernamesCombined(mainUsername: string, userId: string): Promise<string[]> {
+  const staticAliases = getAllUsernames(mainUsername)
+  
+  try {
+    const databaseAliases = await getDatabaseAliases(userId)
+    
+    // Объединяем и убираем дубликаты
+    const allAliases = [...staticAliases]
+    databaseAliases.forEach(alias => {
+      if (!allAliases.includes(alias)) {
+        allAliases.push(alias)
+      }
+    })
+    
+    return allAliases
+  } catch (err) {
+    console.error("Error combining aliases:", err)
+    return staticAliases
+  }
+}
+
 export default async function ProfilePage() {
   const supabase = await createClient()
 
@@ -46,8 +90,10 @@ export default async function ProfilePage() {
   const verifiedUsers = ["startorigin", "winter", "nikolaev", "gerxog"]
   const isVerifiedUser = profile?.username ? verifiedUsers.includes(profile.username) : false
 
-  // Получаем все username для отображения
-  const allUsernames = profile?.username ? getAllUsernames(profile.username) : []
+  // Получаем все username для отображения (статические + из базы данных)
+  const allUsernames = profile?.username 
+    ? await getAllUsernamesCombined(profile.username, user.id)
+    : []
 
   // Fetch user's problems with profiles data
   const { data: problems } = await supabase
