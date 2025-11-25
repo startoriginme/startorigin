@@ -609,11 +609,10 @@ export default function MarketplacePage() {
                     </div>
                     <div className="flex flex-col gap-2">
                       <Link 
-                        href="/about" 
+                        href="https://telegra.ph/StartOrigin-11-25" 
                         className="flex items-center gap-2 px-2 py-2 text-sm rounded-lg hover:bg-accent"
                         onClick={() => setSidebarOpen(false)}
                       >
-                        <User className="h-4 w-4" />
                         About
                       </Link>
                       <Link 
@@ -621,8 +620,21 @@ export default function MarketplacePage() {
                         className="flex items-center gap-2 px-2 py-2 text-sm rounded-lg hover:bg-accent bg-accent"
                         onClick={() => setSidebarOpen(false)}
                       >
-                        <Crown className="h-4 w-4" />
                         Marketplace
+                      </Link>
+                        <Link 
+                        href="https://telegra.ph/Advertise-and-get-verified-on-StartOrigin-11-25" 
+                        className="flex items-center gap-2 px-2 py-2 text-sm rounded-lg hover:bg-accent bg-accent"
+                        onClick={() => setSidebarOpen(false)}
+                      >
+                        Advertise
+                      </Link>
+                       <Link 
+                        href="https://telegra.ph/Advertise-and-get-verified-on-StartOrigin-11-25" 
+                        className="flex items-center gap-2 px-2 py-2 text-sm rounded-lg hover:bg-accent bg-accent"
+                        onClick={() => setSidebarOpen(false)}
+                      >
+                        Get Verified
                       </Link>
                     </div>
                   </div>
