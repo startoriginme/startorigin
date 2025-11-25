@@ -105,7 +105,11 @@ async function getProfileByUsernameOrAlias(username: string) {
       .single()
 
     if (!profileError && profileData) {
-      return profileData
+      return {
+        ...profileData,
+        isAlias: true, // Помечаем что это найденный через алиас
+        requestedAlias: username // Сохраняем запрошенный алиас
+      }
     }
   }
 
@@ -117,7 +121,11 @@ async function getProfileByUsernameOrAlias(username: string) {
     .single()
 
   if (!profileError && profileData) {
-    return profileData
+    return {
+      ...profileData,
+      isAlias: false,
+      requestedAlias: username
+    }
   }
 
   // Если не нашли в базе, проверяем статическую карту
@@ -131,7 +139,11 @@ async function getProfileByUsernameOrAlias(username: string) {
         .single()
 
       if (!staticError && staticProfileData) {
-        return staticProfileData
+        return {
+          ...staticProfileData,
+          isAlias: true,
+          requestedAlias: username
+        }
       }
     }
   }
@@ -153,8 +165,10 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
     notFound()
   }
 
-  // Получаем основной username из профиля
-  const mainUsername = profile.username
+  // Определяем основной username для проверки верификации и редиректа
+  // Если профиль найден через алиас, используем его основной username
+  // Если профиль найден напрямую, используем запрошенный username
+  const mainUsername = profile.isAlias ? profile.username : profile.requestedAlias
 
   // Если пользователь залогинен и пытается посмотреть свой профиль - редиректим на /profile
   if (user && mainUsername) {
@@ -178,13 +192,13 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
     currentUserProfile = currentProfile
   }
 
-  // Список подтвержденных пользователей (используем основной username)
+  // Список подтвержденных пользователей (используем основной username профиля)
   const verifiedUsers = ["startorigin", "nikolaev", "winter", "gerxog"]
-  const isVerifiedUser = mainUsername ? verifiedUsers.includes(mainUsername) : false
+  const isVerifiedUser = profile.username ? verifiedUsers.includes(profile.username) : false
 
   // Получаем все username для отображения (статические + из базы данных)
-  const allUsernames = mainUsername 
-    ? await getAllUsernamesCombined(mainUsername, profile.id)
+  const allUsernames = profile.username 
+    ? await getAllUsernamesCombined(profile.username, profile.id)
     : []
 
   // Fetch user's public problems
