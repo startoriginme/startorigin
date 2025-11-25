@@ -18,7 +18,7 @@ import {
 // Карта алиасов пользователей
 const userAliases: Record<string, string[]> = {
   "nikolaev": ["azya", "nklv"],
-  "gerxog": ["admin"],
+  "gerxog": ["tech"],
   "startorigin": ["problems"],
   "winter": ["zima", "vlkv", "bolt"],
   
