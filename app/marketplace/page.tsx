@@ -23,6 +23,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 
 // Список занятых username, которые не нужно проверять в базе
 const RESERVED_USERNAMES = [
@@ -42,9 +44,15 @@ export default function MarketplacePage() {
     sellerContact?: string
     sellerPrice?: number
   } | null>(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false)
+  const [isSellModalOpen, setIsSellModalOpen] = useState(false)
   const [selectedUsername, setSelectedUsername] = useState<{username: string, price: number, sellerContact?: string} | null>(null)
   const [userAliases, setUserAliases] = useState<string[]>([])
+  const [sellForm, setSellForm] = useState({
+    username: "",
+    price: "",
+    contactInfo: ""
+  })
   
   const router = useRouter()
   const supabase = createClient()
@@ -184,15 +192,44 @@ export default function MarketplacePage() {
         price: result?.price || calculatePrice(username.length)
       })
     }
-    setIsModalOpen(true)
+    setIsPurchaseModalOpen(true)
   }
 
   const handleSellAlias = (alias: string) => {
-    setSelectedUsername({
+    setSellForm({
       username: alias,
-      price: calculatePrice(alias.length)
+      price: calculatePrice(alias.length).toString(),
+      contactInfo: ""
     })
-    setIsModalOpen(true)
+    setIsSellModalOpen(true)
+  }
+
+  const handleSubmitSell = async () => {
+    if (!sellForm.price || !sellForm.contactInfo) {
+      alert("Please fill in all fields")
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from("username_marketplace")
+        .insert({
+          username: sellForm.username.toLowerCase(),
+          price: parseInt(sellForm.price),
+          contact_info: sellForm.contactInfo,
+          seller_id: user.id,
+          status: "active"
+        })
+
+      if (error) throw error
+
+      alert("Username listed for sale successfully!")
+      setIsSellModalOpen(false)
+      setSellForm({ username: "", price: "", contactInfo: "" })
+    } catch (error) {
+      console.error("Error listing username:", error)
+      alert("Failed to list username for sale")
+    }
   }
 
   const handleLogout = async () => {
@@ -353,7 +390,7 @@ export default function MarketplacePage() {
                           <Tag className="h-5 w-5 text-blue-600" />
                           <div>
                             <h4 className="font-semibold">@{alias}</h4>
-                            <p className="text-sm text-muted-foreground">Your alias</p>
+                            <p className="text-sm text-muted-foreground">Your alias • Suggested price: {calculatePrice(alias.length)} stars</p>
                           </div>
                         </div>
                         <Button 
@@ -409,7 +446,7 @@ export default function MarketplacePage() {
       </footer>
 
       {/* Purchase Modal */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <Dialog open={isPurchaseModalOpen} onOpenChange={setIsPurchaseModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -472,6 +509,59 @@ export default function MarketplacePage() {
 
             <div className="text-xs text-muted-foreground text-center">
               <p>StartOrigin is not responsible for second-hand transactions.</p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sell Modal */}
+      <Dialog open={isSellModalOpen} onOpenChange={setIsSellModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Tag className="h-5 w-5 text-blue-600" />
+              Sell @{sellForm.username}
+            </DialogTitle>
+            <DialogDescription>
+              List your alias for sale on the marketplace
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="price">Price (Telegram Stars)</Label>
+              <Input
+                id="price"
+                type="number"
+                placeholder="Enter price in stars"
+                value={sellForm.price}
+                onChange={(e) => setSellForm({...sellForm, price: e.target.value})}
+              />
+              <p className="text-xs text-muted-foreground">
+                Suggested price: {calculatePrice(sellForm.username.length)} stars
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="contact">Contact Information</Label>
+              <Input
+                id="contact"
+                placeholder="Your Telegram username (e.g., @username)"
+                value={sellForm.contactInfo}
+                onChange={(e) => setSellForm({...sellForm, contactInfo: e.target.value})}
+              />
+              <p className="text-xs text-muted-foreground">
+                Buyers will contact you here
+              </p>
+            </div>
+
+            <Button onClick={handleSubmitSell} className="w-full" disabled={!sellForm.price || !sellForm.contactInfo}>
+              List for Sale
+            </Button>
+
+            <div className="text-xs text-muted-foreground text-center">
+              <p>By listing, you agree to transfer the alias to the buyer upon payment.</p>
+              <p>StartOrigin is not responsible for transactions.</p>
             </div>
           </div>
         </DialogContent>
