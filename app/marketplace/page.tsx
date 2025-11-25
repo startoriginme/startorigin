@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
-import { Lightbulb, Plus, LogOut, User, Search, Check, X, Crown, Star, ExternalLink, Tag } from "lucide-react"
+import { Lightbulb, Plus, LogOut, User, Search, Check, X, Crown, Star, ExternalLink, Tag, Trash2, Users, Mail } from "lucide-react"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -24,6 +24,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 // Список занятых username, которые не нужно проверять в базе
 const RESERVED_USERNAMES = [
@@ -42,17 +52,26 @@ export default function MarketplacePage() {
     forSale?: boolean
     sellerContact?: string
     sellerPrice?: number
+    listingId?: string
   } | null>(null)
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false)
   const [isSellModalOpen, setIsSellModalOpen] = useState(false)
-  const [selectedUsername, setSelectedUsername] = useState<{username: string, price: number, sellerContact?: string} | null>(null)
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false)
+  const [selectedUsername, setSelectedUsername] = useState<{username: string, price: number, sellerContact?: string, listingId?: string} | null>(null)
   const [userAliases, setUserAliases] = useState<string[]>([])
+  const [myListings, setMyListings] = useState<any[]>([])
   const [sellForm, setSellForm] = useState({
     username: "",
     price: "",
     contactInfo: ""
   })
+  const [transferForm, setTransferForm] = useState({
+    username: "",
+    newOwnerUsername: "",
+    newOwnerId: ""
+  })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSearchingUser, setIsSearchingUser] = useState(false)
   
   const router = useRouter()
   const supabase = createClient()
@@ -76,10 +95,23 @@ export default function MarketplacePage() {
           .select("alias")
           .eq("user_id", user.id)
         setUserAliases(aliases?.map(a => a.alias) || [])
+
+        // Загружаем активные listings пользователя
+        await fetchMyListings(user.id)
       }
     }
     fetchUser()
   }, [supabase])
+
+  const fetchMyListings = async (userId: string) => {
+    const { data: listings } = await supabase
+      .from("username_marketplace")
+      .select("*")
+      .eq("seller_id", userId)
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+    setMyListings(listings || [])
+  }
 
   const getInitials = (name: string | null) => {
     if (!name) return "U"
@@ -136,7 +168,8 @@ export default function MarketplacePage() {
           length: username.length,
           forSale: true,
           sellerContact: marketplaceData.contact_info,
-          sellerPrice: marketplaceData.price
+          sellerPrice: marketplaceData.price,
+          listingId: marketplaceData.id
         })
         setIsChecking(false)
         return
@@ -184,7 +217,8 @@ export default function MarketplacePage() {
       setSelectedUsername({
         username,
         price: result.sellerPrice!,
-        sellerContact: result.sellerContact
+        sellerContact: result.sellerContact,
+        listingId: result.listingId
       })
     } else {
       setSelectedUsername({
@@ -202,6 +236,43 @@ export default function MarketplacePage() {
       contactInfo: userProfile?.username ? `@${userProfile.username}` : ""
     })
     setIsSellModalOpen(true)
+  }
+
+  const handleTransferAlias = (alias: string) => {
+    setTransferForm({
+      username: alias,
+      newOwnerUsername: "",
+      newOwnerId: ""
+    })
+    setIsTransferModalOpen(true)
+  }
+
+  const searchUser = async () => {
+    if (!transferForm.newOwnerUsername.trim()) return
+
+    setIsSearchingUser(true)
+    try {
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("id, username, display_name")
+        .eq("username", transferForm.newOwnerUsername.toLowerCase())
+        .single()
+
+      if (error || !profile) {
+        alert("User not found. Please check the username.")
+        return
+      }
+
+      setTransferForm(prev => ({
+        ...prev,
+        newOwnerId: profile.id
+      }))
+    } catch (error) {
+      console.error("Error searching user:", error)
+      alert("Error searching for user")
+    } finally {
+      setIsSearchingUser(false)
+    }
   }
 
   const handleSubmitSell = async () => {
@@ -230,9 +301,9 @@ export default function MarketplacePage() {
 
       if (error) {
         console.error("Supabase error:", error)
-        if (error.code === '23505') { // unique violation
+        if (error.code === '23505') {
           alert("This username is already listed for sale")
-        } else if (error.code === '42501') { // permission denied
+        } else if (error.code === '42501') {
           alert("Permission denied. Please make sure the marketplace table exists.")
         } else {
           throw error
@@ -243,8 +314,8 @@ export default function MarketplacePage() {
       alert("Username listed for sale successfully!")
       setIsSellModalOpen(false)
       setSellForm({ username: "", price: "", contactInfo: "" })
+      await fetchMyListings(user.id)
       
-      // Обновляем результат поиска
       if (username === sellForm.username) {
         setResult({
           available: true,
@@ -258,6 +329,84 @@ export default function MarketplacePage() {
     } catch (error) {
       console.error("Error listing username:", error)
       alert("Failed to list username for sale. Please try again.")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleRemoveListing = async (listingId: string, username: string) => {
+    try {
+      const { error } = await supabase
+        .from("username_marketplace")
+        .update({ status: 'cancelled' })
+        .eq('id', listingId)
+
+      if (error) throw error
+
+      alert("Listing removed successfully!")
+      await fetchMyListings(user.id)
+      
+      if (username === username) {
+        setResult(null)
+        setUsername("")
+      }
+    } catch (error) {
+      console.error("Error removing listing:", error)
+      alert("Failed to remove listing")
+    }
+  }
+
+  const handleTransfer = async () => {
+    if (!transferForm.newOwnerId) {
+      alert("Please search and select a user first")
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      // Удаляем алиас у текущего пользователя
+      const { error: deleteError } = await supabase
+        .from("user_aliases")
+        .delete()
+        .eq("alias", transferForm.username.toLowerCase())
+        .eq("user_id", user.id)
+
+      if (deleteError) throw deleteError
+
+      // Добавляем алиас новому пользователю
+      const { error: insertError } = await supabase
+        .from("user_aliases")
+        .insert({
+          alias: transferForm.username.toLowerCase(),
+          user_id: transferForm.newOwnerId
+        })
+
+      if (insertError) throw insertError
+
+      // Если username был в продаже, удаляем listing
+      if (myListings.find(l => l.username === transferForm.username)) {
+        await supabase
+          .from("username_marketplace")
+          .update({ status: 'cancelled' })
+          .eq('username', transferForm.username.toLowerCase())
+          .eq('seller_id', user.id)
+      }
+
+      alert("Username transferred successfully!")
+      setIsTransferModalOpen(false)
+      setTransferForm({ username: "", newOwnerUsername: "", newOwnerId: "" })
+      
+      // Обновляем данные
+      const { data: aliases } = await supabase
+        .from("user_aliases")
+        .select("alias")
+        .eq("user_id", user.id)
+      setUserAliases(aliases?.map(a => a.alias) || [])
+      await fetchMyListings(user.id)
+
+    } catch (error) {
+      console.error("Error transferring username:", error)
+      alert("Failed to transfer username")
     } finally {
       setIsSubmitting(false)
     }
@@ -343,7 +492,7 @@ export default function MarketplacePage() {
               Username Marketplace
             </h1>
             <p className="text-muted-foreground">
-              Buy and sell exclusive usernames with Telegram Stars
+              Buy, sell, and transfer exclusive usernames
             </p>
           </div>
 
@@ -408,10 +557,45 @@ export default function MarketplacePage() {
             )}
           </div>
 
+          {/* My Listings Section */}
+          {user && myListings.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-foreground">My Active Listings</h3>
+              <div className="grid gap-3">
+                {myListings.map((listing) => (
+                  <Card key={listing.id} className="border-orange-200">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Tag className="h-5 w-5 text-orange-600" />
+                          <div>
+                            <h4 className="font-semibold">@{listing.username}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              {listing.price} stars • {listing.contact_info}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleRemoveListing(listing.id, listing.username)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Sell Your Aliases Section */}
           {user && userAliases.length > 0 && (
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-foreground">Sell Your Aliases</h3>
+              <h3 className="text-lg font-semibold text-foreground">My Aliases</h3>
               <div className="grid gap-3">
                 {userAliases.map((alias) => (
                   <Card key={alias} className="border-blue-200">
@@ -421,16 +605,27 @@ export default function MarketplacePage() {
                           <Tag className="h-5 w-5 text-blue-600" />
                           <div>
                             <h4 className="font-semibold">@{alias}</h4>
-                            <p className="text-sm text-muted-foreground">Your alias • Suggested price: {calculatePrice(alias.length)} stars</p>
+                            <p className="text-sm text-muted-foreground">
+                              Your alias • Suggested price: {calculatePrice(alias.length)} stars
+                            </p>
                           </div>
                         </div>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleSellAlias(alias)}
-                        >
-                          Sell
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleSellAlias(alias)}
+                          >
+                            Sell
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleTransferAlias(alias)}
+                          >
+                            <Users className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -597,6 +792,78 @@ export default function MarketplacePage() {
             <div className="text-xs text-muted-foreground text-center">
               <p>By listing, you agree to transfer the alias to the buyer upon payment.</p>
               <p>StartOrigin is not responsible for transactions.</p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Transfer Modal */}
+      <Dialog open={isTransferModalOpen} onOpenChange={setIsTransferModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-green-600" />
+              Transfer @{transferForm.username}
+            </DialogTitle>
+            <DialogDescription>
+              Transfer this alias to another user
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="bg-muted p-4 rounded-lg">
+              <div className="flex justify-between items-center">
+                <span className="font-semibold">Transferring:</span>
+                <span>@{transferForm.username}</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="newOwner">New Owner Username</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="newOwner"
+                  placeholder="Enter username (without @)"
+                  value={transferForm.newOwnerUsername}
+                  onChange={(e) => setTransferForm({...transferForm, newOwnerUsername: e.target.value})}
+                />
+                <Button 
+                  onClick={searchUser} 
+                  disabled={isSearchingUser || !transferForm.newOwnerUsername.trim()}
+                  size="sm"
+                >
+                  {isSearchingUser ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                  ) : (
+                    <Search className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Enter the username of the user you want to transfer this alias to
+              </p>
+            </div>
+
+            {transferForm.newOwnerId && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <p className="text-sm text-green-800">
+                  ✓ User found: @{transferForm.newOwnerUsername}
+                </p>
+              </div>
+            )}
+
+            <Button 
+              onClick={handleTransfer} 
+              className="w-full" 
+              disabled={!transferForm.newOwnerId || isSubmitting}
+              variant="destructive"
+            >
+              {isSubmitting ? "Transferring..." : "Confirm Transfer"}
+            </Button>
+
+            <div className="text-xs text-muted-foreground text-center">
+              <p className="text-red-600 font-medium">Warning: This action cannot be undone!</p>
+              <p>The alias will be permanently transferred to the new owner.</p>
             </div>
           </div>
         </DialogContent>
