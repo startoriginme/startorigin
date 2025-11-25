@@ -34,6 +34,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { toast } from "sonner"
 
 // Список занятых username, которые не нужно проверять в базе
 const RESERVED_USERNAMES = [
@@ -93,11 +94,7 @@ export default function MarketplacePage() {
         setUserProfile(profile)
 
         // Загружаем алиасы пользователя
-        const { data: aliases } = await supabase
-          .from("user_aliases")
-          .select("alias")
-          .eq("user_id", user.id)
-        setUserAliases(aliases?.map(a => a.alias) || [])
+        await fetchUserAliases(user.id)
 
         // Загружаем активные listings пользователя
         await fetchMyListings(user.id)
@@ -105,6 +102,14 @@ export default function MarketplacePage() {
     }
     fetchUser()
   }, [supabase])
+
+  const fetchUserAliases = async (userId: string) => {
+    const { data: aliases } = await supabase
+      .from("user_aliases")
+      .select("alias")
+      .eq("user_id", userId)
+    setUserAliases(aliases?.map(a => a.alias) || [])
+  }
 
   const fetchMyListings = async (userId: string) => {
     const { data: listings } = await supabase
@@ -277,24 +282,51 @@ export default function MarketplacePage() {
 
     setIsSearchingUser(true)
     try {
-      const { data: profile, error } = await supabase
+      const searchUsername = transferForm.newOwnerUsername.toLowerCase()
+
+      // Сначала ищем в основных профилях
+      let profileData = null
+      const { data: mainProfile, error: mainError } = await supabase
         .from("profiles")
         .select("id, username, display_name")
-        .eq("username", transferForm.newOwnerUsername.toLowerCase())
+        .eq("username", searchUsername)
         .single()
 
-      if (error || !profile) {
-        alert("User not found. Please check the username.")
+      if (!mainError && mainProfile) {
+        profileData = mainProfile
+      } else {
+        // Если не нашли в основных профилях, ищем в алиасах
+        const { data: aliasData, error: aliasError } = await supabase
+          .from("user_aliases")
+          .select("profiles(id, username, display_name)")
+          .eq("alias", searchUsername)
+          .single()
+
+        if (!aliasError && aliasData?.profiles) {
+          profileData = aliasData.profiles
+        }
+      }
+
+      if (!profileData) {
+        toast.error("User not found", {
+          description: "Please check the username and try again."
+        })
         return
       }
 
       setTransferForm(prev => ({
         ...prev,
-        newOwnerId: profile.id
+        newOwnerId: profileData.id
       }))
+
+      toast.success("User found", {
+        description: `Ready to transfer to @${profileData.username}`
+      })
     } catch (error) {
       console.error("Error searching user:", error)
-      alert("Error searching for user")
+      toast.error("Search failed", {
+        description: "Error searching for user. Please try again."
+      })
     } finally {
       setIsSearchingUser(false)
     }
@@ -302,12 +334,16 @@ export default function MarketplacePage() {
 
   const handleSubmitSell = async () => {
     if (!sellForm.price || !sellForm.contactInfo) {
-      alert("Please fill in all fields")
+      toast.error("Missing information", {
+        description: "Please fill in all fields"
+      })
       return
     }
 
     if (!sellForm.contactInfo.includes('@')) {
-      alert("Please provide a valid Telegram username starting with @")
+      toast.error("Invalid contact info", {
+        description: "Please provide a valid Telegram username starting with @"
+      })
       return
     }
 
@@ -327,16 +363,23 @@ export default function MarketplacePage() {
       if (error) {
         console.error("Supabase error:", error)
         if (error.code === '23505') {
-          alert("This username is already listed for sale")
+          toast.error("Already listed", {
+            description: "This username is already listed for sale"
+          })
         } else if (error.code === '42501') {
-          alert("Permission denied. Please make sure the marketplace table exists.")
+          toast.error("Permission denied", {
+            description: "Please make sure the marketplace table exists."
+          })
         } else {
           throw error
         }
         return
       }
 
-      alert("Username listed for sale successfully!")
+      toast.success("Listed for sale", {
+        description: `@${sellForm.username} is now available on marketplace`
+      })
+      
       setIsSellModalOpen(false)
       setSellForm({ username: "", price: "", contactInfo: "" })
       await fetchMyListings(user.id)
@@ -353,25 +396,61 @@ export default function MarketplacePage() {
       }
     } catch (error) {
       console.error("Error listing username:", error)
-      alert("Failed to list username for sale. Please try again.")
+      toast.error("Listing failed", {
+        description: "Failed to list username for sale. Please try again."
+      })
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const handleRemoveListing = async (listingId: string, username: string) => {
+  const handleRemoveListing = async (listingId: string, listingUsername: string) => {
     try {
+      console.log("Removing listing:", { listingId, listingUsername, userId: user.id })
+      
       const { error } = await supabase
         .from("username_marketplace")
         .update({ status: 'cancelled' })
         .eq('id', listingId)
+        .eq('seller_id', user.id)
 
-      if (error) throw error
+      if (error) {
+        console.error("Supabase error:", error)
+        throw error
+      }
 
-      alert("Listing removed successfully!")
+      // После удаления листинга, username возвращается в My Aliases
+      // Проверяем, что алиас действительно принадлежит пользователю
+      const { data: existingAlias } = await supabase
+        .from("user_aliases")
+        .select("alias")
+        .eq("alias", listingUsername.toLowerCase())
+        .eq("user_id", user.id)
+        .single()
+
+      if (!existingAlias) {
+        // Если алиас не существует, создаем его
+        const { error: insertError } = await supabase
+          .from("user_aliases")
+          .insert({
+            alias: listingUsername.toLowerCase(),
+            user_id: user.id
+          })
+
+        if (insertError) {
+          console.error("Error adding alias back:", insertError)
+        }
+      }
+
+      toast.success("Listing removed", {
+        description: `@${listingUsername} has been removed from marketplace and returned to your aliases`
+      })
+
       await fetchMyListings(user.id)
+      await fetchUserAliases(user.id)
       
-      if (username === username) {
+      // Если удаленный listing был в текущем поиске, сбрасываем результат
+      if (username === listingUsername) {
         setResult(null)
         setUsername("")
       }
@@ -379,13 +458,17 @@ export default function MarketplacePage() {
       setRemoveListingDialog({open: false, listingId: "", username: ""})
     } catch (error) {
       console.error("Error removing listing:", error)
-      alert("Failed to remove listing")
+      toast.error("Remove failed", {
+        description: "Failed to remove listing. Please try again."
+      })
     }
   }
 
   const handleTransfer = async () => {
     if (!transferForm.newOwnerId) {
-      alert("Please search and select a user first")
+      toast.error("User not selected", {
+        description: "Please search and select a user first"
+      })
       return
     }
 
@@ -399,7 +482,17 @@ export default function MarketplacePage() {
         .single()
 
       if (ownerError || !newOwner) {
-        alert("New owner not found")
+        toast.error("User not found", {
+          description: "New owner not found"
+        })
+        return
+      }
+
+      // Проверяем, что пользователь не пытается передать алиас самому себе
+      if (newOwner.id === user.id) {
+        toast.error("Invalid transfer", {
+          description: "You cannot transfer an alias to yourself"
+        })
         return
       }
 
@@ -447,21 +540,22 @@ export default function MarketplacePage() {
           .eq('seller_id', user.id)
       }
 
-      alert(`Username @${transferForm.username} successfully transferred to @${newOwner.username}!`)
+      toast.success("Transfer completed", {
+        description: `@${transferForm.username} successfully transferred to @${newOwner.username}`
+      })
+      
       setIsTransferModalOpen(false)
       setTransferForm({ username: "", newOwnerUsername: "", newOwnerId: "" })
       
       // Обновляем данные
-      const { data: aliases } = await supabase
-        .from("user_aliases")
-        .select("alias")
-        .eq("user_id", user.id)
-      setUserAliases(aliases?.map(a => a.alias) || [])
+      await fetchUserAliases(user.id)
       await fetchMyListings(user.id)
 
     } catch (error) {
       console.error("Error transferring username:", error)
-      alert("Failed to transfer username. Please try again.")
+      toast.error("Transfer failed", {
+        description: "Failed to transfer username. Please try again."
+      })
     } finally {
       setIsSubmitting(false)
     }
@@ -953,7 +1047,7 @@ export default function MarketplacePage() {
             <AlertDialogTitle>Remove Listing</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to remove @{removeListingDialog.username} from the marketplace?
-              This action cannot be undone.
+              This username will be returned to your aliases.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
