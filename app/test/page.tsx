@@ -57,39 +57,6 @@ export default async function StartupAssessmentPage() {
         <div className="container mx-auto px-4 py-4">
           <nav className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              {/* Бургер меню для всех устройств */}
-              <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <Menu className="h-5 w-5" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-[240px] sm:w-[280px]">
-                  <div className="flex flex-col gap-6 py-6">
-                    <div className="flex items-center gap-2 px-2">
-                      <Lightbulb className="h-6 w-6 text-primary" />
-                      <span className="text-xl font-bold">StartOrigin</span>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <Link 
-                        href="https://telegra.ph/StartOrigin-11-25" 
-                        className="flex items-center gap-2 px-2 py-2 text-sm rounded-lg hover:bg-accent"
-                        onClick={() => setSidebarOpen(false)}
-                      >
-                        About
-                      </Link>
-                       <Link 
-                        href="https://telegra.ph/Advertise-and-get-verified-on-StartOrigin-11-25" 
-                        className="flex items-center gap-2 px-2 py-2 text-sm rounded-lg hover:bg-accent bg-accent"
-                        onClick={() => setSidebarOpen(false)}
-                      >
-                        Pro Features
-                      </Link>
-                    </div>
-                  </div>
-                </SheetContent>
-              </Sheet>
-
               <Link href="/" className="flex items-center gap-2">
                 <Lightbulb className="h-6 w-6 text-primary" />
                 <span className="text-xl font-bold text-foreground">StartOrigin</span>
@@ -164,7 +131,6 @@ export default async function StartupAssessmentPage() {
           </nav>
         </div>
       </header>
-
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 flex-1">
