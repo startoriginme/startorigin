@@ -24,7 +24,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 
 // Список занятых username, которые не нужно проверять в базе
 const RESERVED_USERNAMES = [
@@ -53,6 +52,7 @@ export default function MarketplacePage() {
     price: "",
     contactInfo: ""
   })
+  const [isSubmitting, setIsSubmitting] = useState(false)
   
   const router = useRouter()
   const supabase = createClient()
@@ -122,14 +122,14 @@ export default function MarketplacePage() {
       }
 
       // Проверяем, продается ли username
-      const { data: marketplaceData } = await supabase
+      const { data: marketplaceData, error: marketplaceError } = await supabase
         .from("username_marketplace")
         .select("*")
         .eq("username", username.toLowerCase())
         .eq("status", "active")
         .single()
 
-      if (marketplaceData) {
+      if (!marketplaceError && marketplaceData) {
         setResult({
           available: true,
           price: marketplaceData.price,
@@ -199,7 +199,7 @@ export default function MarketplacePage() {
     setSellForm({
       username: alias,
       price: calculatePrice(alias.length).toString(),
-      contactInfo: ""
+      contactInfo: userProfile?.username ? `@${userProfile.username}` : ""
     })
     setIsSellModalOpen(true)
   }
@@ -209,6 +209,13 @@ export default function MarketplacePage() {
       alert("Please fill in all fields")
       return
     }
+
+    if (!sellForm.contactInfo.includes('@')) {
+      alert("Please provide a valid Telegram username starting with @")
+      return
+    }
+
+    setIsSubmitting(true)
 
     try {
       const { error } = await supabase
@@ -221,14 +228,38 @@ export default function MarketplacePage() {
           status: "active"
         })
 
-      if (error) throw error
+      if (error) {
+        console.error("Supabase error:", error)
+        if (error.code === '23505') { // unique violation
+          alert("This username is already listed for sale")
+        } else if (error.code === '42501') { // permission denied
+          alert("Permission denied. Please make sure the marketplace table exists.")
+        } else {
+          throw error
+        }
+        return
+      }
 
       alert("Username listed for sale successfully!")
       setIsSellModalOpen(false)
       setSellForm({ username: "", price: "", contactInfo: "" })
+      
+      // Обновляем результат поиска
+      if (username === sellForm.username) {
+        setResult({
+          available: true,
+          price: parseInt(sellForm.price),
+          length: sellForm.username.length,
+          forSale: true,
+          sellerContact: sellForm.contactInfo,
+          sellerPrice: parseInt(sellForm.price)
+        })
+      }
     } catch (error) {
       console.error("Error listing username:", error)
-      alert("Failed to list username for sale")
+      alert("Failed to list username for sale. Please try again.")
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -543,20 +574,24 @@ export default function MarketplacePage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="contact">Contact Information</Label>
+              <Label htmlFor="contact">Telegram Username</Label>
               <Input
                 id="contact"
-                placeholder="Your Telegram username (e.g., @username)"
+                placeholder="@yourusername"
                 value={sellForm.contactInfo}
                 onChange={(e) => setSellForm({...sellForm, contactInfo: e.target.value})}
               />
               <p className="text-xs text-muted-foreground">
-                Buyers will contact you here
+                Buyers will contact you here. Must start with @
               </p>
             </div>
 
-            <Button onClick={handleSubmitSell} className="w-full" disabled={!sellForm.price || !sellForm.contactInfo}>
-              List for Sale
+            <Button 
+              onClick={handleSubmitSell} 
+              className="w-full" 
+              disabled={!sellForm.price || !sellForm.contactInfo || !sellForm.contactInfo.includes('@') || isSubmitting}
+            >
+              {isSubmitting ? "Listing..." : "List for Sale"}
             </Button>
 
             <div className="text-xs text-muted-foreground text-center">
