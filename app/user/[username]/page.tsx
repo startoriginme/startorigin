@@ -223,14 +223,13 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
     await supabase.auth.signOut()
     redirect("/auth/login")
   }
-
- return (
+return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4">
           <nav className="flex items-center justify-between">
-            <div className="flex items-center gap-4"></div
+            <div className="flex items-center gap-4">
               <Link href="/" className="flex items-center gap-2">
                 <Lightbulb className="h-6 w-6 text-primary" />
                 <span className="text-xl font-bold text-foreground">StartOrigin</span>
@@ -305,7 +304,7 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
           </nav>
         </div>
       </header>
-
+      
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 flex-1">
         {/* Back Button */}
