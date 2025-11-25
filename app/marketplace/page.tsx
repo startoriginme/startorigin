@@ -356,61 +356,89 @@ export default function MarketplacePage() {
     }
   }
 
-  const handleTransfer = async () => {
-    if (!transferForm.newOwnerId) {
-      alert("Please search and select a user first")
+const handleTransfer = async () => {
+  if (!transferForm.newOwnerId) {
+    alert("Please search and select a user first")
+    return
+  }
+
+  setIsSubmitting(true)
+  try {
+    // Сначала проверяем, что новый владелец существует
+    const { data: newOwner, error: ownerError } = await supabase
+      .from("profiles")
+      .select("id, username")
+      .eq("id", transferForm.newOwnerId)
+      .single()
+
+    if (ownerError || !newOwner) {
+      alert("New owner not found")
       return
     }
 
-    setIsSubmitting(true)
-    try {
-      // Удаляем алиас у текущего пользователя
-      const { error: deleteError } = await supabase
-        .from("user_aliases")
-        .delete()
-        .eq("alias", transferForm.username.toLowerCase())
-        .eq("user_id", user.id)
+    // Удаляем алиас у текущего пользователя
+    const { error: deleteError } = await supabase
+      .from("user_aliases")
+      .delete()
+      .eq("alias", transferForm.username.toLowerCase())
+      .eq("user_id", user.id)
 
-      if (deleteError) throw deleteError
+    if (deleteError) {
+      console.error("Error deleting alias from current owner:", deleteError)
+      throw deleteError
+    }
 
-      // Добавляем алиас новому пользователю
-      const { error: insertError } = await supabase
+    // Добавляем алиас новому пользователю
+    const { error: insertError } = await supabase
+      .from("user_aliases")
+      .insert({
+        alias: transferForm.username.toLowerCase(),
+        user_id: transferForm.newOwnerId
+      })
+
+    if (insertError) {
+      console.error("Error adding alias to new owner:", insertError)
+      
+      // Если не удалось добавить новому владельцу, возвращаем алиас старому
+      await supabase
         .from("user_aliases")
         .insert({
           alias: transferForm.username.toLowerCase(),
-          user_id: transferForm.newOwnerId
+          user_id: user.id
         })
-
-      if (insertError) throw insertError
-
-      // Если username был в продаже, удаляем listing
-      if (myListings.find(l => l.username === transferForm.username)) {
-        await supabase
-          .from("username_marketplace")
-          .update({ status: 'cancelled' })
-          .eq('username', transferForm.username.toLowerCase())
-          .eq('seller_id', user.id)
-      }
-
-      alert("Username transferred successfully!")
-      setIsTransferModalOpen(false)
-      setTransferForm({ username: "", newOwnerUsername: "", newOwnerId: "" })
       
-      // Обновляем данные
-      const { data: aliases } = await supabase
-        .from("user_aliases")
-        .select("alias")
-        .eq("user_id", user.id)
-      setUserAliases(aliases?.map(a => a.alias) || [])
-      await fetchMyListings(user.id)
-
-    } catch (error) {
-      console.error("Error transferring username:", error)
-      alert("Failed to transfer username")
-    } finally {
-      setIsSubmitting(false)
+      throw insertError
     }
+
+    // Если username был в продаже, удаляем listing
+    const existingListing = myListings.find(l => l.username === transferForm.username)
+    if (existingListing) {
+      await supabase
+        .from("username_marketplace")
+        .update({ status: 'cancelled' })
+        .eq('username', transferForm.username.toLowerCase())
+        .eq('seller_id', user.id)
+    }
+
+    alert(`Username @${transferForm.username} successfully transferred to @${newOwner.username}!`)
+    setIsTransferModalOpen(false)
+    setTransferForm({ username: "", newOwnerUsername: "", newOwnerId: "" })
+    
+    // Обновляем данные
+    const { data: aliases } = await supabase
+      .from("user_aliases")
+      .select("alias")
+      .eq("user_id", user.id)
+    setUserAliases(aliases?.map(a => a.alias) || [])
+    await fetchMyListings(user.id)
+
+  } catch (error) {
+    console.error("Error transferring username:", error)
+    alert("Failed to transfer username. Please try again.")
+  } finally {
+    setIsSubmitting(false)
   }
+}
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
