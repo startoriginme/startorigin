@@ -391,6 +391,36 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
               </div>
             </CardContent>
           </Card>
+          // В начале компонента PublicProfilePage добавь:
+const [showChatModal, setShowChatModal] = useState(false)
+
+// В JSX после bio добавь кнопку:
+{user && user.id !== profile.id && (
+  <div className="mt-6">
+    <Button 
+      onClick={() => setShowChatModal(true)}
+      className="gap-2"
+    >
+      <MessageCircle className="h-4 w-4" />
+      Start a Chat
+    </Button>
+  </div>
+)}
+
+// В конце компонента добавь модальное окно:
+{showChatModal && (
+  <ChatModal
+    isOpen={showChatModal}
+    onClose={() => setShowChatModal(false)}
+    recipientUser={profile}
+    currentUser={{
+      id: user.id,
+      username: currentUserProfile?.username,
+      display_name: currentUserProfile?.display_name,
+      avatar_url: currentUserProfile?.avatar_url
+    }}
+  />
+)}
 
           {/* User's Problems */}
           <Card>
