@@ -7,7 +7,7 @@ import { notFound, redirect, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { Lightbulb, Plus, ArrowLeft, LogOut, User, Check, MessageCircle } from "lucide-react"
+import { Lightbulb, Plus, ArrowLeft, LogOut, User, Check, MessageCircle, Bell } from "lucide-react"
 import { ProblemCard } from "@/components/problem-card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -17,6 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Badge } from "@/components/ui/badge"
 
 interface PublicProfilePageProps {
   params: Promise<{ username: string }>
@@ -53,6 +54,8 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
   const [allUsernames, setAllUsernames] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [userUpvotes, setUserUpvotes] = useState<Set<string>>(new Set())
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
+  const [unreadChats, setUnreadChats] = useState<Set<string>>(new Set())
   const router = useRouter()
 
   const supabase = createClient()
@@ -61,6 +64,64 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
     loadData()
   }, [])
 
+  useEffect(() => {
+    if (currentUser) {
+      // Подписываемся на новые сообщения для текущего пользователя
+      const channel = supabase
+        .channel('unread-messages')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+            filter: `recipient_id=eq.${currentUser.id}`,
+          },
+          (payload) => {
+            // Обновляем счетчик непрочитанных сообщений
+            loadUnreadMessagesCount()
+            // Добавляем чат в список непрочитанных
+            setUnreadChats(prev => new Set(prev).add(payload.new.sender_id))
+          }
+        )
+        .subscribe()
+
+      return () => {
+        supabase.removeChannel(channel)
+      }
+    }
+  }, [currentUser])
+
+  const loadUnreadMessagesCount = async () => {
+    if (!currentUser) return
+
+    const { count, error } = await supabase
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('recipient_id', currentUser.id)
+      .eq('is_read', false)
+
+    if (!error && count !== null) {
+      setUnreadMessagesCount(count)
+    }
+  }
+
+  const loadUnreadChats = async () => {
+    if (!currentUser) return
+
+    const { data, error } = await supabase
+      .from('messages')
+      .select('sender_id')
+      .eq('recipient_id', currentUser.id)
+      .eq('is_read', false)
+      .neq('sender_id', currentUser.id)
+
+    if (!error && data) {
+      const senderIds = new Set(data.map(msg => msg.sender_id))
+      setUnreadChats(senderIds)
+    }
+  }
+
   const loadData = async () => {
     try {
       const { username } = await params
@@ -68,6 +129,12 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
       // Получаем текущего пользователя
       const { data: { user } } = await supabase.auth.getUser()
       setCurrentUser(user)
+
+      if (user) {
+        // Загружаем количество непрочитанных сообщений
+        loadUnreadMessagesCount()
+        loadUnreadChats()
+      }
 
       // Получаем профиль по username или алиасу
       const profileData = await getProfileByUsernameOrAlias(username)
@@ -289,7 +356,7 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
                   
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                      <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 relative">
                         <Avatar className="h-8 w-8">
                           <AvatarImage 
                             src={currentUserProfile?.avatar_url || ""} 
@@ -299,13 +366,37 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
                             {getInitials(currentUserProfile?.display_name || currentUserProfile?.username)}
                           </AvatarFallback>
                         </Avatar>
+                        {unreadMessagesCount > 0 && (
+                          <Badge 
+                            className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-blue-500 text-white text-xs"
+                            variant="default"
+                          >
+                            {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
+                          </Badge>
+                        )}
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56">
                       <DropdownMenuItem asChild>
-                        <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
+                        <Link href="/profile" className="flex items-center gap-2 cursor-pointer w-full">
                           <User className="h-4 w-4" />
                           <span>Profile</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/chats" className="flex items-center justify-between cursor-pointer w-full">
+                          <div className="flex items-center gap-2">
+                            <MessageCircle className="h-4 w-4" />
+                            <span>Chats</span>
+                          </div>
+                          {unreadMessagesCount > 0 && (
+                            <Badge 
+                              className="h-5 w-5 flex items-center justify-center p-0 bg-blue-500 text-white text-xs"
+                              variant="default"
+                            >
+                              {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
+                            </Badge>
+                          )}
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
@@ -427,6 +518,14 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
                       >
                         <MessageCircle className="h-4 w-4" />
                         Start a Chat
+                        {unreadChats.has(profile.id) && (
+                          <Badge 
+                            className="ml-1 h-5 w-5 flex items-center justify-center p-0 bg-blue-500 text-white"
+                            variant="default"
+                          >
+                            !
+                          </Badge>
+                        )}
                       </Button>
                     </div>
                   )}
@@ -478,6 +577,7 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
             display_name: currentUserProfile?.display_name,
             avatar_url: currentUserProfile?.avatar_url
           }}
+          hasUnreadMessages={unreadChats.has(profile.id)}
         />
       )}
 
@@ -491,5 +591,4 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
       </footer>
     </div>
   )
-   
 }
