@@ -2,8 +2,6 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import { createClient } from "@/lib/supabase/client"
-import { supabaseAdmin } from "@/lib/supabase/admin-client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -84,28 +82,14 @@ export default function AdminPage() {
 
   const loadProblems = async () => {
     setIsLoading(true)
-    
     try {
-      // Используем admin client для доступа ко всем данным
-      const { data, error } = await supabaseAdmin
-        .from("problems")
-        .select(
-          `
-          *,
-          profiles (
-            id,
-            username,
-            display_name
-          )
-        `,
-        )
-        .order("created_at", { ascending: false })
-
-      if (error) throw error
-      setProblems(data || [])
+      const response = await fetch('/api/admin?action=getProblems')
+      if (!response.ok) throw new Error('Failed to load problems')
+      const data = await response.json()
+      setProblems(data)
     } catch (err) {
-      console.error("Error loading problems:", err)
-      setError("Failed to load problems")
+      console.error('Error loading problems:', err)
+      setError('Failed to load problems')
     } finally {
       setIsLoading(false)
     }
@@ -113,24 +97,12 @@ export default function AdminPage() {
 
   const loadAliases = async () => {
     try {
-      // Используем admin client для доступа ко всем алиасам
-      const { data, error } = await supabaseAdmin
-        .from("user_aliases")
-        .select(
-          `
-          *,
-          profiles (
-            username,
-            display_name
-          )
-        `,
-        )
-        .order("created_at", { ascending: false })
-
-      if (error) throw error
-      setAliases(data || [])
+      const response = await fetch('/api/admin?action=getAliases')
+      if (!response.ok) throw new Error('Failed to load aliases')
+      const data = await response.json()
+      setAliases(data)
     } catch (err) {
-      console.error("Error loading aliases:", err)
+      console.error('Error loading aliases:', err)
     }
   }
 
@@ -138,46 +110,43 @@ export default function AdminPage() {
     if (!searchUsername) return
 
     try {
-      // Используем admin client для поиска пользователей
-      const { data, error } = await supabaseAdmin
-        .from("profiles")
-        .select("*")
-        .eq("username", searchUsername.toLowerCase())
-        .single()
-
-      if (error) throw error
+      const response = await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'searchUser',
+          data: { username: searchUsername }
+        })
+      })
+      
+      if (!response.ok) throw new Error('User not found')
+      const data = await response.json()
       setUserProfile(data)
-      // Автоматически заполняем поле username в форме
       setNewAlias(prev => ({ ...prev, username: data.username }))
     } catch (err) {
-      console.error("Error searching user:", err)
+      console.error('Error searching user:', err)
       setUserProfile(null)
-      alert("User not found. Please check the username.")
+      alert('User not found. Please check the username.')
     }
   }
 
   const handleDelete = async (problemId: string) => {
     setDeletingId(problemId)
-
     try {
-      // Удаляем через admin client (имеет права на удаление любых данных)
-      await supabaseAdmin
-        .from("upvotes")
-        .delete()
-        .eq("problem_id", problemId)
-
-      const { error } = await supabaseAdmin
-        .from("problems")
-        .delete()
-        .eq("id", problemId)
-
-      if (error) throw error
-
-      setProblems(problems.filter((p) => p.id !== problemId))
+      const response = await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'deleteProblem',
+          data: { problemId }
+        })
+      })
       
+      if (!response.ok) throw new Error('Failed to delete problem')
+      setProblems(problems.filter((p) => p.id !== problemId))
     } catch (err) {
-      console.error("Error deleting problem:", err)
-      alert("Failed to delete problem")
+      console.error('Error deleting problem:', err)
+      alert('Failed to delete problem')
     } finally {
       setDeletingId(null)
     }
@@ -187,106 +156,81 @@ export default function AdminPage() {
     e.preventDefault()
     
     if (!newAlias.alias) {
-      alert("Please fill in alias")
+      alert('Please fill in alias')
       return
     }
 
     try {
-      let userId = ""
+      let userId = ''
 
-      // Если пользователь найден через поиск, используем его ID
       if (userProfile) {
         userId = userProfile.id
-      } 
-      // Иначе пытаемся найти пользователя по username из формы
-      else if (newAlias.username) {
-        const { data: userData, error: userError } = await supabaseAdmin
-          .from("profiles")
-          .select("id")
-          .eq("username", newAlias.username.toLowerCase())
-          .single()
-
-        if (userError || !userData) {
-          alert("User not found. Please check the username or use the search function.")
-          return
-        }
-        userId = userData.id
-      } 
-      // Если ни одного способа нет
-      else {
-        alert("Please either search for a user first or provide a username")
-        return
-      }
-
-      // Проверяем, не существует ли уже такой алиас
-      const { data: existingAlias, error: checkError } = await supabaseAdmin
-        .from("user_aliases")
-        .select("id")
-        .eq("alias", newAlias.alias.toLowerCase())
-        .single()
-
-      if (!checkError && existingAlias) {
-        alert("This alias already exists. Please choose a different one.")
-        return
-      }
-
-      // Проверяем, не является ли алиас чьим-то основным username
-      const { data: existingUser, error: userCheckError } = await supabaseAdmin
-        .from("profiles")
-        .select("id")
-        .eq("username", newAlias.alias.toLowerCase())
-        .single()
-
-      if (!userCheckError && existingUser) {
-        alert("This alias matches an existing username. Please choose a different one.")
-        return
-      }
-
-      // Добавляем алиас через admin client
-      const { error } = await supabaseAdmin
-        .from("user_aliases")
-        .insert({
-          alias: newAlias.alias.toLowerCase(),
-          user_id: userId
+      } else if (newAlias.username) {
+        // Ищем пользователя по username
+        const response = await fetch('/api/admin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'searchUser',
+            data: { username: newAlias.username }
+          })
         })
-
-      if (error) {
-        if (error.code === '23505') { // Unique violation
-          alert("This alias already exists. Please choose a different one.")
-          return
-        }
-        throw error
+        
+        if (!response.ok) throw new Error('User not found')
+        const userData = await response.json()
+        userId = userData.id
+      } else {
+        alert('Please either search for a user first or provide a username')
+        return
       }
 
-      setNewAlias({ alias: "", username: "" })
-      setUserProfile(null)
-      setSearchUsername("")
-      loadAliases()
-      alert("Alias added successfully!")
+      // Добавляем алиас
+      const response = await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'addAlias',
+          data: { 
+            alias: newAlias.alias,
+            userId: userId
+          }
+        })
+      })
       
-    } catch (err) {
-      console.error("Error adding alias:", err)
-      alert("Failed to add alias. It might already exist.")
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to add alias')
+      }
+
+      setNewAlias({ alias: '', username: '' })
+      setUserProfile(null)
+      setSearchUsername('')
+      loadAliases()
+      alert('Alias added successfully!')
+      
+    } catch (err: any) {
+      console.error('Error adding alias:', err)
+      alert(err.message || 'Failed to add alias')
     }
   }
 
   const handleDeleteAlias = async (aliasId: string) => {
     setDeletingAliasId(aliasId)
-
     try {
-      // Удаляем алиас через admin client
-      const { error } = await supabaseAdmin
-        .from("user_aliases")
-        .delete()
-        .eq("id", aliasId)
-
-      if (error) throw error
-
-      setAliases(aliases.filter((a) => a.id !== aliasId))
+      const response = await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'deleteAlias',
+          data: { aliasId }
+        })
+      })
       
+      if (!response.ok) throw new Error('Failed to delete alias')
+      setAliases(aliases.filter((a) => a.id !== aliasId))
     } catch (err) {
-      console.error("Error deleting alias:", err)
-      alert("Failed to delete alias")
+      console.error('Error deleting alias:', err)
+      alert('Failed to delete alias')
     } finally {
       setDeletingAliasId(null)
     }
