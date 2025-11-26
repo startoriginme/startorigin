@@ -1,8 +1,17 @@
 import { createClient } from "@/lib/supabase/server"
 import { ProblemsFeed } from "@/components/problems-feed"
 import { Button } from "@/components/ui/button"
-import { Lightbulb, Plus } from "lucide-react"
+import { Lightbulb, Plus, ArrowRight, LogOut, User } from "lucide-react"
 import Link from "next/link"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { redirect } from "next/navigation"
 
 export default async function ProblemsPage() {
   const supabase = await createClient()
@@ -25,13 +34,41 @@ export default async function ProblemsPage() {
     console.error("Error fetching problems:", error)
   }
 
-  // Check if user is authenticated
+  // Check if user is authenticated and get profile
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
+  let userProfile = null
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("avatar_url, display_name, username")
+      .eq("id", user.id)
+      .single()
+    userProfile = profile
+  }
+
+  const getInitials = (name: string | null) => {
+    if (!name) return "U"
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2)
+  }
+
+  // Server action for logout
+  async function handleLogout() {
+    "use server"
+    const supabase = await createClient()
+    await supabase.auth.signOut()
+    redirect("/auth/login")
+  }
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4">
@@ -40,7 +77,9 @@ export default async function ProblemsPage() {
               <Lightbulb className="h-6 w-6 text-primary" />
               <span className="text-xl font-bold text-foreground">StartOrigin</span>
             </Link>
-            <div className="flex items-center gap-4">
+            
+            {/* Desktop Navigation - hidden on mobile */}
+            <div className="hidden md:flex items-center gap-4">
               {user ? (
                 <>
                   <Link href="/problems/new">
@@ -49,9 +88,40 @@ export default async function ProblemsPage() {
                       Share Problem
                     </Button>
                   </Link>
-                  <Link href="/profile">
-                    <Button variant="outline">Profile</Button>
-                  </Link>
+                  
+                  {/* Avatar Dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage 
+                            src={userProfile?.avatar_url || ""} 
+                            className="object-cover"
+                          />
+                          <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
+                            {getInitials(userProfile?.display_name || userProfile?.username)}
+                          </AvatarFallback>
+                        </Avatar>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuItem asChild>
+                        <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
+                          <User className="h-4 w-4" />
+                          <span>Profile</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <form action={handleLogout} className="w-full">
+                          <button type="submit" className="flex items-center gap-2 w-full text-left cursor-pointer">
+                            <LogOut className="h-4 w-4" />
+                            <span>Sign Out</span>
+                          </button>
+                        </form>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </>
               ) : (
                 <>
@@ -64,19 +134,111 @@ export default async function ProblemsPage() {
                 </>
               )}
             </div>
+
+            {/* Mobile Navigation - hidden on desktop */}
+            <div className="flex items-center gap-2 md:hidden">
+              {user ? (
+                <>
+                  {/* Mobile Plus Button */}
+                  <Link href="/problems/new">
+                    <Button size="icon" className="h-9 w-9">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                  
+                  {/* Mobile Avatar Dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage 
+                            src={userProfile?.avatar_url || ""} 
+                            className="object-cover"
+                          />
+                          <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
+                            {getInitials(userProfile?.display_name || userProfile?.username)}
+                          </AvatarFallback>
+                        </Avatar>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuItem asChild>
+                        <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
+                          <User className="h-4 w-4" />
+                          <span>Profile</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <form action={handleLogout} className="w-full">
+                          <button type="submit" className="flex items-center gap-2 w-full text-left cursor-pointer">
+                            <LogOut className="h-4 w-4" />
+                            <span>Sign Out</span>
+                          </button>
+                        </form>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
+              ) : (
+                <>
+                  <Link href="/auth/login">
+                    <Button variant="outline" size="sm">
+                      Sign In
+                    </Button>
+                  </Link>
+                  <Link href="/auth/sign-up">
+                    <Button size="sm">Get Started</Button>
+                  </Link>
+                </>
+              )}
+            </div>
           </nav>
         </div>
       </header>
 
+      {/* Minimal Hero Section */}
+      <section className="border-b border-border bg-card/50">
+        <div className="container mx-auto px-4 py-12">
+          <div className="mx-auto max-w-2xl text-center">
+            <h1 className="mb-4 text-3xl font-bold text-foreground">
+              Origin AI (Beta)
+
+            </h1>
+            <p className="mb-6 text-muted-foreground">
+              Your AI Friend That Truly Understands You
+            </p>
+            <Link href="https://chat.startorigin.me/" target="_blank">
+              <Button variant="outline" className="gap-2">
+                Start Now
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 flex-1">
         <div className="mb-8">
-          <h1 className="mb-2 text-3xl font-bold text-foreground">Explore Problems</h1>
-          <p className="text-muted-foreground">Discover challenges shared by innovators and entrepreneurs</p>
+          <h2 className="text-2xl font-bold text-foreground">Explore Problems</h2>
+          <p className="text-muted-foreground">Discover problems from the community</p>
         </div>
 
-        <ProblemsFeed initialProblems={problems || []} userId={user?.id} />
+        <ProblemsFeed 
+          initialProblems={problems || []} 
+          userId={user?.id}
+        />
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-border bg-card/50 py-6 mt-auto">
+        <div className="container mx-auto px-4">
+          <div className="text-center text-muted-foreground text-sm">
+            © 2025 StartOrigin. All rights reserved.
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }
