@@ -25,7 +25,6 @@ interface PublicProfilePageProps {
 // Карта алиасов пользователей
 const userAliases: Record<string, string[]> = {
   "nikolaev": ["azya", "nklv"],
-  "gerxog": ["admin"],
   "startorigin": ["problems"],
   "winter": ["zima", "vlkv", "bolt"]
 }
