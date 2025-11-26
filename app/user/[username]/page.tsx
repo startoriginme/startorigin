@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/client"
 import { ChatModal } from "@/components/chat-modal"
 import { useState, useEffect } from "react"
-import { notFound, redirect, useRouter } from "next/navigation"
+import { notFound, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
@@ -47,7 +47,7 @@ function getAllUsernames(mainUsername: string): string[] {
 
 export default function PublicProfilePage({ params }: PublicProfilePageProps) {
   const [showChatModal, setShowChatModal] = useState(false)
-  const [showChatsModal, setShowChatsModal] = useState(false) // Новое состояние для модалки всех чатов
+  const [showChatsModal, setShowChatsModal] = useState(false)
   const [profile, setProfile] = useState<any>(null)
   const [problems, setProblems] = useState<any[]>([])
   const [currentUser, setCurrentUser] = useState<any>(null)
@@ -57,6 +57,7 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
   const [userUpvotes, setUserUpvotes] = useState<Set<string>>(new Set())
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
   const [unreadChats, setUnreadChats] = useState<Set<string>>(new Set())
+  const [shouldRedirect, setShouldRedirect] = useState(false)
   const router = useRouter()
 
   const supabase = createClient()
@@ -66,8 +67,13 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
   }, [])
 
   useEffect(() => {
+    if (shouldRedirect) {
+      router.push("/profile")
+    }
+  }, [shouldRedirect, router])
+
+  useEffect(() => {
     if (currentUser) {
-      // Подписываемся на новые сообщения для текущего пользователя
       const channel = supabase
         .channel('unread-messages')
         .on(
@@ -79,9 +85,7 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
             filter: `recipient_id=eq.${currentUser.id}`,
           },
           (payload) => {
-            // Обновляем счетчик непрочитанных сообщений
             loadUnreadMessagesCount()
-            // Добавляем чат в список непрочитанных
             setUnreadChats(prev => new Set(prev).add(payload.new.sender_id))
           }
         )
@@ -132,7 +136,6 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
       setCurrentUser(user)
 
       if (user) {
-        // Загружаем количество непрочитанных сообщений
         loadUnreadMessagesCount()
         loadUnreadChats()
       }
@@ -147,34 +150,34 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
       setProfile(profileData)
 
       // Проверяем, является ли этот профиль профилем текущего пользователя
-      // Сравниваем по ID пользователя
-      if (user && user.id === profileData.id) {
-        redirect("/profile")
-        return
-      }
-
-      // Также проверяем по username и алиасам текущего пользователя
       if (user) {
+        // Сначала проверяем по прямому ID
+        if (user.id === profileData.id) {
+          setShouldRedirect(true)
+          return
+        }
+
+        // Затем проверяем по username и алиасам текущего пользователя
         const { data: currentProfile } = await supabase
           .from("profiles")
           .select("avatar_url, display_name, username")
           .eq("id", user.id)
           .single()
+        
         setCurrentUserProfile(currentProfile)
 
-        // Получаем все username текущего пользователя для проверки
-        const currentUserAllUsernames = currentProfile?.username 
-          ? await getAllUsernamesCombined(currentProfile.username, user.id)
-          : []
-
-        // Проверяем, совпадает ли запрошенный username с любым из username текущего пользователя
-        if (currentUserAllUsernames.includes(username)) {
-          redirect("/profile")
-          return
+        if (currentProfile?.username) {
+          const currentUserAllUsernames = await getAllUsernamesCombined(currentProfile.username, user.id)
+          
+          // Проверяем, совпадает ли запрошенный username с любым из username текущего пользователя
+          if (currentUserAllUsernames.includes(username)) {
+            setShouldRedirect(true)
+            return
+          }
         }
       }
 
-      // Получаем все username для отображения (статические + из базы данных)
+      // Если редирект не нужен, продолжаем загрузку данных
       const usernames = profileData.username 
         ? await getAllUsernamesCombined(profileData.username, profileData.id)
         : []
@@ -269,7 +272,6 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
       .single()
 
     if (!aliasError && aliasData) {
-      // Если нашли в алиасах, получаем профиль пользователя
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("*")
@@ -295,7 +297,6 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
     // Если не нашли в базе, проверяем статическую карту
     for (const [mainUsername, aliases] of Object.entries(userAliases)) {
       if (mainUsername === username || aliases.includes(username)) {
-        // Ищем профиль по основному username
         const { data: staticProfileData, error: staticError } = await supabase
           .from("profiles")
           .select("*")
@@ -326,6 +327,17 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
       .slice(0, 2)
   }
 
+  // Если нужно редиректить, показываем ничего или лоадер
+  if (shouldRedirect) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-muted-foreground">Redirecting to your profile...</p>
+        </div>
+      </div>
+    )
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -340,7 +352,7 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
     notFound()
   }
 
-  // Список подтвержденных пользователей (используем username профиля)
+  // Список подтвержденных пользователей
   const verifiedUsers = ["startorigin", "nikolaev", "winter", "gerxog"]
   const isVerifiedUser = profile.username ? verifiedUsers.includes(profile.username) : false
 
@@ -472,7 +484,6 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
             </CardHeader>
             <CardContent>
               <div className="flex flex-col items-center text-center gap-4">
-                {/* Кастомный аватар без сжатия */}
                 <div className="relative">
                   <div className="h-24 w-24 rounded-full overflow-hidden border-2 border-border bg-muted">
                     {profile.avatar_url ? (
@@ -489,7 +500,6 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
                       </div>
                     )}
                   </div>
-                  {/* Галочка верификации */}
                   {isVerifiedUser && (
                     <div className="absolute -bottom-1 -right-1 bg-blue-500 rounded-full p-1 border-2 border-background">
                       <Check className="h-4 w-4 text-white" />
@@ -509,7 +519,6 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
                     )}
                   </div>
                   
-                  {/* Отображаем все username через запятую */}
                   <div className="flex flex-wrap items-center justify-center gap-1">
                     {allUsernames.map((userName, index) => (
                       <span key={userName} className="text-muted-foreground">
@@ -523,7 +532,6 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
                     <p className="mt-4 text-foreground max-w-2xl">{profile.bio}</p>
                   )}
 
-                  {/* Кнопка Start a Chat */}
                   {currentUser && currentUser.id !== profile.id && (
                     <div className="mt-6">
                       <Button 
