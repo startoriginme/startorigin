@@ -1,14 +1,15 @@
-import { createClient } from "@/lib/supabase/server"
+"use client"
+
+import { createClient } from "@/lib/supabase/client"
 import { ChatModal } from "@/components/chat-modal"
-import { useState } from "react"
-import { notFound, redirect } from "next/navigation"
+import { useState, useEffect } from "react"
+import { notFound, redirect, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { Lightbulb, Plus, ArrowLeft, LogOut, User, Check, MessageCircle } from "lucide-react"
 import { ProblemCard } from "@/components/problem-card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,9 +21,6 @@ import {
 interface PublicProfilePageProps {
   params: Promise<{ username: string }>
 }
-
-const [showChatModal, setShowChatModal] = useState(false)
-
 
 // Карта алиасов пользователей
 const userAliases: Record<string, string[]> = {
@@ -47,169 +45,196 @@ function getAllUsernames(mainUsername: string): string[] {
   return [mainUsername, ...(userAliases[mainUsername] || [])]
 }
 
-// Функция для получения алиасов из базы данных
-async function getDatabaseAliases(userId: string): Promise<string[]> {
-  const supabase = await createClient()
-  
-  try {
-    const { data, error } = await supabase
-      .from("user_aliases")
-      .select("alias")
-      .eq("user_id", userId)
+export default function PublicProfilePage({ params }: PublicProfilePageProps) {
+  const [showChatModal, setShowChatModal] = useState(false)
+  const [profile, setProfile] = useState<any>(null)
+  const [problems, setProblems] = useState<any[]>([])
+  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [currentUserProfile, setCurrentUserProfile] = useState<any>(null)
+  const [allUsernames, setAllUsernames] = useState<string[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [userUpvotes, setUserUpvotes] = useState<Set<string>>(new Set())
+  const router = useRouter()
 
-    if (error) {
-      console.error("Error fetching database aliases:", error)
+  const supabase = createClient()
+
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const loadData = async () => {
+    try {
+      const { username } = await params
+      
+      // Получаем текущего пользователя
+      const { data: { user } } = await supabase.auth.getUser()
+      setCurrentUser(user)
+
+      // Получаем профиль по username или алиасу
+      const profileData = await getProfileByUsernameOrAlias(username)
+      if (!profileData) {
+        notFound()
+        return
+      }
+
+      setProfile(profileData)
+
+      // Если пользователь залогинен и пытается посмотреть СВОЙ профиль - редиректим на /profile
+      if (user && user.id === profileData.id) {
+        redirect("/profile")
+        return
+      }
+
+      // Fetch current user's profile for avatar (только если пользователь залогинен)
+      if (user) {
+        const { data: currentProfile } = await supabase
+          .from("profiles")
+          .select("avatar_url, display_name, username")
+          .eq("id", user.id)
+          .single()
+        setCurrentUserProfile(currentProfile)
+      }
+
+      // Получаем все username для отображения (статические + из базы данных)
+      const usernames = profileData.username 
+        ? await getAllUsernamesCombined(profileData.username, profileData.id)
+        : []
+      setAllUsernames(usernames)
+
+      // Fetch user's public problems
+      const { data: problemsData } = await supabase
+        .from("problems")
+        .select(`
+          *,
+          profiles:author_id (
+            id,
+            username,
+            display_name,
+            avatar_url
+          )
+        `)
+        .eq("author_id", profileData.id)
+        .order("created_at", { ascending: false })
+
+      setProblems(problemsData || [])
+
+      // Fetch upvotes for current user if logged in
+      if (user) {
+        const { data: upvotes } = await supabase
+          .from("upvotes")
+          .select("problem_id")
+          .eq("user_id", user.id)
+        
+        if (upvotes) {
+          setUserUpvotes(new Set(upvotes.map(upvote => upvote.problem_id)))
+        }
+      }
+
+    } catch (error) {
+      console.error("Error loading profile data:", error)
+      notFound()
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Функция для получения алиасов из базы данных
+  const getDatabaseAliases = async (userId: string): Promise<string[]> => {
+    try {
+      const { data, error } = await supabase
+        .from("user_aliases")
+        .select("alias")
+        .eq("user_id", userId)
+
+      if (error) {
+        console.error("Error fetching database aliases:", error)
+        return []
+      }
+
+      return data?.map(item => item.alias) || []
+    } catch (err) {
+      console.error("Error fetching database aliases:", err)
       return []
     }
-
-    return data?.map(item => item.alias) || []
-  } catch (err) {
-    console.error("Error fetching database aliases:", err)
-    return []
   }
-}
 
-// Функция для объединения статических и базы данных алиасов
-async function getAllUsernamesCombined(mainUsername: string, userId: string): Promise<string[]> {
-  const staticAliases = getAllUsernames(mainUsername)
-  
-  try {
-    const databaseAliases = await getDatabaseAliases(userId)
+  // Функция для объединения статических и базы данных алиасов
+  const getAllUsernamesCombined = async (mainUsername: string, userId: string): Promise<string[]> => {
+    const staticAliases = getAllUsernames(mainUsername)
     
-    // Объединяем и убираем дубликаты
-    const allAliases = [...staticAliases]
-    databaseAliases.forEach(alias => {
-      if (!allAliases.includes(alias)) {
-        allAliases.push(alias)
+    try {
+      const databaseAliases = await getDatabaseAliases(userId)
+      
+      // Объединяем и убираем дубликаты
+      const allAliases = [...staticAliases]
+      databaseAliases.forEach(alias => {
+        if (!allAliases.includes(alias)) {
+          allAliases.push(alias)
+        }
+      })
+      
+      return allAliases
+    } catch (err) {
+      console.error("Error combining aliases:", err)
+      return staticAliases
+    }
+  }
+
+  // Функция для получения профиля по username или алиасу
+  const getProfileByUsernameOrAlias = async (username: string) => {
+    // Сначала ищем в базе данных по алиасам
+    const { data: aliasData, error: aliasError } = await supabase
+      .from("user_aliases")
+      .select("user_id")
+      .eq("alias", username)
+      .single()
+
+    if (!aliasError && aliasData) {
+      // Если нашли в алиасах, получаем профиль пользователя
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", aliasData.user_id)
+        .single()
+
+      if (!profileError && profileData) {
+        return profileData
       }
-    })
-    
-    return allAliases
-  } catch (err) {
-    console.error("Error combining aliases:", err)
-    return staticAliases
-  }
-}
+    }
 
-// Функция для получения профиля по username или алиасу
-async function getProfileByUsernameOrAlias(username: string) {
-  const supabase = await createClient()
-  
-  // Сначала ищем в базе данных по алиасам
-  const { data: aliasData, error: aliasError } = await supabase
-    .from("user_aliases")
-    .select("user_id")
-    .eq("alias", username)
-    .single()
-
-  if (!aliasError && aliasData) {
-    // Если нашли в алиасах, получаем профиль пользователя
+    // Если не нашли в алиасах, ищем по основному username
     const { data: profileData, error: profileError } = await supabase
       .from("profiles")
       .select("*")
-      .eq("id", aliasData.user_id)
+      .eq("username", username)
       .single()
 
     if (!profileError && profileData) {
       return profileData
     }
-  }
 
-  // Если не нашли в алиасах, ищем по основному username
-  const { data: profileData, error: profileError } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("username", username)
-    .single()
+    // Если не нашли в базе, проверяем статическую карту
+    for (const [mainUsername, aliases] of Object.entries(userAliases)) {
+      if (mainUsername === username || aliases.includes(username)) {
+        // Ищем профиль по основному username
+        const { data: staticProfileData, error: staticError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("username", mainUsername)
+          .single()
 
-  if (!profileError && profileData) {
-    return profileData
-  }
-
-  // Если не нашли в базе, проверяем статическую карту
-  for (const [mainUsername, aliases] of Object.entries(userAliases)) {
-    if (mainUsername === username || aliases.includes(username)) {
-      // Ищем профиль по основному username
-      const { data: staticProfileData, error: staticError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("username", mainUsername)
-        .single()
-
-      if (!staticError && staticProfileData) {
-        return staticProfileData
+        if (!staticError && staticProfileData) {
+          return staticProfileData
+        }
       }
     }
+
+    return null
   }
 
-  return null
-}
-
-export default async function PublicProfilePage({ params }: PublicProfilePageProps) {
-  const { username } = await params
-  const supabase = await createClient()
-
-  // Получаем текущего пользователя (но не редиректим если не залогинен)
-  const { data: { user } } = await supabase.auth.getUser()
-
-  // Получаем профиль по username или алиасу
-  const profile = await getProfileByUsernameOrAlias(username)
-
-  if (!profile) {
-    notFound()
-  }
-
-  // Если пользователь залогинен и пытается посмотреть СВОЙ профиль - редиректим на /profile
-  if (user && user.id === profile.id) {
-    redirect("/profile")
-  }
-
-  // Fetch current user's profile for avatar (только если пользователь залогинен)
-  let currentUserProfile = null
-  if (user) {
-    const { data: currentProfile } = await supabase
-      .from("profiles")
-      .select("avatar_url, display_name, username")
-      .eq("id", user.id)
-      .single()
-    currentUserProfile = currentProfile
-  }
-
-  // Список подтвержденных пользователей (используем username профиля)
-  const verifiedUsers = ["startorigin", "nikolaev", "winter", "gerxog"]
-  const isVerifiedUser = profile.username ? verifiedUsers.includes(profile.username) : false
-
-  // Получаем все username для отображения (статические + из базы данных)
-  const allUsernames = profile.username 
-    ? await getAllUsernamesCombined(profile.username, profile.id)
-    : []
-
-  // Fetch user's public problems
-  const { data: problems } = await supabase
-    .from("problems")
-    .select(`
-      *,
-      profiles:author_id (
-        id,
-        username,
-        display_name,
-        avatar_url
-      )
-    `)
-    .eq("author_id", profile.id)
-    .order("created_at", { ascending: false })
-
-  // Fetch upvotes for current user if logged in
-  let userUpvotes: Set<string> = new Set()
-  if (user) {
-    const { data: upvotes } = await supabase
-      .from("upvotes")
-      .select("problem_id")
-      .eq("user_id", user.id)
-    
-    if (upvotes) {
-      userUpvotes = new Set(upvotes.map(upvote => upvote.problem_id))
-    }
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    router.push("/auth/login")
   }
 
   const getInitials = (name: string | null) => {
@@ -222,13 +247,23 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
       .slice(0, 2)
   }
 
-  // Server action for logout (только для залогиненных пользователей)
-  async function handleLogout() {
-    "use server"
-    const supabase = await createClient()
-    await supabase.auth.signOut()
-    redirect("/auth/login")
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-muted-foreground">Loading profile...</p>
+        </div>
+      </div>
+    )
   }
+
+  if (!profile) {
+    notFound()
+  }
+
+  // Список подтвержденных пользователей (используем username профиля)
+  const verifiedUsers = ["startorigin", "nikolaev", "winter", "gerxog"]
+  const isVerifiedUser = profile.username ? verifiedUsers.includes(profile.username) : false
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -244,7 +279,7 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
             </div>
             
             <div className="flex items-center gap-2 sm:gap-4">
-              {user ? (
+              {currentUser ? (
                 <>
                   <Link href="/problems/new">
                     <Button className="gap-2">
@@ -275,13 +310,9 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <form action={handleLogout} className="w-full">
-                          <button type="submit" className="flex items-center gap-2 w-full text-left cursor-pointer">
-                            <LogOut className="h-4 w-4" />
-                            <span>Sign Out</span>
-                          </button>
-                        </form>
+                      <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2 cursor-pointer">
+                        <LogOut className="h-4 w-4" />
+                        <span>Sign Out</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -387,40 +418,23 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
                   {profile.bio && (
                     <p className="mt-4 text-foreground max-w-2xl">{profile.bio}</p>
                   )}
+
+                  {/* Кнопка Start a Chat */}
+                  {currentUser && currentUser.id !== profile.id && (
+                    <div className="mt-6">
+                      <Button 
+                        onClick={() => setShowChatModal(true)}
+                        className="gap-2"
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                        Start a Chat
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>
           </Card>
-          // В начале компонента PublicProfilePage добавь:
-const [showChatModal, setShowChatModal] = useState(false)
-
-// В JSX после bio добавь кнопку:
-{user && user.id !== profile.id && (
-  <div className="mt-6">
-    <Button 
-      onClick={() => setShowChatModal(true)}
-      className="gap-2"
-    >
-      <MessageCircle className="h-4 w-4" />
-      Start a Chat
-    </Button>
-  </div>
-)}
-
-// В конце компонента добавь модальное окно:
-{showChatModal && (
-  <ChatModal
-    isOpen={showChatModal}
-    onClose={() => setShowChatModal(false)}
-    recipientUser={profile}
-    currentUser={{
-      id: user.id,
-      username: currentUserProfile?.username,
-      display_name: currentUserProfile?.display_name,
-      avatar_url: currentUserProfile?.avatar_url
-    }}
-  />
-)}
 
           {/* User's Problems */}
           <Card>
@@ -438,7 +452,7 @@ const [showChatModal, setShowChatModal] = useState(false)
                     <ProblemCard 
                       key={problem.id} 
                       problem={problem} 
-                      userId={user?.id}
+                      userId={currentUser?.id}
                       initialHasUpvoted={userUpvotes.has(problem.id)}
                     />
                   ))}
@@ -452,6 +466,21 @@ const [showChatModal, setShowChatModal] = useState(false)
           </Card>
         </div>
       </main>
+
+      {/* Модальное окно чата */}
+      {showChatModal && currentUser && (
+        <ChatModal
+          isOpen={showChatModal}
+          onClose={() => setShowChatModal(false)}
+          recipientUser={profile}
+          currentUser={{
+            id: currentUser.id,
+            username: currentUserProfile?.username,
+            display_name: currentUserProfile?.display_name,
+            avatar_url: currentUserProfile?.avatar_url
+          }}
+        />
+      )}
 
       {/* Footer */}
       <footer className="border-t border-border bg-card/50 py-6 mt-auto">
