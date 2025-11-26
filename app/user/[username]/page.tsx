@@ -1,11 +1,14 @@
 import { createClient } from "@/lib/supabase/server"
+import { ChatModal } from "@/components/chat-modal"
+import { useState } from "react"
 import { notFound, redirect } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { Lightbulb, Plus, ArrowLeft, LogOut, User, Check } from "lucide-react"
+import { Lightbulb, Plus, ArrowLeft, LogOut, User, Check, MessageCircle } from "lucide-react"
 import { ProblemCard } from "@/components/problem-card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +20,9 @@ import {
 interface PublicProfilePageProps {
   params: Promise<{ username: string }>
 }
+
+const [showChatModal, setShowChatModal] = useState(false)
+
 
 // Карта алиасов пользователей
 const userAliases: Record<string, string[]> = {
