@@ -74,19 +74,21 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
 
   useEffect(() => {
     if (currentUser) {
+      // Подписываемся на изменения в таблице messages
       const channel = supabase
         .channel('unread-messages')
         .on(
           'postgres_changes',
           {
-            event: 'INSERT',
+            event: '*',
             schema: 'public',
             table: 'messages',
             filter: `recipient_id=eq.${currentUser.id}`,
           },
           (payload) => {
+            // При любом изменении сообщений обновляем счетчики
             loadUnreadMessagesCount()
-            setUnreadChats(prev => new Set(prev).add(payload.new.sender_id))
+            loadUnreadChats()
           }
         )
         .subscribe()
@@ -100,30 +102,47 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
   const loadUnreadMessagesCount = async () => {
     if (!currentUser) return
 
-    const { count, error } = await supabase
-      .from('messages')
-      .select('*', { count: 'exact', head: true })
-      .eq('recipient_id', currentUser.id)
-      .eq('is_read', false)
+    try {
+      const { count, error } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('recipient_id', currentUser.id)
+        .eq('is_read', false)
 
-    if (!error && count !== null) {
-      setUnreadMessagesCount(count)
+      console.log('Unread messages count:', count, error)
+      
+      if (!error && count !== null) {
+        setUnreadMessagesCount(count)
+      } else if (error) {
+        console.error('Error loading unread messages count:', error)
+      }
+    } catch (error) {
+      console.error('Error in loadUnreadMessagesCount:', error)
     }
   }
 
   const loadUnreadChats = async () => {
     if (!currentUser) return
 
-    const { data, error } = await supabase
-      .from('messages')
-      .select('sender_id')
-      .eq('recipient_id', currentUser.id)
-      .eq('is_read', false)
-      .neq('sender_id', currentUser.id)
+    try {
+      // Получаем уникальных отправителей с непрочитанными сообщениями
+      const { data, error } = await supabase
+        .from('messages')
+        .select('sender_id')
+        .eq('recipient_id', currentUser.id)
+        .eq('is_read', false)
 
-    if (!error && data) {
-      const senderIds = new Set(data.map(msg => msg.sender_id))
-      setUnreadChats(senderIds)
+      console.log('Unread chats data:', data, error)
+      
+      if (!error && data) {
+        const senderIds = new Set(data.map(msg => msg.sender_id))
+        console.log('Unread sender IDs:', Array.from(senderIds))
+        setUnreadChats(senderIds)
+      } else if (error) {
+        console.error('Error loading unread chats:', error)
+      }
+    } catch (error) {
+      console.error('Error in loadUnreadChats:', error)
     }
   }
 
@@ -131,18 +150,25 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
     try {
       const { username } = await params
       
+      console.log('Loading profile for username:', username)
+      
       // Получаем текущего пользователя
       const { data: { user } } = await supabase.auth.getUser()
+      console.log('Current user:', user)
       setCurrentUser(user)
 
       if (user) {
-        loadUnreadMessagesCount()
-        loadUnreadChats()
+        console.log('Loading unread messages for user:', user.id)
+        await loadUnreadMessagesCount()
+        await loadUnreadChats()
       }
 
       // Получаем профиль по username или алиасу
       const profileData = await getProfileByUsernameOrAlias(username)
+      console.log('Found profile:', profileData)
+      
       if (!profileData) {
+        console.log('Profile not found')
         notFound()
         return
       }
@@ -151,8 +177,12 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
 
       // Проверяем, является ли этот профиль профилем текущего пользователя
       if (user) {
+        console.log('Checking if profile belongs to current user')
+        console.log('User ID:', user.id, 'Profile ID:', profileData.id)
+        
         // Сначала проверяем по прямому ID
         if (user.id === profileData.id) {
+          console.log('Redirecting: same user ID')
           setShouldRedirect(true)
           return
         }
@@ -164,18 +194,24 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
           .eq("id", user.id)
           .single()
         
+        console.log('Current user profile:', currentProfile)
         setCurrentUserProfile(currentProfile)
 
         if (currentProfile?.username) {
           const currentUserAllUsernames = await getAllUsernamesCombined(currentProfile.username, user.id)
+          console.log('Current user all usernames:', currentUserAllUsernames)
+          console.log('Requested username:', username)
           
           // Проверяем, совпадает ли запрошенный username с любым из username текущего пользователя
           if (currentUserAllUsernames.includes(username)) {
+            console.log('Redirecting: username match')
             setShouldRedirect(true)
             return
           }
         }
       }
+
+      console.log('No redirect needed, loading profile data')
 
       // Если редирект не нужен, продолжаем загрузку данных
       const usernames = profileData.username 
@@ -264,6 +300,8 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
 
   // Функция для получения профиля по username или алиасу
   const getProfileByUsernameOrAlias = async (username: string) => {
+    console.log('Searching for profile with username/alias:', username)
+    
     // Сначала ищем в базе данных по алиасам
     const { data: aliasData, error: aliasError } = await supabase
       .from("user_aliases")
@@ -271,12 +309,16 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
       .eq("alias", username)
       .single()
 
+    console.log('Alias search result:', aliasData, aliasError)
+
     if (!aliasError && aliasData) {
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", aliasData.user_id)
         .single()
+
+      console.log('Profile by alias result:', profileData, profileError)
 
       if (!profileError && profileData) {
         return profileData
@@ -290,6 +332,8 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
       .eq("username", username)
       .single()
 
+    console.log('Profile by username result:', profileData, profileError)
+
     if (!profileError && profileData) {
       return profileData
     }
@@ -297,11 +341,15 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
     // Если не нашли в базе, проверяем статическую карту
     for (const [mainUsername, aliases] of Object.entries(userAliases)) {
       if (mainUsername === username || aliases.includes(username)) {
+        console.log('Found in static map, main username:', mainUsername)
+        
         const { data: staticProfileData, error: staticError } = await supabase
           .from("profiles")
           .select("*")
           .eq("username", mainUsername)
           .single()
+
+        console.log('Static profile result:', staticProfileData, staticError)
 
         if (!staticError && staticProfileData) {
           return staticProfileData
@@ -309,6 +357,7 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
       }
     }
 
+    console.log('Profile not found in any method')
     return null
   }
 
@@ -355,6 +404,9 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
   // Список подтвержденных пользователей
   const verifiedUsers = ["startorigin", "nikolaev", "winter", "gerxog"]
   const isVerifiedUser = profile.username ? verifiedUsers.includes(profile.username) : false
+
+  console.log('Rendering profile. Unread messages:', unreadMessagesCount)
+  console.log('Unread chats for this profile:', unreadChats.has(profile.id))
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
