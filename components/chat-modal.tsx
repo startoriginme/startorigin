@@ -35,6 +35,7 @@ interface Message {
   created_at: string
   updated_at: string
   deleted_by: string[]
+  chat_id: string
   reactions: Reaction[]
 }
 
@@ -42,10 +43,12 @@ interface Reaction {
   id: string
   emoji: string
   user_id: string
+  message_id: string
 }
 
 interface Chat {
   id: string
+  created_at: string
   participants: any[]
   last_message?: Message
   unread_count: number
@@ -94,65 +97,53 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
     }
   }, [isOpen])
 
-  // Подписываемся на новые сообщения
+  // Подписываемся на новые сообщения только для активного чата
   useEffect(() => {
     if (!activeChat) return
 
-    let channel: any
-
-    const setupSubscription = async () => {
-      channel = supabase
-        .channel(`chat:${activeChat}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'messages',
-            filter: `chat_id=eq.${activeChat}`
-          },
-          async (payload) => {
-            const newMessage = payload.new as Message
-            
-            // Загружаем реакции для нового сообщения
-            const { data: reactions } = await supabase
-              .from('message_reactions')
-              .select('*')
-              .eq('message_id', newMessage.id)
-            
+    const channel = supabase
+      .channel(`chat:${activeChat}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `chat_id=eq.${activeChat}`
+        },
+        async (payload) => {
+          const newMessage = payload.new as Message
+          
+          // Загружаем реакции для нового сообщения
+          const { data: reactions } = await supabase
+            .from('message_reactions')
+            .select('*')
+            .eq('message_id', newMessage.id)
+          
+          // Добавляем только если сообщение для активного чата
+          if (newMessage.chat_id === activeChat) {
             setMessages(prev => [...prev, {
               ...newMessage,
               reactions: reactions || []
             }])
+            
+            // Обновляем список чатов чтобы показать последнее сообщение
+            loadChats()
           }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'DELETE',
-            schema: 'public',
-            table: 'messages',
-            filter: `chat_id=eq.${activeChat}`
-          },
-          (payload) => {
-            setMessages(prev => prev.filter(msg => msg.id !== payload.old.id))
-          }
-        )
-        .subscribe()
-    }
-
-    setupSubscription()
+        }
+      )
+      .subscribe()
 
     return () => {
-      if (channel) {
-        supabase.removeChannel(channel)
-      }
+      supabase.removeChannel(channel)
     }
   }, [activeChat])
 
   const loadChats = async () => {
     try {
       setIsLoading(true)
+      
+      // Загружаем чаты пользователя с участниками
       const { data: chatParticipants, error } = await supabase
         .from('chat_participants')
         .select(`
@@ -160,7 +151,6 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
           chats (
             id,
             created_at,
-            updated_at,
             participants:chat_participants (
               user:profiles (
                 id,
@@ -172,16 +162,20 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
           )
         `)
         .eq('user_id', currentUser.id)
-        .order('created_at', { ascending: false })
 
       if (error) {
         console.error('Error loading chats:', error)
         return
       }
 
+      if (!chatParticipants) {
+        setChats([])
+        return
+      }
+
       // Загружаем последние сообщения для каждого чата
       const chatsWithMessages = await Promise.all(
-        (chatParticipants || []).map(async (cp: any) => {
+        chatParticipants.map(async (cp: any) => {
           const chat = cp.chats
           
           // Получаем последнее сообщение
@@ -195,6 +189,7 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
 
           return {
             id: chat.id,
+            created_at: chat.created_at,
             participants: chat.participants.map((p: any) => p.user),
             last_message: lastMessage || undefined,
             unread_count: 0
@@ -202,10 +197,17 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
         })
       )
 
-      setChats(chatsWithMessages)
+      // Сортируем по дате последнего сообщения или созданию чата
+      const sortedChats = chatsWithMessages.sort((a, b) => {
+        const aDate = a.last_message?.created_at || a.created_at
+        const bDate = b.last_message?.created_at || b.created_at
+        return new Date(bDate).getTime() - new Date(aDate).getTime()
+      })
 
-      // Автоматически открываем чат с получателем, если он существует
-      const existingChat = chatsWithMessages.find(chat =>
+      setChats(sortedChats)
+
+      // Автоматически открываем чат с получателем
+      const existingChat = sortedChats.find(chat =>
         chat.participants.some((p: any) => p.id === recipientUser.id)
       )
 
@@ -214,7 +216,7 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
         loadMessages(existingChat.id)
       } else {
         // Создаем новый чат с получателем
-        createOrGetChat()
+        await createNewChat(recipientUser)
       }
     } catch (error) {
       console.error('Error in loadChats:', error)
@@ -223,7 +225,7 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
     }
   }
 
-  const createOrGetChat = async () => {
+  const createNewChat = async (user: SearchedUser) => {
     try {
       // Создаем новый чат
       const { data: newChat, error: createError } = await supabase
@@ -234,7 +236,7 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
 
       if (createError || !newChat) {
         console.error('Error creating chat:', createError)
-        return
+        return null
       }
 
       // Добавляем участников
@@ -242,27 +244,29 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
         .from('chat_participants')
         .insert([
           { chat_id: newChat.id, user_id: currentUser.id },
-          { chat_id: newChat.id, user_id: recipientUser.id }
+          { chat_id: newChat.id, user_id: user.id }
         ])
 
       if (participantsError) {
         console.error('Error adding participants:', participantsError)
-        return
+        return null
       }
 
-      setActiveChat(newChat.id)
       const newChatObj = {
         id: newChat.id,
-        participants: [currentUser, recipientUser],
+        created_at: newChat.created_at,
+        participants: [currentUser, user],
         last_message: undefined,
         unread_count: 0
       }
+
       setChats(prev => [newChatObj, ...prev])
+      setActiveChat(newChat.id)
       
-      // Загружаем сообщения для нового чата
-      loadMessages(newChat.id)
+      return newChat.id
     } catch (error) {
-      console.error('Error in createOrGetChat:', error)
+      console.error('Error in createNewChat:', error)
+      return null
     }
   }
 
@@ -275,7 +279,8 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
           reactions:message_reactions (
             id,
             emoji,
-            user_id
+            user_id,
+            message_id
           )
         `)
         .eq('chat_id', chatId)
@@ -324,11 +329,7 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
         return
       }
 
-      // Обновляем список чатов чтобы показать последнее сообщение
-      await loadChats()
-      
       setNewMessage("")
-      // Фокус на инпут после отправки
       inputRef.current?.focus()
     } catch (error) {
       console.error('Error in sendMessage:', error)
@@ -352,7 +353,7 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
       if (error) {
         console.error('Error deleting message:', error)
       } else {
-        // Перезагружаем сообщения
+        // Обновляем сообщения
         if (activeChat) {
           loadMessages(activeChat)
         }
@@ -374,11 +375,6 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
 
       if (error) {
         console.error('Error adding reaction:', error)
-      } else {
-        // Обновляем сообщения чтобы показать новую реакцию
-        if (activeChat) {
-          loadMessages(activeChat)
-        }
       }
     } catch (error) {
       console.error('Error in addReaction:', error)
@@ -396,11 +392,6 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
 
       if (error) {
         console.error('Error removing reaction:', error)
-      } else {
-        // Обновляем сообщения
-        if (activeChat) {
-          loadMessages(activeChat)
-        }
       }
     } catch (error) {
       console.error('Error in removeReaction:', error)
@@ -437,61 +428,25 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
 
   const startChatWithUser = async (user: SearchedUser) => {
     try {
-      // Проверяем существующий чат
-      const { data: existingChats } = await supabase
-        .from('chat_participants')
-        .select('chat_id')
-        .eq('user_id', currentUser.id)
+      // Ищем существующий чат с этим пользователем
+      const existingChat = chats.find(chat =>
+        chat.participants.some((p: any) => p.id === user.id)
+      )
 
-      if (existingChats && existingChats.length > 0) {
-        const chatIds = existingChats.map(cp => cp.chat_id)
-        
-        const { data: userChats } = await supabase
-          .from('chat_participants')
-          .select('chat_id')
-          .eq('user_id', user.id)
-          .in('chat_id', chatIds)
-
-        if (userChats && userChats.length > 0) {
-          setActiveChat(userChats[0].chat_id)
-          loadMessages(userChats[0].chat_id)
-          setSearchResults([])
-          setSearchQuery("")
-          setMobileSidebarOpen(false)
-          return
+      if (existingChat) {
+        setActiveChat(existingChat.id)
+        loadMessages(existingChat.id)
+      } else {
+        // Создаем новый чат
+        const newChatId = await createNewChat(user)
+        if (newChatId) {
+          loadMessages(newChatId)
         }
       }
 
-      // Создаем новый чат
-      const { data: newChat } = await supabase
-        .from('chats')
-        .insert({})
-        .select()
-        .single()
-
-      if (!newChat) return
-
-      await supabase
-        .from('chat_participants')
-        .insert([
-          { chat_id: newChat.id, user_id: currentUser.id },
-          { chat_id: newChat.id, user_id: user.id }
-        ])
-
-      setActiveChat(newChat.id)
-      const newChatObj = {
-        id: newChat.id,
-        participants: [currentUser, user],
-        last_message: undefined,
-        unread_count: 0
-      }
-      setChats(prev => [newChatObj, ...prev])
       setSearchResults([])
       setSearchQuery("")
       setMobileSidebarOpen(false)
-      
-      // Загружаем сообщения для нового чата
-      loadMessages(newChat.id)
     } catch (error) {
       console.error('Error starting chat:', error)
     }
@@ -508,7 +463,8 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
     if (!activeChat) return recipientUser
     const chat = chats.find(c => c.id === activeChat)
     if (!chat) return recipientUser
-    return chat.participants.find((p: any) => p.id !== currentUser.id) || recipientUser
+    const otherUser = chat.participants.find((p: any) => p.id !== currentUser.id)
+    return otherUser || recipientUser
   }
 
   // Сайдбар для мобильных
