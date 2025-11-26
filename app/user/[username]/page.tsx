@@ -47,6 +47,7 @@ function getAllUsernames(mainUsername: string): string[] {
 
 export default function PublicProfilePage({ params }: PublicProfilePageProps) {
   const [showChatModal, setShowChatModal] = useState(false)
+  const [showChatsModal, setShowChatsModal] = useState(false) // Новое состояние для модалки всех чатов
   const [profile, setProfile] = useState<any>(null)
   const [problems, setProblems] = useState<any[]>([])
   const [currentUser, setCurrentUser] = useState<any>(null)
@@ -145,13 +146,14 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
 
       setProfile(profileData)
 
-      // Если пользователь залогинен и пытается посмотреть СВОЙ профиль - редиректим на /profile
+      // Проверяем, является ли этот профиль профилем текущего пользователя
+      // Сравниваем по ID пользователя
       if (user && user.id === profileData.id) {
         redirect("/profile")
         return
       }
 
-      // Fetch current user's profile for avatar (только если пользователь залогинен)
+      // Также проверяем по username и алиасам текущего пользователя
       if (user) {
         const { data: currentProfile } = await supabase
           .from("profiles")
@@ -159,6 +161,17 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
           .eq("id", user.id)
           .single()
         setCurrentUserProfile(currentProfile)
+
+        // Получаем все username текущего пользователя для проверки
+        const currentUserAllUsernames = currentProfile?.username 
+          ? await getAllUsernamesCombined(currentProfile.username, user.id)
+          : []
+
+        // Проверяем, совпадает ли запрошенный username с любым из username текущего пользователя
+        if (currentUserAllUsernames.includes(username)) {
+          redirect("/profile")
+          return
+        }
       }
 
       // Получаем все username для отображения (статические + из базы данных)
@@ -383,21 +396,22 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
                           <span>Profile</span>
                         </Link>
                       </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href="/chats" className="flex items-center justify-between cursor-pointer w-full">
-                          <div className="flex items-center gap-2">
-                            <MessageCircle className="h-4 w-4" />
-                            <span>Chats</span>
-                          </div>
-                          {unreadMessagesCount > 0 && (
-                            <Badge 
-                              className="h-5 w-5 flex items-center justify-center p-0 bg-blue-500 text-white text-xs"
-                              variant="default"
-                            >
-                              {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
-                            </Badge>
-                          )}
-                        </Link>
+                      <DropdownMenuItem 
+                        onClick={() => setShowChatsModal(true)}
+                        className="flex items-center justify-between cursor-pointer w-full"
+                      >
+                        <div className="flex items-center gap-2">
+                          <MessageCircle className="h-4 w-4" />
+                          <span>Chats</span>
+                        </div>
+                        {unreadMessagesCount > 0 && (
+                          <Badge 
+                            className="h-5 w-5 flex items-center justify-center p-0 bg-blue-500 text-white text-xs"
+                            variant="default"
+                          >
+                            {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
+                          </Badge>
+                        )}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2 cursor-pointer">
@@ -565,7 +579,7 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
         </div>
       </main>
 
-      {/* Модальное окно чата */}
+      {/* Модальное окно чата с конкретным пользователем */}
       {showChatModal && currentUser && (
         <ChatModal
           isOpen={showChatModal}
@@ -578,6 +592,26 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
             avatar_url: currentUserProfile?.avatar_url
           }}
           hasUnreadMessages={unreadChats.has(profile.id)}
+        />
+      )}
+
+      {/* Модальное окно всех чатов */}
+      {showChatsModal && currentUser && (
+        <ChatModal
+          isOpen={showChatsModal}
+          onClose={() => setShowChatsModal(false)}
+          recipientUser={{
+            id: "",
+            username: "all-chats",
+            display_name: "All Chats", 
+            avatar_url: null
+          }}
+          currentUser={{
+            id: currentUser.id,
+            username: currentUserProfile?.username,
+            display_name: currentUserProfile?.display_name,
+            avatar_url: currentUserProfile?.avatar_url
+          }}
         />
       )}
 
