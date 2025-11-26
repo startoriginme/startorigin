@@ -85,6 +85,15 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
 
   const supabase = createClient()
 
+  // Фокус на инпут при открытии
+  useEffect(() => {
+    if (isOpen && inputRef.current) {
+      setTimeout(() => {
+        inputRef.current?.focus()
+      }, 100)
+    }
+  }, [isOpen, activeChat])
+
   // Авто-скролл к новым сообщениям
   useEffect(() => {
     if (messages.length > 0) {
@@ -347,7 +356,10 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
       }])
 
       setNewMessage("")
-      inputRef.current?.focus()
+      // Фокус остается на инпуте после отправки
+      setTimeout(() => {
+        inputRef.current?.focus()
+      }, 50)
     } catch (error) {
       console.error('Error in sendMessage:', error)
       alert('Failed to send message')
@@ -560,9 +572,12 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
                   onClick={() => startChatWithUser(user)}
                 >
                   <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.avatar_url || ""} />
-                      <AvatarFallback>
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage 
+                        src={user.avatar_url || ""} 
+                        className="object-cover"
+                      />
+                      <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
                         {user.display_name?.[0] || user.username?.[0] || "U"}
                       </AvatarFallback>
                     </Avatar>
@@ -606,8 +621,11 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
                 >
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={otherUser.avatar_url || ""} />
-                      <AvatarFallback>
+                      <AvatarImage 
+                        src={otherUser.avatar_url || ""} 
+                        className="object-cover"
+                      />
+                      <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
                         {otherUser.display_name?.[0] || otherUser.username?.[0] || "U"}
                       </AvatarFallback>
                     </Avatar>
@@ -652,8 +670,11 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
               </SheetContent>
             </Sheet>
             <Avatar className="h-8 w-8">
-              <AvatarImage src={currentChatUser.avatar_url || ""} />
-              <AvatarFallback>
+              <AvatarImage 
+                src={currentChatUser.avatar_url || ""} 
+                className="object-cover"
+              />
+              <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
                 {currentChatUser.display_name?.[0] || currentChatUser.username?.[0] || "U"}
               </AvatarFallback>
             </Avatar>
@@ -682,8 +703,11 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
           <div className="hidden sm:flex p-4 border-b border-border items-center justify-between">
             <div className="flex items-center gap-3">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={currentChatUser.avatar_url || ""} />
-                <AvatarFallback>
+                <AvatarImage 
+                  src={currentChatUser.avatar_url || ""} 
+                  className="object-cover"
+                />
+                <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
                   {currentChatUser.display_name?.[0] || currentChatUser.username?.[0] || "U"}
                 </AvatarFallback>
               </Avatar>
@@ -719,8 +743,11 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
                     >
                       {message.sender_id !== currentUser.id && (
                         <Avatar className="h-6 w-6 sm:h-8 sm:w-8 flex-shrink-0">
-                          <AvatarImage src={currentChatUser.avatar_url || ""} />
-                          <AvatarFallback className="text-xs">
+                          <AvatarImage 
+                            src={currentChatUser.avatar_url || ""} 
+                            className="object-cover"
+                          />
+                          <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
                             {currentChatUser.display_name?.[0] || currentChatUser.username?.[0] || "U"}
                           </AvatarFallback>
                         </Avatar>
@@ -820,7 +847,12 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
                 placeholder="Type a message..."
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault() // Предотвращаем стандартное поведение
+                    sendMessage()
+                  }
+                }}
                 className="flex-1"
                 disabled={isSending}
               />
