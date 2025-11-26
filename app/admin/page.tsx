@@ -3,6 +3,7 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { supabaseAdmin } from "@/lib/supabase/admin-client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -83,10 +84,10 @@ export default function AdminPage() {
 
   const loadProblems = async () => {
     setIsLoading(true)
-    const supabase = createClient()
-
+    
     try {
-      const { data, error } = await supabase
+      // Используем admin client для доступа ко всем данным
+      const { data, error } = await supabaseAdmin
         .from("problems")
         .select(
           `
@@ -111,10 +112,9 @@ export default function AdminPage() {
   }
 
   const loadAliases = async () => {
-    const supabase = createClient()
-
     try {
-      const { data, error } = await supabase
+      // Используем admin client для доступа ко всем алиасам
+      const { data, error } = await supabaseAdmin
         .from("user_aliases")
         .select(
           `
@@ -137,10 +137,9 @@ export default function AdminPage() {
   const searchUser = async () => {
     if (!searchUsername) return
 
-    const supabase = createClient()
-
     try {
-      const { data, error } = await supabase
+      // Используем admin client для поиска пользователей
+      const { data, error } = await supabaseAdmin
         .from("profiles")
         .select("*")
         .eq("username", searchUsername.toLowerCase())
@@ -161,14 +160,13 @@ export default function AdminPage() {
     setDeletingId(problemId)
 
     try {
-      const supabase = createClient()
-      
-      await supabase
+      // Удаляем через admin client (имеет права на удаление любых данных)
+      await supabaseAdmin
         .from("upvotes")
         .delete()
         .eq("problem_id", problemId)
 
-      const { error } = await supabase
+      const { error } = await supabaseAdmin
         .from("problems")
         .delete()
         .eq("id", problemId)
@@ -193,8 +191,6 @@ export default function AdminPage() {
       return
     }
 
-    const supabase = createClient()
-
     try {
       let userId = ""
 
@@ -204,7 +200,7 @@ export default function AdminPage() {
       } 
       // Иначе пытаемся найти пользователя по username из формы
       else if (newAlias.username) {
-        const { data: userData, error: userError } = await supabase
+        const { data: userData, error: userError } = await supabaseAdmin
           .from("profiles")
           .select("id")
           .eq("username", newAlias.username.toLowerCase())
@@ -223,7 +219,7 @@ export default function AdminPage() {
       }
 
       // Проверяем, не существует ли уже такой алиас
-      const { data: existingAlias, error: checkError } = await supabase
+      const { data: existingAlias, error: checkError } = await supabaseAdmin
         .from("user_aliases")
         .select("id")
         .eq("alias", newAlias.alias.toLowerCase())
@@ -235,7 +231,7 @@ export default function AdminPage() {
       }
 
       // Проверяем, не является ли алиас чьим-то основным username
-      const { data: existingUser, error: userCheckError } = await supabase
+      const { data: existingUser, error: userCheckError } = await supabaseAdmin
         .from("profiles")
         .select("id")
         .eq("username", newAlias.alias.toLowerCase())
@@ -246,8 +242,8 @@ export default function AdminPage() {
         return
       }
 
-      // Затем добавляем алиас
-      const { error } = await supabase
+      // Добавляем алиас через admin client
+      const { error } = await supabaseAdmin
         .from("user_aliases")
         .insert({
           alias: newAlias.alias.toLowerCase(),
@@ -278,9 +274,8 @@ export default function AdminPage() {
     setDeletingAliasId(aliasId)
 
     try {
-      const supabase = createClient()
-
-      const { error } = await supabase
+      // Удаляем алиас через admin client
+      const { error } = await supabaseAdmin
         .from("user_aliases")
         .delete()
         .eq("id", aliasId)
