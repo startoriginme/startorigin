@@ -491,4 +491,5 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
       </footer>
     </div>
   )
+   
 }
