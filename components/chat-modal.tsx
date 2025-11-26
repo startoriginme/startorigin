@@ -80,34 +80,24 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
   const [isSending, setIsSending] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [showReactionPicker, setShowReactionPicker] = useState<string | null>(null)
-  const [isVisible, setIsVisible] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const scrollAreaRef = useRef<HTMLDivElement>(null)
 
   const supabase = createClient()
 
-  // Анимация появления
-  useEffect(() => {
-    if (isOpen) {
-      setIsVisible(true)
-    } else {
-      setIsVisible(false)
-    }
-  }, [isOpen])
-
   // Авто-скролл к новым сообщениям
   useEffect(() => {
-    scrollToBottom()
+    if (messages.length > 0) {
+      scrollToBottom()
+    }
   }, [messages])
 
   const scrollToBottom = () => {
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ 
-        behavior: "smooth",
-        block: "end"
+        behavior: "smooth"
       })
-    }, 150)
+    }, 100)
   }
 
   // Загружаем чаты текущего пользователя
@@ -149,7 +139,7 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
             }])
             
             // Обновляем список чатов чтобы показать последнее сообщение
-            setTimeout(() => loadChats(), 500)
+            setTimeout(() => loadChats(), 300)
           }
         }
       )
@@ -520,12 +510,12 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
   }
 
   const ReactionPicker = ({ messageId, onClose }: { messageId: string, onClose: () => void }) => (
-    <div className="absolute bottom-full left-0 mb-2 bg-background border border-border rounded-lg shadow-lg p-2 z-10 animate-in fade-in-0 zoom-in-95">
+    <div className="absolute bottom-full left-0 mb-2 bg-background border border-border rounded-lg shadow-lg p-2 z-10">
       <div className="flex gap-1">
         {EMOJIS.map(emoji => (
           <button
             key={emoji}
-            className="h-8 w-8 text-lg hover:bg-accent rounded transition-all duration-200 hover:scale-110 active:scale-95 flex items-center justify-center"
+            className="h-8 w-8 text-lg hover:bg-accent rounded transition-colors flex items-center justify-center"
             onClick={() => {
               addReaction(messageId, emoji)
               onClose()
@@ -563,11 +553,10 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
           {searchResults.length > 0 && (
             <div className="mb-4">
               <h3 className="text-sm font-medium mb-2 px-2">Search Results</h3>
-              {searchResults.map((user, index) => (
+              {searchResults.map(user => (
                 <div
                   key={user.id}
-                  className="p-3 rounded-lg cursor-pointer hover:bg-accent transition-all duration-200 animate-in fade-in-0 slide-in-from-top-2"
-                  style={{ animationDelay: `${index * 50}ms` }}
+                  className="p-3 rounded-lg cursor-pointer hover:bg-accent transition-colors mb-2"
                   onClick={() => startChatWithUser(user)}
                 >
                   <div className="flex items-center gap-3">
@@ -599,17 +588,16 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
               <p>No chats yet</p>
             </div>
           ) : (
-            chats.map((chat, index) => {
+            chats.map(chat => {
               const otherUser = chat.participants.find((p: any) => p.id !== currentUser.id)
               if (!otherUser) return null
 
               return (
                 <div
                   key={chat.id}
-                  className={`p-3 rounded-lg cursor-pointer hover:bg-accent transition-all duration-200 animate-in fade-in-0 slide-in-from-top-2 ${
+                  className={`p-3 rounded-lg cursor-pointer hover:bg-accent transition-colors ${
                     activeChat === chat.id ? 'bg-accent' : ''
                   }`}
-                  style={{ animationDelay: `${index * 50}ms` }}
                   onClick={() => {
                     setActiveChat(chat.id)
                     loadMessages(chat.id)
@@ -643,15 +631,13 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
     </div>
   )
 
-  if (!isOpen || !isVisible) return null
+  if (!isOpen) return null
 
   const currentChatUser = getCurrentChatUser()
 
   return (
     <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
-      <div className={`bg-background border border-border rounded-lg shadow-lg w-full h-full max-w-6xl max-h-[90vh] flex flex-col sm:flex-row transition-all duration-300 ${
-        isVisible ? 'animate-in fade-in-0 zoom-in-95' : 'animate-out fade-out-0 zoom-out-95'
-      }`}>
+      <div className="bg-background border border-border rounded-lg shadow-lg w-full h-full max-w-6xl max-h-[90vh] flex flex-col sm:flex-row">
         {/* Мобильный header */}
         <div className="sm:hidden p-4 border-b border-border flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -716,19 +702,20 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
           </div>
 
           {/* Сообщения */}
-          <ScrollArea className="flex-1" ref={scrollAreaRef}>
-            <div className="p-3 sm:p-4 min-h-full">
-              <div className="space-y-3 sm:space-y-4">
+          <ScrollArea className="flex-1 min-h-0">
+            <div className="p-3 sm:p-4">
+              <div className="space-y-3 sm:space-y-4 max-h-full">
                 {messages.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground animate-in fade-in-0">
+                  <div className="text-center py-8 text-muted-foreground">
                     <p>No messages yet. Start the conversation!</p>
                   </div>
                 ) : (
-                  messages.map((message, index) => (
+                  messages.map(message => (
                     <div
                       key={message.id}
-                      className={`flex gap-2 sm:gap-3 group relative animate-in fade-in-0 slide-in-from-bottom-2`}
-                      style={{ animationDelay: `${index * 50}ms` }}
+                      className={`flex gap-2 sm:gap-3 group relative ${
+                        message.sender_id === currentUser.id ? 'justify-end' : 'justify-start'
+                      }`}
                     >
                       {message.sender_id !== currentUser.id && (
                         <Avatar className="h-6 w-6 sm:h-8 sm:w-8 flex-shrink-0">
@@ -739,21 +726,23 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
                         </Avatar>
                       )}
                       
-                      <div className={`max-w-[85%] sm:max-w-[70%] ${message.sender_id === currentUser.id ? 'order-first' : ''}`}>
+                      <div className={`max-w-[85%] sm:max-w-[70%] min-w-0 ${
+                        message.sender_id === currentUser.id ? 'order-first' : ''
+                      }`}>
                         <div
-                          className={`rounded-lg p-3 text-sm sm:text-base relative transition-all duration-200 ${
+                          className={`rounded-lg p-3 text-sm sm:text-base relative ${
                             message.sender_id === currentUser.id
                               ? 'bg-primary text-primary-foreground'
                               : 'bg-muted'
                           }`}
                         >
-                          <p className="break-words">{message.content}</p>
+                          <p className="break-words whitespace-pre-wrap">{message.content}</p>
                           
                           {/* Меню сообщения */}
-                          <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                          <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-6 w-6 hover:scale-110 transition-transform">
+                                <Button variant="ghost" size="icon" className="h-6 w-6">
                                   <MoreHorizontal className="h-3 w-3" />
                                 </Button>
                               </DropdownMenuTrigger>
@@ -785,24 +774,23 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
                                   return acc
                                 }, {})
                               ).map(([emoji, count]) => (
-                                <div key={emoji} className="transition-all duration-200 hover:scale-110">
-                                  <Badge
-                                    variant="secondary"
-                                    className="text-xs cursor-pointer hover:bg-accent px-1 py-0 h-5"
-                                    onClick={() => {
-                                      const userReaction = message.reactions.find(
-                                        r => r.user_id === currentUser.id && r.emoji === emoji
-                                      )
-                                      if (userReaction) {
-                                        removeReaction(message.id, emoji)
-                                      } else {
-                                        addReaction(message.id, emoji)
-                                      }
-                                    }}
-                                  >
-                                    {emoji} {count}
-                                  </Badge>
-                                </div>
+                                <Badge
+                                  key={emoji}
+                                  variant="secondary"
+                                  className="text-xs cursor-pointer hover:bg-accent px-1 py-0 h-5"
+                                  onClick={() => {
+                                    const userReaction = message.reactions.find(
+                                      r => r.user_id === currentUser.id && r.emoji === emoji
+                                    )
+                                    if (userReaction) {
+                                      removeReaction(message.id, emoji)
+                                    } else {
+                                      addReaction(message.id, emoji)
+                                    }
+                                  }}
+                                >
+                                  {emoji} {count}
+                                </Badge>
                               ))}
                             </div>
                           )}
@@ -825,7 +813,7 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
           </ScrollArea>
 
           {/* Ввод сообщения */}
-          <div className="p-3 sm:p-4 border-t border-border animate-in fade-in-0 slide-in-from-bottom-2">
+          <div className="p-3 sm:p-4 border-t border-border">
             <div className="flex gap-2">
               <Input
                 ref={inputRef}
@@ -840,7 +828,7 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
                 onClick={sendMessage} 
                 disabled={!newMessage.trim() || isSending}
                 size="sm"
-                className="sm:px-3 transition-all duration-200 hover:scale-105 active:scale-95"
+                className="sm:px-3"
               >
                 {isSending ? (
                   <div className="animate-spin">
