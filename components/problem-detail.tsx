@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical, Share2, Copy, Twitter, MessageCircle, Flag, Shield, Check } from "lucide-react"
+import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical, Share2, Copy, Twitter, MessageCircle, Flag, Shield, Check, Sparkles } from "lucide-react"
 import Link from "next/link"
 import {
   AlertDialog,
@@ -27,6 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/components/ui/use-toast"
+import { ProblemAnimationModal } from "@/components/problem-animation-modal"
 
 type Profile = {
   id: string
@@ -50,6 +51,7 @@ type Problem = {
   contact: string | null
   looking_for_cofounder: boolean | null
   profiles: Profile | null
+  animation_type?: string | null
 }
 
 type ProblemDetailProps = {
@@ -174,6 +176,162 @@ const parseMentions = (text: string) => {
 // Список подтвержденных пользователей
 const verifiedUsers = ["startorigin", "nikolaev", "winter", "gerxog"]
 
+// Компонент анимации снега
+const SnowAnimation = () => (
+  <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+    {[...Array(50)].map((_, i) => (
+      <div
+        key={i}
+        className="absolute top-[-20px] text-blue-200 opacity-70 animate-fall"
+        style={{
+          left: `${Math.random() * 100}%`,
+          animationDelay: `${Math.random() * 5}s`,
+          animationDuration: `${Math.random() * 3 + 5}s`,
+          fontSize: `${Math.random() * 10 + 10}px`,
+        }}
+      >
+        ❄
+      </div>
+    ))}
+    <style jsx>{`
+      @keyframes fall {
+        0% {
+          transform: translateY(-20px) rotate(0deg);
+        }
+        100% {
+          transform: translateY(calc(100vh + 20px)) rotate(360deg);
+        }
+      }
+      .animate-fall {
+        animation: fall linear infinite;
+      }
+    `}</style>
+  </div>
+)
+
+// Компонент новогодней анимации
+const ChristmasAnimation = () => (
+  <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+    {/* Веночки */}
+    <div className="absolute top-4 left-4 text-green-500 opacity-50 text-3xl">🎄</div>
+    <div className="absolute top-4 right-4 text-green-500 opacity-50 text-3xl">🎄</div>
+    <div className="absolute bottom-4 left-4 text-green-500 opacity-50 text-3xl">🎄</div>
+    <div className="absolute bottom-4 right-4 text-green-500 opacity-50 text-3xl">🎄</div>
+    
+    {/* Колокольчики */}
+    <div className="absolute top-12 left-12 text-yellow-500 opacity-60 text-2xl animate-bell animate-bounce">
+      🔔
+    </div>
+    <div className="absolute top-12 right-12 text-yellow-500 opacity-60 text-2xl animate-bell animate-bounce">
+      🔔
+    </div>
+    <div className="absolute bottom-12 left-12 text-yellow-500 opacity-60 text-2xl animate-bell animate-bounce">
+      🔔
+    </div>
+    <div className="absolute bottom-12 right-12 text-yellow-500 opacity-60 text-2xl animate-bell animate-bounce">
+      🔔
+    </div>
+    
+    {/* Снежинки */}
+    {[...Array(30)].map((_, i) => (
+      <div
+        key={i}
+        className="absolute text-blue-100 opacity-50"
+        style={{
+          top: `${Math.random() * 100}%`,
+          left: `${Math.random() * 100}%`,
+          animationDelay: `${Math.random() * 2}s`,
+          animationDuration: `${Math.random() * 3 + 3}s`,
+          fontSize: `${Math.random() * 8 + 12}px`,
+        }}
+      >
+        ❅
+      </div>
+    ))}
+    <style jsx>{`
+      @keyframes bell {
+        0%, 100% { transform: rotate(0deg); }
+        25% { transform: rotate(15deg); }
+        75% { transform: rotate(-15deg); }
+      }
+      .animate-bell {
+        animation: bell 1s ease-in-out infinite;
+      }
+    `}</style>
+  </div>
+)
+
+// Компонент анимации Stranger Things
+const StrangerThingsAnimation = () => (
+  <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+    {/* Молнии */}
+    {[...Array(8)].map((_, i) => (
+      <div
+        key={i}
+        className="absolute text-red-400 opacity-70 animate-lightning"
+        style={{
+          top: `${Math.random() * 100}%`,
+          left: `${Math.random() * 100}%`,
+          animationDelay: `${Math.random() * 3}s`,
+          animationDuration: '0.3s',
+          fontSize: '30px',
+        }}
+      >
+        ⚡
+      </div>
+    ))}
+    
+    {/* Парящие частицы */}
+    {[...Array(40)].map((_, i) => (
+      <div
+        key={i}
+        className="absolute rounded-full bg-red-500/20 animate-float"
+        style={{
+          width: `${Math.random() * 6 + 2}px`,
+          height: `${Math.random() * 6 + 2}px`,
+          top: `${Math.random() * 100}%`,
+          left: `${Math.random() * 100}%`,
+          animationDelay: `${Math.random() * 5}s`,
+          animationDuration: `${Math.random() * 10 + 10}s`,
+        }}
+      />
+    ))}
+    <style jsx>{`
+      @keyframes lightning {
+        0% { opacity: 0; transform: scale(1); }
+        50% { opacity: 1; transform: scale(1.2); }
+        100% { opacity: 0; transform: scale(1); }
+      }
+      .animate-lightning {
+        animation: lightning linear infinite;
+      }
+      @keyframes float {
+        0%, 100% { transform: translateY(0) translateX(0); opacity: 0.2; }
+        50% { transform: translateY(-20px) translateX(10px); opacity: 0.5; }
+      }
+      .animate-float {
+        animation: float ease-in-out infinite;
+      }
+    `}</style>
+  </div>
+)
+
+// Компонент для отображения анимации на основе типа
+const AnimationRenderer = ({ animationType }: { animationType?: string | null }) => {
+  if (!animationType) return null
+
+  switch (animationType) {
+    case 'let_it_snow':
+      return <SnowAnimation />
+    case 'merry_christmas':
+      return <ChristmasAnimation />
+    case 'stranger_things':
+      return <StrangerThingsAnimation />
+    default:
+      return null
+  }
+}
+
 export function ProblemDetail({ 
   problem, 
   userId, 
@@ -186,6 +344,9 @@ export function ProblemDetail({
   const [isDeleting, setIsDeleting] = useState(false)
   const [isShareOpen, setIsShareOpen] = useState(false)
   const [authorAllUsernames, setAuthorAllUsernames] = useState<string[]>([])
+  const [showAnimationModal, setShowAnimationModal] = useState(false)
+  const [currentAnimation, setCurrentAnimation] = useState<string | null>(problem.animation_type || null)
+  const [isSavingAnimation, setIsSavingAnimation] = useState(false)
   
   const router = useRouter()
   const { toast } = useToast()
@@ -263,6 +424,45 @@ export function ProblemDetail({
       console.error("Error deleting problem:", error)
     } finally {
       setIsDeleting(false)
+    }
+  }
+
+  const handleAnimationSelect = async (animationType: string | null) => {
+    setIsSavingAnimation(true)
+    const supabase = createClient()
+
+    try {
+      const { error } = await supabase
+        .from("problems")
+        .update({ animation_type: animationType })
+        .eq("id", problem.id)
+        .eq("author_id", userId!)
+
+      if (error) {
+        throw error
+      }
+
+      setCurrentAnimation(animationType)
+      setShowAnimationModal(false)
+      
+      toast({
+        title: "Animation updated!",
+        description: animationType ? 
+          "Your problem now has a cool animation!" : 
+          "Animation has been removed from your problem.",
+      })
+
+      // Обновляем страницу для отображения изменений
+      router.refresh()
+    } catch (error) {
+      console.error("Error updating animation:", error)
+      toast({
+        title: "Failed to update animation",
+        description: "Please try again",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSavingAnimation(false)
     }
   }
 
@@ -347,10 +547,65 @@ export function ProblemDetail({
     return <Mail className="h-4 w-4" />
   }
 
+  // Получаем классы фона в зависимости от анимации
+  const getAnimationBackgroundClass = () => {
+    switch (currentAnimation) {
+      case 'let_it_snow':
+        return 'bg-blue-50'
+      case 'merry_christmas':
+        return 'bg-gradient-to-br from-blue-50 to-green-50'
+      case 'stranger_things':
+        return 'bg-gradient-to-br from-gray-900 to-red-900 text-white'
+      default:
+        return ''
+    }
+  }
+
+  // Получаем классы для текста в зависимости от анимации
+  const getTextColorClass = () => {
+    switch (currentAnimation) {
+      case 'stranger_things':
+        return 'text-white'
+      default:
+        return 'text-foreground'
+    }
+  }
+
+  // Получаем классы для бордеров и карточек
+  const getCardClasses = () => {
+    switch (currentAnimation) {
+      case 'let_it_snow':
+        return 'border-blue-200'
+      case 'merry_christmas':
+        return 'border-green-200'
+      case 'stranger_things':
+        return 'border-red-800'
+      default:
+        return 'border-border'
+    }
+  }
+
+  // Получаем цвет баджа в зависимости от анимации
+  const getBadgeVariant = () => {
+    switch (currentAnimation) {
+      case 'let_it_snow':
+        return 'secondary'
+      case 'merry_christmas':
+        return 'default'
+      case 'stranger_things':
+        return 'destructive'
+      default:
+        return 'secondary'
+    }
+  }
+
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className={`relative mx-auto max-w-4xl space-y-6 min-h-screen ${getAnimationBackgroundClass()} ${getTextColorClass()} p-4`}>
+      {/* Рендерим анимацию если есть */}
+      <AnimationRenderer animationType={currentAnimation} />
+      
       {/* Problem Card */}
-      <Card>
+      <Card className={`relative z-10 ${getCardClasses()}`}>
         <CardHeader className="pb-4">
           <div className="flex flex-col gap-4">
             {/* Заголовок и кнопки действий */}
@@ -361,7 +616,11 @@ export function ProblemDetail({
                 </h1>
                 
                 <div className="flex flex-wrap gap-2 mb-4">
-                  {problem.category && <Badge variant="secondary">{getCategoryLabel(problem.category)}</Badge>}
+                  {problem.category && (
+                    <Badge variant={getBadgeVariant()}>
+                      {getCategoryLabel(problem.category)}
+                    </Badge>
+                  )}
                   {problem.tags?.map((tag) => (
                     <Badge key={tag} variant="outline" className="text-xs">
                       {tag}
@@ -386,6 +645,19 @@ export function ProblemDetail({
 
               {/* Кнопки действий */}
               <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
+                {/* Кнопка анимации - только для автора */}
+                {isAuthor && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 bg-transparent hover:bg-purple-50 hover:text-purple-700 text-purple-600"
+                    onClick={() => setShowAnimationModal(true)}
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    <span className="hidden xs:inline">Animation</span>
+                  </Button>
+                )}
+
                 {/* Кнопка пожаловаться - скрыта для автора */}
                 {!isAuthor && (
                   <AlertDialog>
@@ -470,6 +742,10 @@ export function ProblemDetail({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-56">
+                          <DropdownMenuItem onClick={() => setShowAnimationModal(true)} className="cursor-pointer">
+                            <Sparkles className="h-4 w-4 mr-2" />
+                            Add Animation
+                          </DropdownMenuItem>
                           <DropdownMenuItem asChild>
                             <Link href={`/problems/${problem.id}/edit`} className="flex items-center gap-2 cursor-pointer">
                               <Edit className="h-4 w-4" />
@@ -578,7 +854,7 @@ export function ProblemDetail({
       </Card>
 
       {/* Author Card */}
-      <Card>
+      <Card className={`relative z-10 ${getCardClasses()}`}>
         <CardHeader>
           <h2 className="text-lg font-semibold">About the Author</h2>
         </CardHeader>
@@ -666,7 +942,7 @@ export function ProblemDetail({
       </Card>
 
       {/* Moderation Section */}
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+      <Card className={`relative z-10 bg-gradient-to-r from-blue-50 to-indigo-50 ${getCardClasses()}`}>
         <CardContent className="pt-6">
           <div className="text-center space-y-4">
             <div className="flex justify-center">
@@ -702,6 +978,15 @@ export function ProblemDetail({
           </div>
         </CardContent>
       </Card>
+
+      {/* Модальное окно выбора анимации */}
+      <ProblemAnimationModal
+        isOpen={showAnimationModal}
+        onClose={() => setShowAnimationModal(false)}
+        onSelectAnimation={handleAnimationSelect}
+        currentAnimation={currentAnimation}
+        isLoading={isSavingAnimation}
+      />
     </div>
   )
 }
