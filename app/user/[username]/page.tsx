@@ -408,7 +408,7 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
   console.log('Rendering profile. Unread messages:', unreadMessagesCount)
   console.log('Unread chats for this profile:', unreadChats.has(profile.id))
 
-return (
+  return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="border-b border-border bg-card">
@@ -421,7 +421,7 @@ return (
             
             {/* Desktop Navigation - hidden on mobile */}
             <div className="hidden md:flex items-center gap-4">
-              {user ? (
+              {currentUser ? (
                 <>
                   <Link href="/problems/new">
                     <Button className="gap-2">
@@ -436,11 +436,11 @@ return (
                       <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
                         <Avatar className="h-8 w-8">
                           <AvatarImage 
-                            src={userProfile?.avatar_url || ""} 
+                            src={currentUserProfile?.avatar_url || ""} 
                             className="object-cover"
                           />
                           <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
-                            {getInitials(userProfile?.display_name || userProfile?.username)}
+                            {getInitials(currentUserProfile?.display_name || currentUserProfile?.username)}
                           </AvatarFallback>
                         </Avatar>
                       </button>
@@ -453,13 +453,12 @@ return (
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <form action={handleLogout} className="w-full">
-                          <button type="submit" className="flex items-center gap-2 w-full text-left cursor-pointer">
-                            <LogOut className="h-4 w-4" />
-                            <span>Sign Out</span>
-                          </button>
-                        </form>
+                      <DropdownMenuItem 
+                        onClick={handleLogout}
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        <span>Sign Out</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -478,7 +477,7 @@ return (
 
             {/* Mobile Navigation - hidden on desktop */}
             <div className="flex items-center gap-2 md:hidden">
-              {user ? (
+              {currentUser ? (
                 <>
                   {/* Mobile Plus Button */}
                   <Link href="/problems/new">
@@ -493,11 +492,11 @@ return (
                       <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
                         <Avatar className="h-8 w-8">
                           <AvatarImage 
-                            src={userProfile?.avatar_url || ""} 
+                            src={currentUserProfile?.avatar_url || ""} 
                             className="object-cover"
                           />
                           <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
-                            {getInitials(userProfile?.display_name || userProfile?.username)}
+                            {getInitials(currentUserProfile?.display_name || currentUserProfile?.username)}
                           </AvatarFallback>
                         </Avatar>
                       </button>
@@ -510,13 +509,12 @@ return (
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <form action={handleLogout} className="w-full">
-                          <button type="submit" className="flex items-center gap-2 w-full text-left cursor-pointer">
-                            <LogOut className="h-4 w-4" />
-                            <span>Sign Out</span>
-                          </button>
-                        </form>
+                      <DropdownMenuItem 
+                        onClick={handleLogout}
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        <span>Sign Out</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
