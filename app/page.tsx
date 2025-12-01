@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { ProblemsFeed } from "@/components/problems-feed"
 import { Button } from "@/components/ui/button"
-import { Lightbulb, Plus, ArrowRight, LogOut, User, ChevronLeft, ChevronRight } from "lucide-react"
+import { Lightbulb, Plus, ArrowRight, LogOut, User } from "lucide-react"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -12,7 +12,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { redirect } from "next/navigation"
-import { HeroCarousel } from "@/components/hero-carousel"
 
 export default async function ProblemsPage() {
   const supabase = await createClient()
@@ -67,47 +66,6 @@ export default async function ProblemsPage() {
     await supabase.auth.signOut()
     redirect("/auth/login")
   }
-
-  // Hero slides data
-  const heroSlides = [
-    {
-      id: 1,
-      title: "Black Friday!",
-      description: "Invite a friend, and if a friend will publish a normal problem, you will get a collectible username!",
-      background: "bg-black",
-      textColor: "text-white",
-      buttonText: "Learn more",
-      buttonVariant: "default" as const,
-      link: "https://startorigin.me/problems/d13a2d85-21fa-4ccf-8129-d19ac726cdda",
-      openInNewTab: true
-    },
-    {
-      id: 2,
-      title: "OriginChat (Beta)",
-      description: "Chat with StartOrigin users on the platform.",
-      background: "bg-cover bg-center",
-      backgroundImage: "url('https://images.unsplash.com/photo-1662974770404-468fd9660389?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8Y2hhdHxlbnwwfHwwfHx8MA%3D%3D')",
-      textColor: "text-black",
-      buttonText: "Open Chat",
-      buttonVariant: "outline" as const,
-      link: "https://startorigin.me/user/chat",
-      openInNewTab: false,
-      overlay: "bg-white/70 backdrop-blur-sm"
-    },
-    {
-      id: 3,
-      title: "Origin AI",
-      description: "Your AI friend that truly understands you",
-      background: "bg-cover bg-center",
-      backgroundImage: "url('https://images.unsplash.com/photo-1727434032773-af3cd98375ba?w=500&auto=format&fit=crop&q=80&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')",
-      textColor: "text-black",
-      buttonText: "Try AI Chat",
-      buttonVariant: "default" as const,
-      link: "https://chat.startorigin.me/",
-      openInNewTab: true,
-      overlay: "bg-white/70 backdrop-blur-sm"
-    }
-  ]
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -239,8 +197,51 @@ export default async function ProblemsPage() {
         </div>
       </header>
 
-      {/* Hero Carousel Section */}
-      <HeroCarousel slides={heroSlides} />
+      {/* Minimal Hero Section */}
+      <section className="border-b border-border">
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            {/* Black Friday Banner */}
+            <div className="bg-black text-white rounded-lg p-4 flex-1 w-full">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-bold text-lg">Black Friday!</h3>
+                  <p className="text-sm text-gray-300">
+                    Invite a friend and get a collectible username!
+                  </p>
+                </div>
+                <Link 
+                  href="https://startorigin.me/problems/d13a2d85-21fa-4ccf-8129-d19ac726cdda" 
+                  target="_blank"
+                >
+                  <Button variant="outline" className="border-white text-white hover:bg-white/10">
+                    Learn more
+                  </Button>
+                </Link>
+              </div>
+            </div>
+
+            {/* Chat and AI Links */}
+            <div className="flex gap-3 w-full md:w-auto">
+              <Link href="https://startorigin.me/user/chat" className="flex-1 md:flex-none">
+                <Button variant="outline" className="w-full md:w-auto gap-2">
+                  <span className="hidden sm:inline">OriginChat</span>
+                  <span className="sm:hidden">Chat</span>
+                  <ArrowRight className="h-3 w-3" />
+                </Button>
+              </Link>
+              
+              <Link href="https://chat.startorigin.me/" target="_blank" className="flex-1 md:flex-none">
+                <Button className="w-full md:w-auto gap-2">
+                  <span className="hidden sm:inline">Origin AI</span>
+                  <span className="sm:hidden">AI</span>
+                  <ArrowRight className="h-3 w-3" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 flex-1">
