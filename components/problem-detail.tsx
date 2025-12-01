@@ -178,209 +178,190 @@ const verifiedUsers = ["startorigin", "nikolaev", "winter", "gerxog"]
 
 // Компонент анимации снега
 const SnowAnimation = () => (
-  <div className="absolute left-0 top-0 bottom-0 w-16 pointer-events-none overflow-hidden z-0">
-    {[...Array(30)].map((_, i) => (
+  <>
+    {[...Array(40)].map((_, i) => (
       <div
         key={i}
-        className="absolute text-gray-400 opacity-80 animate-fall-snow"
+        className="absolute pointer-events-none text-blue-200/30 opacity-60 animate-snow-fall"
         style={{
-          left: `${Math.random() * 16}px`,
+          left: `${Math.random() * 100}%`,
+          top: '-20px',
           animationDelay: `${Math.random() * 5}s`,
           animationDuration: `${Math.random() * 3 + 5}s`,
-          fontSize: `${Math.random() * 10 + 12}px`,
+          fontSize: `${Math.random() * 12 + 10}px`,
         }}
       >
         ❄
       </div>
     ))}
     <style jsx>{`
-      @keyframes fall-snow {
+      @keyframes snow-fall {
         0% {
-          transform: translateY(-100%) translateX(0) rotate(0deg);
+          transform: translateY(-20px) translateX(0) rotate(0deg);
+          opacity: 0.6;
         }
         100% {
-          transform: translateY(100vh) translateX(20px) rotate(360deg);
+          transform: translateY(calc(100vh)) translateX(${Math.random() * 50 - 25}px) rotate(360deg);
+          opacity: 0;
         }
       }
-      .animate-fall-snow {
-        animation: fall-snow linear infinite;
+      .animate-snow-fall {
+        animation: snow-fall linear infinite;
       }
     `}</style>
-  </div>
+  </>
 )
 
 // Компонент новогодней анимации
 const ChristmasAnimation = () => (
-  <div className="absolute left-0 top-0 bottom-0 w-20 pointer-events-none overflow-hidden z-0">
-    {/* Веночки слева */}
-    <div className="absolute top-4 left-2 text-green-500 opacity-60 text-3xl animate-bell">
+  <>
+    {/* Размытые новогодние элементы по всей карточке */}
+    <div className="absolute top-4 right-8 text-green-300/20 text-4xl blur-[2px] opacity-30 animate-float-slow">
       🎄
     </div>
-    <div className="absolute top-20 left-6 text-green-400 opacity-50 text-2xl animate-bell" style={{animationDelay: '0.5s'}}>
+    <div className="absolute bottom-12 right-12 text-green-300/20 text-4xl blur-[2px] opacity-30 animate-float-slow" style={{animationDelay: '1s'}}>
       🎄
     </div>
-    <div className="absolute bottom-20 left-3 text-green-500 opacity-70 text-3xl animate-bell" style={{animationDelay: '1s'}}>
-      🎄
-    </div>
-    
-    {/* Колокольчики */}
-    <div className="absolute top-40 left-4 text-yellow-500 opacity-70 text-2xl animate-swing">
+    <div className="absolute top-16 right-16 text-yellow-300/20 text-3xl blur-[2px] opacity-30 animate-bell">
       🔔
     </div>
-    <div className="absolute bottom-40 left-8 text-yellow-500 opacity-70 text-2xl animate-swing" style={{animationDelay: '0.3s'}}>
+    <div className="absolute bottom-24 right-24 text-yellow-300/20 text-3xl blur-[2px] opacity-30 animate-bell" style={{animationDelay: '0.5s'}}>
       🔔
     </div>
     
     {/* Снежинки */}
-    {[...Array(15)].map((_, i) => (
+    {[...Array(20)].map((_, i) => (
       <div
         key={i}
-        className="absolute text-blue-100 opacity-70 animate-fall-christmas"
+        className="absolute pointer-events-none text-blue-100/40 opacity-40 animate-snow-drift"
         style={{
-          left: `${Math.random() * 20}px`,
+          left: `${Math.random() * 100}%`,
+          top: '-10px',
           animationDelay: `${Math.random() * 2}s`,
-          animationDuration: `${Math.random() * 3 + 4}s`,
-          fontSize: `${Math.random() * 8 + 10}px`,
+          animationDuration: `${Math.random() * 4 + 6}s`,
+          fontSize: `${Math.random() * 10 + 8}px`,
         }}
       >
         ❅
       </div>
     ))}
     <style jsx>{`
+      @keyframes float-slow {
+        0%, 100% { transform: translateY(0) translateX(0); }
+        50% { transform: translateY(-10px) translateX(5px); }
+      }
       @keyframes bell {
         0%, 100% { transform: rotate(0deg) scale(1); }
-        50% { transform: rotate(5deg) scale(1.1); }
+        50% { transform: rotate(5deg) scale(1.05); }
       }
-      @keyframes swing {
-        0%, 100% { transform: rotate(0deg); }
-        25% { transform: rotate(10deg); }
-        75% { transform: rotate(-10deg); }
-      }
-      @keyframes fall-christmas {
+      @keyframes snow-drift {
         0% {
-          transform: translateY(-100%) translateX(0) rotate(0deg);
-          opacity: 0.7;
+          transform: translateY(-10px) translateX(0) rotate(0deg);
+          opacity: 0.4;
         }
         100% {
-          transform: translateY(100vh) translateX(15px) rotate(180deg);
+          transform: translateY(calc(100vh)) translateX(${Math.random() * 40 - 20}px) rotate(180deg);
           opacity: 0;
         }
+      }
+      .animate-float-slow {
+        animation: float-slow 6s ease-in-out infinite;
       }
       .animate-bell {
         animation: bell 3s ease-in-out infinite;
       }
-      .animate-swing {
-        animation: swing 2s ease-in-out infinite;
-      }
-      .animate-fall-christmas {
-        animation: fall-christmas linear infinite;
+      .animate-snow-drift {
+        animation: snow-drift linear infinite;
       }
     `}</style>
-  </div>
+  </>
 )
 
 // Компонент анимации Stranger Things
 const StrangerThingsAnimation = () => (
-  <div className="absolute left-0 top-0 bottom-0 w-20 pointer-events-none overflow-hidden z-0">
-    {/* Большая молния сбоку */}
-    <div className="absolute left-4 top-1/4 text-red-500 opacity-90 text-5xl animate-lightning-main">
+  <>
+    {/* Размытые молнии */}
+    <div className="absolute top-8 right-10 text-red-300/15 text-6xl blur-[3px] opacity-20 animate-lightning-main">
+      ⚡
+    </div>
+    <div className="absolute bottom-16 right-20 text-red-300/15 text-5xl blur-[3px] opacity-20 animate-lightning-main" style={{animationDelay: '1.5s'}}>
       ⚡
     </div>
     
-    {/* Маленькие молнии */}
-    {[...Array(5)].map((_, i) => (
+    {/* Мелкие молнии */}
+    {[...Array(8)].map((_, i) => (
       <div
         key={i}
-        className="absolute text-red-400 opacity-70 animate-lightning-small"
+        className="absolute pointer-events-none text-red-400/20 blur-[1px] opacity-30 animate-lightning-flash"
         style={{
-          left: `${Math.random() * 20}px`,
+          left: `${Math.random() * 100}%`,
           top: `${Math.random() * 100}%`,
-          animationDelay: `${Math.random() * 2 + 1}s`,
-          fontSize: '20px',
+          animationDelay: `${Math.random() * 3}s`,
+          animationDuration: '0.4s',
+          fontSize: `${Math.random() * 20 + 15}px`,
         }}
       >
         ⚡
       </div>
     ))}
     
-    {/* Красные частицы */}
-    {[...Array(20)].map((_, i) => (
+    {/* Парящие красные частицы */}
+    {[...Array(25)].map((_, i) => (
       <div
         key={i}
-        className="absolute rounded-full bg-red-500/40 animate-float-red"
+        className="absolute rounded-full pointer-events-none animate-particle-float"
         style={{
           width: `${Math.random() * 4 + 1}px`,
           height: `${Math.random() * 4 + 1}px`,
-          left: `${Math.random() * 20}px`,
+          left: `${Math.random() * 100}%`,
           top: `${Math.random() * 100}%`,
-          animationDelay: `${Math.random() * 3}s`,
-          animationDuration: `${Math.random() * 8 + 5}s`,
+          animationDelay: `${Math.random() * 5}s`,
+          animationDuration: `${Math.random() * 12 + 8}s`,
+          background: `rgba(239, 68, 68, ${Math.random() * 0.1 + 0.05})`,
+          filter: 'blur(0.5px)',
         }}
       />
     ))}
     <style jsx>{`
       @keyframes lightning-main {
-        0%, 100% { opacity: 0.2; transform: scale(1) translateX(0); }
-        25% { opacity: 0.8; transform: scale(1.2) translateX(-2px); }
-        50% { opacity: 1; transform: scale(1.5) translateX(2px); }
-        75% { opacity: 0.8; transform: scale(1.2) translateX(-2px); }
+        0%, 100% { opacity: 0.1; transform: scale(1) rotate(0deg); }
+        25% { opacity: 0.25; transform: scale(1.1) rotate(5deg); }
+        50% { opacity: 0.35; transform: scale(1.2) rotate(-5deg); }
+        75% { opacity: 0.25; transform: scale(1.1) rotate(5deg); }
       }
-      @keyframes lightning-small {
+      @keyframes lightning-flash {
         0% { opacity: 0; transform: scale(1); }
-        50% { opacity: 1; transform: scale(1.3); }
+        50% { opacity: 0.3; transform: scale(1.2); }
         100% { opacity: 0; transform: scale(1); }
       }
-      @keyframes float-red {
-        0%, 100% { transform: translateY(0) translateX(0); opacity: 0.3; }
-        50% { transform: translateY(-15px) translateX(5px); opacity: 0.6; }
+      @keyframes particle-float {
+        0%, 100% { transform: translateY(0) translateX(0); opacity: 0.05; }
+        50% { transform: translateY(-15px) translateX(8px); opacity: 0.15; }
       }
       .animate-lightning-main {
-        animation: lightning-main 4s ease-in-out infinite;
+        animation: lightning-main 5s ease-in-out infinite;
       }
-      .animate-lightning-small {
-        animation: lightning-small 1.5s ease-in-out infinite;
+      .animate-lightning-flash {
+        animation: lightning-flash ease-in-out infinite;
       }
-      .animate-float-red {
-        animation: float-red ease-in-out infinite;
+      .animate-particle-float {
+        animation: particle-float ease-in-out infinite;
       }
     `}</style>
-  </div>
+  </>
 )
 
 // Компонент для отображения анимации на основе типа
 const AnimationRenderer = ({ animationType }: { animationType?: string | null }) => {
   if (!animationType) return null
 
-  switch (animationType) {
-    case 'let_it_snow':
-      return <SnowAnimation />
-    case 'merry_christmas':
-      return <ChristmasAnimation />
-    case 'stranger_things':
-      return <StrangerThingsAnimation />
-    default:
-      return null
-  }
-}
-
-// Компонент для отображения боковой полоски
-const AnimationSidebar = ({ animationType }: { animationType?: string | null }) => {
-  if (!animationType) return null
-
-  let bgColor = ''
-  switch (animationType) {
-    case 'let_it_snow':
-      bgColor = 'bg-gradient-to-b from-blue-100 to-blue-50'
-      break
-    case 'merry_christmas':
-      bgColor = 'bg-gradient-to-b from-green-50 to-blue-50'
-      break
-    case 'stranger_things':
-      bgColor = 'bg-gradient-to-b from-red-950 to-red-900'
-      break
-  }
-
-  return <div className={`absolute left-0 top-0 bottom-0 w-16 ${bgColor} z-0`} />
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+      {animationType === 'let_it_snow' && <SnowAnimation />}
+      {animationType === 'merry_christmas' && <ChristmasAnimation />}
+      {animationType === 'stranger_things' && <StrangerThingsAnimation />}
+    </div>
+  )
 }
 
 export function ProblemDetail({ 
@@ -602,14 +583,16 @@ export function ProblemDetail({
     <div className="mx-auto max-w-4xl space-y-6 p-4">
       {/* Problem Card с анимацией */}
       <Card className="relative overflow-hidden">
-        {/* Боковая полоска с фоном */}
-        <AnimationSidebar animationType={currentAnimation} />
-        
-        {/* Анимация поверх полоски */}
+        {/* Анимация внутри карточки */}
         <AnimationRenderer animationType={currentAnimation} />
         
-        {/* Сдвигаем контент вправо, чтобы не перекрывался анимацией */}
-        <div className="relative ml-16 z-10">
+        {/* Затемнение для лучшей читаемости текста */}
+        {currentAnimation && (
+          <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-white/85 to-transparent z-0" />
+        )}
+        
+        {/* Контент поверх анимации */}
+        <div className="relative z-10">
           <CardHeader className="pb-4">
             <div className="flex flex-col gap-4">
               {/* Заголовок и кнопки действий */}
