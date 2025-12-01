@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { X, Loader2 } from "lucide-react"
+import { X, Loader2, AlertCircle } from "lucide-react"
 
 type ProblemFormProps = {
   userId: string
@@ -46,6 +46,72 @@ const CATEGORIES = [
   "other",
 ]
 
+// Функция проверки проблемы через Gemini AI
+async function checkProblemWithAI(title: string, description: string): Promise<boolean> {
+  try {
+    const apiKey = "AIzaSyDGXbeDZsUEJJi8NX2la9_rpU7-H2SsrGE"
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`
+
+    const prompt = `
+      Проверь следующий текст проблемы для стартап-сообщества StartOrigin и ответь ТОЛЬКО "APPROVED" или "REJECTED" без каких-либо других слов:
+      
+      КРИТЕРИИ ОДОБРЕНИЯ:
+      1. Проблема должна быть реальной и актуальной (не спам типа "ldfffsdjvlkdsfvjld" или бессмысленный текст)
+      2. Проблема должна быть серьезной и относящейся к бизнесу, технологиям, образованию, здоровью, экологии или социальным вопросам
+      3. Не должна быть глупой/шутливой (например, "Я не прекращаю пукать" или подобное)
+      4. Должна иметь потенциал для решения через инновации/стартапы
+      5. Минимальная длина - 20 осмысленных символов
+      6. Должна быть сформулирована четко и понятно
+      
+      Текст проблемы:
+      Заголовок: "${title}"
+      Описание: "${description}"
+      
+      Ответь ТОЛЬКО "APPROVED" или "REJECTED":
+    `
+
+    const response = await fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                text: prompt
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 10,
+        }
+      })
+    })
+
+    if (!response.ok) {
+      console.error("API error:", await response.text())
+      throw new Error(`API request failed with status ${response.status}`)
+    }
+
+    const data = await response.json()
+    const aiResponse = data?.candidates?.[0]?.content?.parts?.[0]?.text || ""
+    const cleanResponse = aiResponse.trim().toUpperCase()
+    
+    console.log("AI Response:", cleanResponse)
+    
+    return cleanResponse === "APPROVED"
+    
+  } catch (error) {
+    console.error("Gemini AI проверка не удалась:", error)
+    // В случае ошибки API разрешаем публикацию, но логируем ошибку
+    return true
+  }
+}
+
 export function ProblemForm({ userId, initialData }: ProblemFormProps) {
   const [title, setTitle] = useState(initialData?.title || "")
   const [description, setDescription] = useState(initialData?.description || "")
@@ -57,6 +123,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
   const [lookingForCofounder, setLookingForCofounder] = useState(initialData?.looking_for_cofounder || false)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isValidating, setIsValidating] = useState(false)
   const router = useRouter()
 
   const handleAddTag = () => {
@@ -73,15 +140,26 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // 🔒 ЗАЩИТА ОТ МНОЖЕСТВЕННЫХ НАЖАТИЙ
-    if (isLoading) return
+    if (isLoading || isValidating) return
     
-    setIsLoading(true)
+    setIsValidating(true)
     setError(null)
 
-    const supabase = createClient()
-
     try {
+      // Проверяем проблему через Gemini AI
+      const isProblemValid = await checkProblemWithAI(title, description)
+      
+      if (!isProblemValid) {
+        setError("Origin AI checked the problem content and it's unacceptable for StartOrigin. Please, make the problem acceptable for publishing.")
+        setIsValidating(false)
+        return
+      }
+      
+      setIsValidating(false)
+      setIsLoading(true)
+      
+      const supabase = createClient()
+
       if (initialData) {
         // Update existing problem
         const { error } = await supabase
@@ -101,7 +179,6 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
 
         if (error) throw error
         
-        // 🚀 ОПТИМИСТИЧНЫЙ РЕДИРЕКТ
         router.push(`/problems/${initialData.id}`)
         router.refresh()
       } else {
@@ -122,15 +199,14 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
 
         if (error) throw error
         
-        // 🚀 ОПТИМИСТИЧНЫЙ РЕДИРЕКТ - сразу переходим
         router.push(`/problems/${data.id}`)
         router.refresh()
       }
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred")
-      setIsLoading(false) // ❌ При ошибке снова разрешаем нажатия
+      setIsValidating(false)
+      setIsLoading(false)
     }
-    // ⚠️ Убрал finally - при успехе isLoading останется true, но это ок т.к. мы уходим со страницы
   }
 
   const getCategoryLabel = (category: string) => {
@@ -150,7 +226,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               onChange={(e) => setTitle(e.target.value)}
               required
               maxLength={200}
-              disabled={isLoading} // 🔒 Блокируем поля при загрузке
+              disabled={isLoading || isValidating}
             />
             <p className="text-xs text-muted-foreground">{title.length}/200 characters</p>
           </div>
@@ -165,9 +241,11 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               required
               rows={8}
               maxLength={2000}
-              disabled={isLoading} // 🔒 Блокируем поля при загрузке
+              disabled={isLoading || isValidating}
             />
-            <p className="text-xs text-muted-foreground">{description.length}/2000 characters</p>
+            <p className="text-xs text-muted-foreground">
+              {description.length}/2000 characters. Please describe your problem clearly and seriously.
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -178,14 +256,14 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               value={contact}
               onChange={(e) => setContact(e.target.value)}
               maxLength={100}
-              disabled={isLoading} // 🔒 Блокируем поля при загрузке
+              disabled={isLoading || isValidating}
             />
             <p className="text-xs text-muted-foreground">How can people reach you? (Optional)</p>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="category">Category</Label>
-            <Select value={category} onValueChange={setCategory} disabled={isLoading}>
+            <Select value={category} onValueChange={setCategory} disabled={isLoading || isValidating}>
               <SelectTrigger id="category">
                 <SelectValue placeholder="Select a category" />
               </SelectTrigger>
@@ -213,13 +291,13 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
                     handleAddTag()
                   }
                 }}
-                disabled={isLoading} // 🔒 Блокируем поля при загрузке
+                disabled={isLoading || isValidating}
               />
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleAddTag}
-                disabled={!tagInput.trim() || tags.length >= 5 || isLoading}
+                disabled={!tagInput.trim() || tags.length >= 5 || isLoading || isValidating}
               >
                 Add
               </Button>
@@ -233,7 +311,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
                       type="button" 
                       onClick={() => handleRemoveTag(tag)} 
                       className="ml-1 hover:text-destructive"
-                      disabled={isLoading} // 🔒 Блокируем кнопки при загрузке
+                      disabled={isLoading || isValidating}
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -248,7 +326,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               id="cofounder"
               checked={lookingForCofounder}
               onCheckedChange={(checked) => setLookingForCofounder(checked as boolean)}
-              disabled={isLoading} // 🔒 Блокируем чекбокс при загрузке
+              disabled={isLoading || isValidating}
             />
             <Label htmlFor="cofounder" className="text-sm font-normal cursor-pointer">
               I'm looking for a cofounder to solve this problem
@@ -258,7 +336,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
           {initialData && (
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
-              <Select value={status} onValueChange={setStatus} disabled={isLoading}>
+              <Select value={status} onValueChange={setStatus} disabled={isLoading || isValidating}>
                 <SelectTrigger id="status">
                   <SelectValue />
                 </SelectTrigger>
@@ -272,15 +350,51 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
             </div>
           )}
 
+          <div className="rounded-md bg-blue-50 border border-blue-200 p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <AlertCircle className="h-5 w-5 text-blue-400" />
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-blue-800">AI Validation</h3>
+                <div className="mt-2 text-sm text-blue-700">
+                  <p>
+                    All problems are automatically checked by Origin AI to ensure they are:
+                  </p>
+                  <ul className="list-disc pl-5 mt-1 space-y-1">
+                    <li>Real and meaningful (no spam or gibberish)</li>
+                    <li>Serious and related to startups/business/innovation</li>
+                    <li>Clearly formulated with problem-solving potential</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {error && (
-            <div className="rounded-md bg-destructive/10 p-3">
-              <p className="text-sm text-destructive">{error}</p>
+            <div className="rounded-md bg-destructive/10 border border-destructive/20 p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <AlertCircle className="h-5 w-5 text-destructive" />
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-destructive">Submission Error</h3>
+                  <div className="mt-2 text-sm text-destructive">
+                    <p>{error}</p>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
           <div className="flex gap-4">
-            <Button type="submit" disabled={isLoading} className="flex-1">
-              {isLoading ? (
+            <Button type="submit" disabled={isLoading || isValidating} className="flex-1">
+              {isValidating ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Validating with AI...
+                </>
+              ) : isLoading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   {initialData ? "Updating..." : "Publishing..."}
@@ -289,7 +403,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
                 initialData ? "Update Problem" : "Publish Problem"
               )}
             </Button>
-            <Button type="button" variant="outline" onClick={() => router.back()} disabled={isLoading}>
+            <Button type="button" variant="outline" onClick={() => router.back()} disabled={isLoading || isValidating}>
               Cancel
             </Button>
           </div>
