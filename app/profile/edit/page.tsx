@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Switch } from "@/components/ui/switch"
 import Link from "next/link"
-import { Lightbulb, ArrowLeft, Loader2, Upload, X, Image as ImageIcon, Plus, LogOut, User } from "lucide-react"
+import { Lightbulb, ArrowLeft, Loader2, Upload, X, Image as ImageIcon, Plus, LogOut, User, Globe, MessageCircle } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -24,6 +25,8 @@ export default function EditProfilePage() {
   const [username, setUsername] = useState("")
   const [bio, setBio] = useState("")
   const [avatarUrl, setAvatarUrl] = useState("")
+  const [website, setWebsite] = useState("")
+  const [disableChat, setDisableChat] = useState(false)
   const [customAvatarUrl, setCustomAvatarUrl] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -58,6 +61,8 @@ export default function EditProfilePage() {
         setUsername(profile.username || "")
         setBio(profile.bio || "")
         setAvatarUrl(profile.avatar_url || "")
+        setWebsite(profile.website || "")
+        setDisableChat(profile.disable_chat || false)
       }
       
       setIsDataLoading(false)
@@ -248,6 +253,21 @@ export default function EditProfilePage() {
     }
   }
 
+  const validateWebsite = (url: string) => {
+    if (!url) return true // Пустая строка допустима
+    try {
+      // Добавляем https:// если нет протокола
+      let normalizedUrl = url
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        normalizedUrl = 'https://' + url
+      }
+      new URL(normalizedUrl)
+      return true
+    } catch {
+      return false
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -260,6 +280,12 @@ export default function EditProfilePage() {
 
     try {
       const normalizedUsername = username ? username.toLowerCase().trim() : ""
+      const normalizedWebsite = website ? website.trim() : ""
+
+      // Валидация website
+      if (normalizedWebsite && !validateWebsite(normalizedWebsite)) {
+        throw new Error("Please enter a valid website URL (e.g., example.com or https://example.com)")
+      }
 
       if (normalizedUsername && !/^[a-zA-Z0-9_]+$/.test(normalizedUsername)) {
         throw new Error("Username can only contain letters, numbers, and underscores")
@@ -303,6 +329,12 @@ export default function EditProfilePage() {
         }
       }
 
+      // Подготавливаем website для сохранения
+      let finalWebsite = normalizedWebsite
+      if (finalWebsite && !finalWebsite.startsWith('http')) {
+        finalWebsite = 'https://' + finalWebsite
+      }
+
       const { error: updateError } = await supabase
         .from("profiles")
         .update({
@@ -310,6 +342,8 @@ export default function EditProfilePage() {
           username: normalizedUsername || null,
           bio: bio || null,
           avatar_url: finalAvatarUrl || null,
+          website: finalWebsite || null,
+          disable_chat: disableChat,
           updated_at: new Date().toISOString(),
         })
         .eq("id", user.id)
@@ -345,8 +379,7 @@ export default function EditProfilePage() {
     )
   }
 
- 
-return (
+  return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="border-b border-border bg-card">
@@ -642,6 +675,27 @@ return (
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="website">
+                    <div className="flex items-center gap-2">
+                      <Globe className="h-4 w-4" />
+                      <span>Website</span>
+                    </div>
+                  </Label>
+                  <Input
+                    id="website"
+                    name="website"
+                    type="text"
+                    value={website}
+                    onChange={(e) => setWebsite(e.target.value)}
+                    placeholder="example.com or https://example.com"
+                    disabled={isLoading}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Link to your personal website, blog, or portfolio. Will be displayed as a button on your profile.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="bio">Bio</Label>
                   <Textarea
                     id="bio"
@@ -653,6 +707,31 @@ return (
                     disabled={isLoading}
                   />
                   <p className="text-sm text-muted-foreground">A short bio about yourself (optional).</p>
+                </div>
+
+                {/* Privacy Settings */}
+                <div className="border-t pt-6 mt-6">
+                  <h3 className="text-lg font-semibold mb-4">Privacy Settings</h3>
+                  
+                  <div className="flex items-center justify-between p-4 rounded-lg border">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <MessageCircle className="h-4 w-4" />
+                        <Label htmlFor="disable_chat" className="font-medium">
+                          Don't allow users to chat with me
+                        </Label>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        When enabled, you won't appear in chat search and the "Start Chat" button will be hidden on your profile.
+                      </p>
+                    </div>
+                    <Switch
+                      id="disable_chat"
+                      checked={disableChat}
+                      onCheckedChange={setDisableChat}
+                      disabled={isLoading}
+                    />
+                  </div>
                 </div>
 
                 <div className="flex gap-4">
