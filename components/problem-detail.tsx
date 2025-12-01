@@ -178,32 +178,32 @@ const verifiedUsers = ["startorigin", "nikolaev", "winter", "gerxog"]
 
 // Компонент анимации снега
 const SnowAnimation = () => (
-  <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-    {[...Array(50)].map((_, i) => (
+  <div className="absolute left-0 top-0 bottom-0 w-16 pointer-events-none overflow-hidden z-0">
+    {[...Array(30)].map((_, i) => (
       <div
         key={i}
-        className="absolute top-[-20px] text-blue-200 opacity-70 animate-fall"
+        className="absolute text-gray-400 opacity-80 animate-fall-snow"
         style={{
-          left: `${Math.random() * 100}%`,
+          left: `${Math.random() * 16}px`,
           animationDelay: `${Math.random() * 5}s`,
           animationDuration: `${Math.random() * 3 + 5}s`,
-          fontSize: `${Math.random() * 10 + 10}px`,
+          fontSize: `${Math.random() * 10 + 12}px`,
         }}
       >
         ❄
       </div>
     ))}
     <style jsx>{`
-      @keyframes fall {
+      @keyframes fall-snow {
         0% {
-          transform: translateY(-20px) rotate(0deg);
+          transform: translateY(-100%) translateX(0) rotate(0deg);
         }
         100% {
-          transform: translateY(calc(100vh + 20px)) rotate(360deg);
+          transform: translateY(100vh) translateX(20px) rotate(360deg);
         }
       }
-      .animate-fall {
-        animation: fall linear infinite;
+      .animate-fall-snow {
+        animation: fall-snow linear infinite;
       }
     `}</style>
   </div>
@@ -211,38 +211,36 @@ const SnowAnimation = () => (
 
 // Компонент новогодней анимации
 const ChristmasAnimation = () => (
-  <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-    {/* Веночки */}
-    <div className="absolute top-4 left-4 text-green-500 opacity-50 text-3xl">🎄</div>
-    <div className="absolute top-4 right-4 text-green-500 opacity-50 text-3xl">🎄</div>
-    <div className="absolute bottom-4 left-4 text-green-500 opacity-50 text-3xl">🎄</div>
-    <div className="absolute bottom-4 right-4 text-green-500 opacity-50 text-3xl">🎄</div>
+  <div className="absolute left-0 top-0 bottom-0 w-20 pointer-events-none overflow-hidden z-0">
+    {/* Веночки слева */}
+    <div className="absolute top-4 left-2 text-green-500 opacity-60 text-3xl animate-bell">
+      🎄
+    </div>
+    <div className="absolute top-20 left-6 text-green-400 opacity-50 text-2xl animate-bell" style={{animationDelay: '0.5s'}}>
+      🎄
+    </div>
+    <div className="absolute bottom-20 left-3 text-green-500 opacity-70 text-3xl animate-bell" style={{animationDelay: '1s'}}>
+      🎄
+    </div>
     
     {/* Колокольчики */}
-    <div className="absolute top-12 left-12 text-yellow-500 opacity-60 text-2xl animate-bell animate-bounce">
+    <div className="absolute top-40 left-4 text-yellow-500 opacity-70 text-2xl animate-swing">
       🔔
     </div>
-    <div className="absolute top-12 right-12 text-yellow-500 opacity-60 text-2xl animate-bell animate-bounce">
-      🔔
-    </div>
-    <div className="absolute bottom-12 left-12 text-yellow-500 opacity-60 text-2xl animate-bell animate-bounce">
-      🔔
-    </div>
-    <div className="absolute bottom-12 right-12 text-yellow-500 opacity-60 text-2xl animate-bell animate-bounce">
+    <div className="absolute bottom-40 left-8 text-yellow-500 opacity-70 text-2xl animate-swing" style={{animationDelay: '0.3s'}}>
       🔔
     </div>
     
     {/* Снежинки */}
-    {[...Array(30)].map((_, i) => (
+    {[...Array(15)].map((_, i) => (
       <div
         key={i}
-        className="absolute text-blue-100 opacity-50"
+        className="absolute text-blue-100 opacity-70 animate-fall-christmas"
         style={{
-          top: `${Math.random() * 100}%`,
-          left: `${Math.random() * 100}%`,
+          left: `${Math.random() * 20}px`,
           animationDelay: `${Math.random() * 2}s`,
-          animationDuration: `${Math.random() * 3 + 3}s`,
-          fontSize: `${Math.random() * 8 + 12}px`,
+          animationDuration: `${Math.random() * 3 + 4}s`,
+          fontSize: `${Math.random() * 8 + 10}px`,
         }}
       >
         ❅
@@ -250,12 +248,32 @@ const ChristmasAnimation = () => (
     ))}
     <style jsx>{`
       @keyframes bell {
+        0%, 100% { transform: rotate(0deg) scale(1); }
+        50% { transform: rotate(5deg) scale(1.1); }
+      }
+      @keyframes swing {
         0%, 100% { transform: rotate(0deg); }
-        25% { transform: rotate(15deg); }
-        75% { transform: rotate(-15deg); }
+        25% { transform: rotate(10deg); }
+        75% { transform: rotate(-10deg); }
+      }
+      @keyframes fall-christmas {
+        0% {
+          transform: translateY(-100%) translateX(0) rotate(0deg);
+          opacity: 0.7;
+        }
+        100% {
+          transform: translateY(100vh) translateX(15px) rotate(180deg);
+          opacity: 0;
+        }
       }
       .animate-bell {
-        animation: bell 1s ease-in-out infinite;
+        animation: bell 3s ease-in-out infinite;
+      }
+      .animate-swing {
+        animation: swing 2s ease-in-out infinite;
+      }
+      .animate-fall-christmas {
+        animation: fall-christmas linear infinite;
       }
     `}</style>
   </div>
@@ -263,54 +281,67 @@ const ChristmasAnimation = () => (
 
 // Компонент анимации Stranger Things
 const StrangerThingsAnimation = () => (
-  <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-    {/* Молнии */}
-    {[...Array(8)].map((_, i) => (
+  <div className="absolute left-0 top-0 bottom-0 w-20 pointer-events-none overflow-hidden z-0">
+    {/* Большая молния сбоку */}
+    <div className="absolute left-4 top-1/4 text-red-500 opacity-90 text-5xl animate-lightning-main">
+      ⚡
+    </div>
+    
+    {/* Маленькие молнии */}
+    {[...Array(5)].map((_, i) => (
       <div
         key={i}
-        className="absolute text-red-400 opacity-70 animate-lightning"
+        className="absolute text-red-400 opacity-70 animate-lightning-small"
         style={{
+          left: `${Math.random() * 20}px`,
           top: `${Math.random() * 100}%`,
-          left: `${Math.random() * 100}%`,
-          animationDelay: `${Math.random() * 3}s`,
-          animationDuration: '0.3s',
-          fontSize: '30px',
+          animationDelay: `${Math.random() * 2 + 1}s`,
+          fontSize: '20px',
         }}
       >
         ⚡
       </div>
     ))}
     
-    {/* Парящие частицы */}
-    {[...Array(40)].map((_, i) => (
+    {/* Красные частицы */}
+    {[...Array(20)].map((_, i) => (
       <div
         key={i}
-        className="absolute rounded-full bg-red-500/20 animate-float"
+        className="absolute rounded-full bg-red-500/40 animate-float-red"
         style={{
-          width: `${Math.random() * 6 + 2}px`,
-          height: `${Math.random() * 6 + 2}px`,
+          width: `${Math.random() * 4 + 1}px`,
+          height: `${Math.random() * 4 + 1}px`,
+          left: `${Math.random() * 20}px`,
           top: `${Math.random() * 100}%`,
-          left: `${Math.random() * 100}%`,
-          animationDelay: `${Math.random() * 5}s`,
-          animationDuration: `${Math.random() * 10 + 10}s`,
+          animationDelay: `${Math.random() * 3}s`,
+          animationDuration: `${Math.random() * 8 + 5}s`,
         }}
       />
     ))}
     <style jsx>{`
-      @keyframes lightning {
+      @keyframes lightning-main {
+        0%, 100% { opacity: 0.2; transform: scale(1) translateX(0); }
+        25% { opacity: 0.8; transform: scale(1.2) translateX(-2px); }
+        50% { opacity: 1; transform: scale(1.5) translateX(2px); }
+        75% { opacity: 0.8; transform: scale(1.2) translateX(-2px); }
+      }
+      @keyframes lightning-small {
         0% { opacity: 0; transform: scale(1); }
-        50% { opacity: 1; transform: scale(1.2); }
+        50% { opacity: 1; transform: scale(1.3); }
         100% { opacity: 0; transform: scale(1); }
       }
-      .animate-lightning {
-        animation: lightning linear infinite;
+      @keyframes float-red {
+        0%, 100% { transform: translateY(0) translateX(0); opacity: 0.3; }
+        50% { transform: translateY(-15px) translateX(5px); opacity: 0.6; }
       }
-      @keyframes float {
-        0%, 100% { transform: translateY(0) translateX(0); opacity: 0.2; }
-        50% { transform: translateY(-20px) translateX(10px); opacity: 0.5; }
+      .animate-lightning-main {
+        animation: lightning-main 4s ease-in-out infinite;
       }
-      .animate-float {
-        animation: float ease-in-out infinite;
+      .animate-lightning-small {
+        animation: lightning-small 1.5s ease-in-out infinite;
+      }
+      .animate-float-red {
+        animation: float-red ease-in-out infinite;
       }
     `}</style>
   </div>
@@ -330,6 +361,26 @@ const AnimationRenderer = ({ animationType }: { animationType?: string | null })
     default:
       return null
   }
+}
+
+// Компонент для отображения боковой полоски
+const AnimationSidebar = ({ animationType }: { animationType?: string | null }) => {
+  if (!animationType) return null
+
+  let bgColor = ''
+  switch (animationType) {
+    case 'let_it_snow':
+      bgColor = 'bg-gradient-to-b from-blue-100 to-blue-50'
+      break
+    case 'merry_christmas':
+      bgColor = 'bg-gradient-to-b from-green-50 to-blue-50'
+      break
+    case 'stranger_things':
+      bgColor = 'bg-gradient-to-b from-red-950 to-red-900'
+      break
+  }
+
+  return <div className={`absolute left-0 top-0 bottom-0 w-16 ${bgColor} z-0`} />
 }
 
 export function ProblemDetail({ 
@@ -547,314 +598,268 @@ export function ProblemDetail({
     return <Mail className="h-4 w-4" />
   }
 
-  // Получаем классы фона в зависимости от анимации
-  const getAnimationBackgroundClass = () => {
-    switch (currentAnimation) {
-      case 'let_it_snow':
-        return 'bg-blue-50'
-      case 'merry_christmas':
-        return 'bg-gradient-to-br from-blue-50 to-green-50'
-      case 'stranger_things':
-        return 'bg-gradient-to-br from-gray-900 to-red-900 text-white'
-      default:
-        return ''
-    }
-  }
-
-  // Получаем классы для текста в зависимости от анимации
-  const getTextColorClass = () => {
-    switch (currentAnimation) {
-      case 'stranger_things':
-        return 'text-white'
-      default:
-        return 'text-foreground'
-    }
-  }
-
-  // Получаем классы для бордеров и карточек
-  const getCardClasses = () => {
-    switch (currentAnimation) {
-      case 'let_it_snow':
-        return 'border-blue-200'
-      case 'merry_christmas':
-        return 'border-green-200'
-      case 'stranger_things':
-        return 'border-red-800'
-      default:
-        return 'border-border'
-    }
-  }
-
-  // Получаем цвет баджа в зависимости от анимации
-  const getBadgeVariant = () => {
-    switch (currentAnimation) {
-      case 'let_it_snow':
-        return 'secondary'
-      case 'merry_christmas':
-        return 'default'
-      case 'stranger_things':
-        return 'destructive'
-      default:
-        return 'secondary'
-    }
-  }
-
   return (
-    <div className={`relative mx-auto max-w-4xl space-y-6 min-h-screen ${getAnimationBackgroundClass()} ${getTextColorClass()} p-4`}>
-      {/* Рендерим анимацию если есть */}
-      <AnimationRenderer animationType={currentAnimation} />
-      
-      {/* Problem Card */}
-      <Card className={`relative z-10 ${getCardClasses()}`}>
-        <CardHeader className="pb-4">
-          <div className="flex flex-col gap-4">
-            {/* Заголовок и кнопки действий */}
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-3 break-words">
-                  {problem.title}
-                </h1>
-                
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {problem.category && (
-                    <Badge variant={getBadgeVariant()}>
-                      {getCategoryLabel(problem.category)}
+    <div className="mx-auto max-w-4xl space-y-6 p-4">
+      {/* Problem Card с анимацией */}
+      <Card className="relative overflow-hidden">
+        {/* Боковая полоска с фоном */}
+        <AnimationSidebar animationType={currentAnimation} />
+        
+        {/* Анимация поверх полоски */}
+        <AnimationRenderer animationType={currentAnimation} />
+        
+        {/* Сдвигаем контент вправо, чтобы не перекрывался анимацией */}
+        <div className="relative ml-16 z-10">
+          <CardHeader className="pb-4">
+            <div className="flex flex-col gap-4">
+              {/* Заголовок и кнопки действий */}
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-3 break-words">
+                    {problem.title}
+                  </h1>
+                  
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {problem.category && (
+                      <Badge variant="secondary">
+                        {getCategoryLabel(problem.category)}
+                      </Badge>
+                    )}
+                    {problem.tags?.map((tag) => (
+                      <Badge key={tag} variant="outline" className="text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
+                    <Badge
+                      variant={
+                        problem.status === "open" ? "default" : problem.status === "solved" ? "secondary" : "outline"
+                      }
+                      className="text-xs"
+                    >
+                      {getStatusLabel(problem.status)}
                     </Badge>
+                    {problem.looking_for_cofounder && (
+                      <Badge variant="default" className="gap-1 bg-green-600 hover:bg-green-700 text-xs">
+                        <Users className="h-3 w-3" />
+                        Looking for Cofounder
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
+                {/* Кнопки действий */}
+                <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
+                  {/* Кнопка анимации - только для автора */}
+                  {isAuthor && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 bg-transparent hover:bg-purple-50 hover:text-purple-700 text-purple-600"
+                      onClick={() => setShowAnimationModal(true)}
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      <span className="hidden xs:inline">Animation</span>
+                    </Button>
                   )}
-                  {problem.tags?.map((tag) => (
-                    <Badge key={tag} variant="outline" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
-                  <Badge
-                    variant={
-                      problem.status === "open" ? "default" : problem.status === "solved" ? "secondary" : "outline"
-                    }
-                    className="text-xs"
-                  >
-                    {getStatusLabel(problem.status)}
-                  </Badge>
-                  {problem.looking_for_cofounder && (
-                    <Badge variant="default" className="gap-1 bg-green-600 hover:bg-green-700 text-xs">
-                      <Users className="h-3 w-3" />
-                      Looking for Cofounder
-                    </Badge>
+
+                  {/* Кнопка пожаловаться - скрыта для автора */}
+                  {!isAuthor && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="gap-2 bg-transparent text-orange-600 hover:text-orange-700 hover:bg-orange-50 flex-1 sm:flex-none"
+                        >
+                          <Flag className="h-4 w-4" />
+                          <span className="hidden xs:inline">Report</span>
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="max-w-[95vw] sm:max-w-md">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Report Problem</AlertDialogTitle>
+                          <AlertDialogDescription className="text-sm">
+                            If you believe this problem violates our community guidelines or contains inappropriate content, 
+                            you can report it using Google Forms.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter className="flex flex-col sm:flex-row gap-2">
+                          <AlertDialogCancel className="mt-0 sm:mt-0">Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleReport}
+                            className="bg-orange-600 text-white hover:bg-orange-700"
+                          >
+                            <Flag className="h-4 w-4 mr-2" />
+                            Open Report Form
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+
+                  {/* Кнопки автора */}
+                  {isAuthor && (
+                    <div className="flex gap-2 w-full sm:w-auto">
+                      {/* Основные кнопки для десктопа */}
+                      <div className="hidden sm:flex gap-2 flex-1 sm:flex-none">
+                        <Link href={`/problems/${problem.id}/edit`} className="flex-1 sm:flex-none">
+                          <Button variant="outline" size="sm" className="gap-2 bg-transparent w-full sm:w-auto">
+                            <Edit className="h-4 w-4" />
+                            Edit
+                          </Button>
+                        </Link>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="outline" size="sm" className="gap-2 bg-transparent text-destructive hover:text-destructive hover:bg-destructive/10 w-full sm:w-auto">
+                              <Trash2 className="h-4 w-4" />
+                              Delete
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent className="max-w-[95vw] sm:max-w-md">
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Problem</AlertDialogTitle>
+                              <AlertDialogDescription className="text-sm">
+                                Are you sure you want to delete this problem? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter className="flex flex-col sm:flex-row gap-2">
+                              <AlertDialogCancel className="mt-0 sm:mt-0">Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={handleDelete}
+                                disabled={isDeleting}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                {isDeleting ? "Deleting..." : "Delete"}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+
+                      {/* Dropdown меню для мобильных */}
+                      <div className="sm:hidden flex-1">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="gap-2 bg-transparent w-full">
+                              <MoreVertical className="h-4 w-4" />
+                              <span>Actions</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-56">
+                            <DropdownMenuItem onClick={() => setShowAnimationModal(true)} className="cursor-pointer">
+                              <Sparkles className="h-4 w-4 mr-2" />
+                              Add Animation
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/problems/${problem.id}/edit`} className="flex items-center gap-2 cursor-pointer">
+                                <Edit className="h-4 w-4" />
+                                Edit Problem
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              className="text-destructive focus:text-destructive cursor-pointer"
+                              onClick={() => document.querySelector('[data-delete-trigger]')?.click()}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Delete Problem
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        {/* Скрытый триггер для диалога удаления */}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <button data-delete-trigger className="hidden" />
+                          </AlertDialogTrigger>
+                          <AlertDialogContent className="max-w-[95vw] sm:max-w-md">
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Problem</AlertDialogTitle>
+                              <AlertDialogDescription className="text-sm">
+                                Are you sure you want to delete this problem? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter className="flex flex-col sm:flex-row gap-2">
+                              <AlertDialogCancel className="mt-0 sm:mt-0">Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={handleDelete}
+                                disabled={isDeleting}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                {isDeleting ? "Deleting..." : "Delete"}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
 
-              {/* Кнопки действий */}
-              <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
-                {/* Кнопка анимации - только для автора */}
-                {isAuthor && (
+              {/* Upvote и мета-информация */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t">
+                <div className="flex items-center gap-4">
                   <Button
-                    variant="outline"
+                    variant={hasUpvoted ? "default" : "outline"}
                     size="sm"
-                    className="gap-2 bg-transparent hover:bg-purple-50 hover:text-purple-700 text-purple-600"
-                    onClick={() => setShowAnimationModal(true)}
+                    className="flex-col gap-1 h-auto py-2 px-3 min-w-[60px]"
+                    onClick={handleUpvote}
+                    disabled={isUpvoting}
                   >
-                    <Sparkles className="h-4 w-4" />
-                    <span className="hidden xs:inline">Animation</span>
+                    <ArrowBigUp className="h-5 w-5" />
+                    <span className="text-sm font-semibold">{upvotes}</span>
                   </Button>
-                )}
 
-                {/* Кнопка пожаловаться - скрыта для автора */}
-                {!isAuthor && (
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="gap-2 bg-transparent text-orange-600 hover:text-orange-700 hover:bg-orange-50 flex-1 sm:flex-none"
-                      >
-                        <Flag className="h-4 w-4" />
-                        <span className="hidden xs:inline">Report</span>
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="max-w-[95vw] sm:max-w-md">
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Report Problem</AlertDialogTitle>
-                        <AlertDialogDescription className="text-sm">
-                          If you believe this problem violates our community guidelines or contains inappropriate content, 
-                          you can report it using Google Forms.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter className="flex flex-col sm:flex-row gap-2">
-                        <AlertDialogCancel className="mt-0 sm:mt-0">Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={handleReport}
-                          className="bg-orange-600 text-white hover:bg-orange-700"
-                        >
-                          <Flag className="h-4 w-4 mr-2" />
-                          Open Report Form
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                )}
-
-                {/* Кнопки автора */}
-                {isAuthor && (
-                  <div className="flex gap-2 w-full sm:w-auto">
-                    {/* Основные кнопки для десктопа */}
-                    <div className="hidden sm:flex gap-2 flex-1 sm:flex-none">
-                      <Link href={`/problems/${problem.id}/edit`} className="flex-1 sm:flex-none">
-                        <Button variant="outline" size="sm" className="gap-2 bg-transparent w-full sm:w-auto">
-                          <Edit className="h-4 w-4" />
-                          Edit
-                        </Button>
-                      </Link>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="outline" size="sm" className="gap-2 bg-transparent text-destructive hover:text-destructive hover:bg-destructive/10 w-full sm:w-auto">
-                            <Trash2 className="h-4 w-4" />
-                            Delete
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent className="max-w-[95vw] sm:max-w-md">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Problem</AlertDialogTitle>
-                            <AlertDialogDescription className="text-sm">
-                              Are you sure you want to delete this problem? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter className="flex flex-col sm:flex-row gap-2">
-                            <AlertDialogCancel className="mt-0 sm:mt-0">Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={handleDelete}
-                              disabled={isDeleting}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              {isDeleting ? "Deleting..." : "Delete"}
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-4 w-4" />
+                      <span>{formatDate(problem.created_at)}</span>
                     </div>
-
-                    {/* Dropdown меню для мобильных */}
-                    <div className="sm:hidden flex-1">
-                      <DropdownMenu>
+                    
+                    {/* Кнопка поделиться */}
+                    <div className="relative">
+                      <DropdownMenu open={isShareOpen} onOpenChange={setIsShareOpen}>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm" className="gap-2 bg-transparent w-full">
-                            <MoreVertical className="h-4 w-4" />
-                            <span>Actions</span>
+                          <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
+                            <Share2 className="h-4 w-4" />
+                            <span className="hidden xs:inline">Share</span>
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56">
-                          <DropdownMenuItem onClick={() => setShowAnimationModal(true)} className="cursor-pointer">
-                            <Sparkles className="h-4 w-4 mr-2" />
-                            Add Animation
+                        <DropdownMenuContent align="start" className="w-48">
+                          <DropdownMenuItem onClick={copyToClipboard} className="cursor-pointer">
+                            <Copy className="h-4 w-4 mr-2" />
+                            Copy Link
                           </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/problems/${problem.id}/edit`} className="flex items-center gap-2 cursor-pointer">
-                              <Edit className="h-4 w-4" />
-                              Edit Problem
-                            </Link>
+                          <DropdownMenuItem onClick={shareOnTwitter} className="cursor-pointer">
+                            <Twitter className="h-4 w-4 mr-2" />
+                            Share on X
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            className="text-destructive focus:text-destructive cursor-pointer"
-                            onClick={() => document.querySelector('[data-delete-trigger]')?.click()}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            Delete Problem
+                          <DropdownMenuItem onClick={shareOnTelegram} className="cursor-pointer">
+                            <MessageCircle className="h-4 w-4 mr-2" />
+                            Share on Telegram
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-
-                      {/* Скрытый триггер для диалога удаления */}
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <button data-delete-trigger className="hidden" />
-                        </AlertDialogTrigger>
-                        <AlertDialogContent className="max-w-[95vw] sm:max-w-md">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Problem</AlertDialogTitle>
-                            <AlertDialogDescription className="text-sm">
-                              Are you sure you want to delete this problem? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter className="flex flex-col sm:flex-row gap-2">
-                            <AlertDialogCancel className="mt-0 sm:mt-0">Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={handleDelete}
-                              disabled={isDeleting}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              {isDeleting ? "Deleting..." : "Delete"}
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
                     </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Upvote и мета-информация */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t">
-              <div className="flex items-center gap-4">
-                <Button
-                  variant={hasUpvoted ? "default" : "outline"}
-                  size="sm"
-                  className="flex-col gap-1 h-auto py-2 px-3 min-w-[60px]"
-                  onClick={handleUpvote}
-                  disabled={isUpvoting}
-                >
-                  <ArrowBigUp className="h-5 w-5" />
-                  <span className="text-sm font-semibold">{upvotes}</span>
-                </Button>
-
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
-                    <span>{formatDate(problem.created_at)}</span>
-                  </div>
-                  
-                  {/* Кнопка поделиться */}
-                  <div className="relative">
-                    <DropdownMenu open={isShareOpen} onOpenChange={setIsShareOpen}>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
-                          <Share2 className="h-4 w-4" />
-                          <span className="hidden xs:inline">Share</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="w-48">
-                        <DropdownMenuItem onClick={copyToClipboard} className="cursor-pointer">
-                          <Copy className="h-4 w-4 mr-2" />
-                          Copy Link
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={shareOnTwitter} className="cursor-pointer">
-                          <Twitter className="h-4 w-4 mr-2" />
-                          Share on X
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={shareOnTelegram} className="cursor-pointer">
-                          <MessageCircle className="h-4 w-4 mr-2" />
-                          Share on Telegram
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        </CardHeader>
+          </CardHeader>
 
-        <CardContent>
-          <div className="prose prose-slate max-w-none prose-sm sm:prose-base">
-            <div className="whitespace-pre-wrap text-foreground leading-relaxed break-words">
-              {parseMentions(problem.description)}
+          <CardContent>
+            <div className="prose prose-slate max-w-none prose-sm sm:prose-base">
+              <div className="whitespace-pre-wrap text-foreground leading-relaxed break-words">
+                {parseMentions(problem.description)}
+              </div>
             </div>
-          </div>
-        </CardContent>
+          </CardContent>
+        </div>
       </Card>
 
-      {/* Author Card */}
-      <Card className={`relative z-10 ${getCardClasses()}`}>
+      {/* Author Card (без анимации) */}
+      <Card>
         <CardHeader>
           <h2 className="text-lg font-semibold">About the Author</h2>
         </CardHeader>
@@ -941,8 +946,8 @@ export function ProblemDetail({
         </CardContent>
       </Card>
 
-      {/* Moderation Section */}
-      <Card className={`relative z-10 bg-gradient-to-r from-blue-50 to-indigo-50 ${getCardClasses()}`}>
+      {/* Moderation Section (без анимации) */}
+      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
         <CardContent className="pt-6">
           <div className="text-center space-y-4">
             <div className="flex justify-center">
