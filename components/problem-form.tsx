@@ -52,23 +52,33 @@ async function checkProblemWithAI(title: string, description: string): Promise<b
     const apiKey = "AIzaSyDGXbeDZsUEJJi8NX2la9_rpU7-H2SsrGE"
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`
 
-    const prompt = `
-      Проверь следующий текст проблемы для стартап-сообщества StartOrigin и ответь ТОЛЬКО "APPROVED" или "REJECTED" без каких-либо других слов:
-      
-      КРИТЕРИИ ОДОБРЕНИЯ:
-      1. Проблема должна быть реальной и актуальной (не спам типа "ldfffsdjvlkdsfvjld" или бессмысленный текст)
-      2. Проблема должна быть серьезной и относящейся к бизнесу, технологиям, образованию, здоровью, экологии или социальным вопросам
-      3. Не должна быть глупой/шутливой (например, "Я не прекращаю пукать" или подобное)
-      4. Должна иметь потенциал для решения через инновации/стартапы
-      5. Минимальная длина - 20 осмысленных символов
-      6. Должна быть сформулирована четко и понятно
-      
-      Текст проблемы:
-      Заголовок: "${title}"
-      Описание: "${description}"
-      
-      Ответь ТОЛЬКО "APPROVED" или "REJECTED":
-    `
+    const prompt = `Ты - модератор для платформы StartOrigin. Проверь, является ли проблема подходящей для публикации.
+
+Оцени проблему по следующим критериям:
+
+1. **Качество текста**: 
+   - Текст должен быть осмысленным (не случайный набор символов типа "ldfffsdjvlkdsfvjld" или "isfvosdhvdfjsk")
+   - Должен содержать реальные слова и предложения
+   - Минимальная длина: 20 символов
+
+2. **Тематика**:
+   - Проблема должна быть связана с бизнесом, технологиями, образованием, здоровьем, экологией или социальными вопросами
+   - Не должна быть шутливой, глупой или неприличной
+   - Должна иметь потенциал для решения через стартап или инновации
+
+3. **Серьезность**:
+   - Не спам
+   - Не реклама
+   - Не бессмысленный текст
+
+Заголовок проблемы: "${title.substring(0, 100)}"
+Описание проблемы: "${description.substring(0, 500)}"
+
+Проанализируй и дай ответ в формате JSON:
+{
+  "approved": boolean,
+  "reason": string (если не approved)
+}`
 
     const response = await fetch(apiUrl, {
       method: "POST",
@@ -87,7 +97,7 @@ async function checkProblemWithAI(title: string, description: string): Promise<b
         ],
         generationConfig: {
           temperature: 0.1,
-          maxOutputTokens: 10,
+          maxOutputTokens: 200,
         }
       })
     })
@@ -99,17 +109,67 @@ async function checkProblemWithAI(title: string, description: string): Promise<b
 
     const data = await response.json()
     const aiResponse = data?.candidates?.[0]?.content?.parts?.[0]?.text || ""
-    const cleanResponse = aiResponse.trim().toUpperCase()
     
-    console.log("AI Response:", cleanResponse)
+    console.log("AI Raw Response:", aiResponse)
     
-    return cleanResponse === "APPROVED"
+    try {
+      // Пытаемся распарсить JSON ответ
+      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0])
+        return parsed.approved === true
+      }
+      
+      // Если не JSON, проверяем текст ответа
+      const cleanResponse = aiResponse.toLowerCase().trim()
+      if (cleanResponse.includes('approved') || cleanResponse.includes('true')) {
+        return true
+      }
+      
+      return false
+      
+    } catch (parseError) {
+      console.error("JSON parse error:", parseError)
+      // Если не удалось распарсить, проверяем содержание
+      if (aiResponse.toLowerCase().includes('spam') || 
+          aiResponse.toLowerCase().includes('nonsense') ||
+          aiResponse.toLowerCase().includes('gibberish') ||
+          aiResponse.toLowerCase().includes('reject')) {
+        return false
+      }
+      return true
+    }
     
   } catch (error) {
     console.error("Gemini AI проверка не удалась:", error)
     // В случае ошибки API разрешаем публикацию, но логируем ошибку
     return true
   }
+}
+
+// Базовая проверка на спам (быстрая проверка перед AI)
+function basicSpamCheck(text: string): boolean {
+  if (!text || text.trim().length < 20) return false
+  
+  const lowerText = text.toLowerCase()
+  
+  // Проверка на повторяющиеся символы или слова
+  const repeatedCharPattern = /(.)\1{4,}/ // 5+ одинаковых символов подряд
+  if (repeatedCharPattern.test(lowerText)) return false
+  
+  // Проверка на слишком много специальных символов
+  const specialChars = lowerText.replace(/[a-zа-я0-9\s]/g, '').length
+  if (specialChars > text.length * 0.3) return false // Более 30% спецсимволов
+  
+  // Проверка на отсутствие пробелов в длинных текстах
+  if (text.length > 50 && !text.includes(' ')) return false
+  
+  // Проверка на минимальное количество уникальных слов
+  const words = text.trim().split(/\s+/).filter(w => w.length > 2)
+  const uniqueWords = new Set(words)
+  if (uniqueWords.size < 2 && text.length > 30) return false
+  
+  return true
 }
 
 export function ProblemForm({ userId, initialData }: ProblemFormProps) {
@@ -146,7 +206,14 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
     setError(null)
 
     try {
-      // Проверяем проблему через Gemini AI
+      // Сначала базовая проверка на спам
+      if (!basicSpamCheck(title) || !basicSpamCheck(description)) {
+        setError("The problem content contains spam or meaningless text. Please provide a real problem with meaningful content.")
+        setIsValidating(false)
+        return
+      }
+      
+      // Затем проверка через Gemini AI
       const isProblemValid = await checkProblemWithAI(title, description)
       
       if (!isProblemValid) {
@@ -235,7 +302,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
             <Label htmlFor="description">Description *</Label>
             <Textarea
               id="description"
-              placeholder="Describe the problem in detail..."
+              placeholder="Describe the problem in detail. Be specific about the challenges you're facing..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               required
@@ -244,7 +311,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               disabled={isLoading || isValidating}
             />
             <p className="text-xs text-muted-foreground">
-              {description.length}/2000 characters. Please describe your problem clearly and seriously.
+              {description.length}/2000 characters. Describe your problem clearly with real words and sentences.
             </p>
           </div>
 
@@ -359,12 +426,13 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
                 <h3 className="text-sm font-medium text-blue-800">AI Validation</h3>
                 <div className="mt-2 text-sm text-blue-700">
                   <p>
-                    All problems are automatically checked by Origin AI to ensure they are:
+                    All problems are automatically checked by Origin AI to ensure quality:
                   </p>
                   <ul className="list-disc pl-5 mt-1 space-y-1">
-                    <li>Real and meaningful (no spam or gibberish)</li>
-                    <li>Serious and related to startups/business/innovation</li>
-                    <li>Clearly formulated with problem-solving potential</li>
+                    <li>No spam, gibberish, or meaningless text</li>
+                    <li>Real problems with business/innovation potential</li>
+                    <li>Clear, serious, and properly formatted content</li>
+                    <li>Minimum 20 meaningful characters required</li>
                   </ul>
                 </div>
               </div>
@@ -378,7 +446,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
                   <AlertCircle className="h-5 w-5 text-destructive" />
                 </div>
                 <div className="ml-3">
-                  <h3 className="text-sm font-medium text-destructive">Submission Error</h3>
+                  <h3 className="text-sm font-medium text-destructive">Validation Failed</h3>
                   <div className="mt-2 text-sm text-destructive">
                     <p>{error}</p>
                   </div>
