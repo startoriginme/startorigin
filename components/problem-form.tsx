@@ -164,6 +164,11 @@ function basicContentCheck(text: string): {valid: boolean, message?: string} {
     return { valid: false, message: "Text cannot be empty" }
   }
   
+  // Минимальная длина - 10 символов (очень мало, но допустимо для заголовка)
+  if (text.trim().length < 10) {
+    return { valid: false, message: "Text is too short. Minimum 10 characters required." }
+  }
+  
   const lowerText = text.toLowerCase()
   
   // Проверка на маты и плохие слова
@@ -173,21 +178,20 @@ function basicContentCheck(text: string): {valid: boolean, message?: string} {
     }
   }
   
-  // Проверка на явный спам (много повторяющихся символов)
-  const repeatedCharPattern = /(.)\1{6,}/ // 7+ одинаковых символов подряд
-  if (repeatedCharPattern.test(text)) {
-    return { valid: false, message: "Text appears to be spam" }
+  // Проверка на явный спам (много повторяющихся символов) - только для длинных текстов
+  if (text.length > 20) {
+    const repeatedCharPattern = /(.)\1{8,}/ // 9+ одинаковых символов подряд (только для явного спама)
+    if (repeatedCharPattern.test(text)) {
+      return { valid: false, message: "Text appears to be spam" }
+    }
   }
   
-  // Проверка на слишком много специальных символов (более 40%)
-  const specialChars = text.replace(/[a-zа-яё0-9\s.,!?;:-]/gi, '').length
-  if (specialChars > text.length * 0.4) {
-    return { valid: false, message: "Too many special characters" }
-  }
-  
-  // Проверка на минимальную длину осмысленного текста
-  if (text.trim().length < 10) {
-    return { valid: false, message: "Text is too short" }
+  // Проверка на слишком много специальных символов (более 50%) - только для длинных текстов
+  if (text.length > 30) {
+    const specialChars = text.replace(/[a-zа-яё0-9\s.,!?;:'"()-]/gi, '').length
+    if (specialChars > text.length * 0.5) { // 50% спецсимволов
+      return { valid: false, message: "Too many special characters" }
+    }
   }
   
   return { valid: true }
@@ -231,8 +235,14 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
       const titleCheck = basicContentCheck(title)
       const descCheck = basicContentCheck(description)
       
-      if (!titleCheck.valid || !descCheck.valid) {
-        setError(titleCheck.message || descCheck.message || "Content validation failed")
+      if (!titleCheck.valid) {
+        setError(`Title: ${titleCheck.message}`)
+        setIsValidating(false)
+        return
+      }
+      
+      if (!descCheck.valid) {
+        setError(`Description: ${descCheck.message}`)
         setIsValidating(false)
         return
       }
@@ -241,7 +251,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
       const aiCheck = await checkProblemWithAI(title, description)
       
       if (!aiCheck.approved) {
-        setError(aiCheck.message || "Origin AI checked the problem content and it's unacceptable for StartOrigin. Please make sure your content is appropriate.")
+        setError(aiCheck.message || "Origin AI checked the content and found it inappropriate. Please make sure your content is respectful and meaningful.")
         setIsValidating(false)
         return
       }
@@ -319,7 +329,9 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               maxLength={200}
               disabled={isLoading || isValidating}
             />
-            <p className="text-xs text-muted-foreground">{title.length}/200 characters</p>
+            <p className="text-xs text-muted-foreground">
+              {title.length}/200 characters. Minimum 10 characters.
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -335,7 +347,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               disabled={isLoading || isValidating}
             />
             <p className="text-xs text-muted-foreground">
-              {description.length}/2000 characters. Be creative, share your thoughts!
+              {description.length}/2000 characters. Minimum 10 characters. Be creative, share your thoughts!
             </p>
           </div>
 
@@ -432,87 +444,86 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
                 <SelectTrigger id="status">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="open">Open for Discussion</SelectItem>
-                  <SelectItem value="in_progress">Working on It</SelectItem>
-                  <SelectItem value="solved">Solved/Completed</SelectItem>
-                  <SelectItem value="closed">Closed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+              <SelectContent>
+                <SelectItem value="open">Open for Discussion</SelectItem>
+                <SelectItem value="in_progress">Working on It</SelectItem>
+                <SelectItem value="solved">Solved/Completed</SelectItem>
+                <SelectItem value="closed">Closed</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
-          <div className="rounded-md bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 p-4">
-            <div className="flex items-start">
-              <div className="flex-shrink-0 mt-0.5">
-                <Sparkles className="h-5 w-5 text-blue-500" />
+        <div className="rounded-md bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 p-4">
+          <div className="flex items-start">
+            <div className="flex-shrink-0 mt-0.5">
+              <Sparkles className="h-5 w-5 text-blue-500" />
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-blue-800">Friendly Content Check</h3>
+              <div className="mt-2 text-sm text-blue-700">
+                <p>
+                  We just do a quick check to keep the community friendly:
+                </p>
+                <ul className="list-disc pl-5 mt-1 space-y-1">
+                  <li>✅ Minimum 10 characters for title and description</li>
+                  <li>✅ No offensive language or hate speech</li>
+                  <li>✅ No obvious spam (like "aaaaaaaaaaa")</li>
+                  <li>✅ Normal text in any language is welcome</li>
+                  <li>✅ Share ideas, thoughts, problems - all good!</li>
+                </ul>
+                <p className="mt-2 text-blue-600">
+                  Most normal posts will be approved! ✨
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {error && (
+          <div className="rounded-md bg-amber-50 border border-amber-200 p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <AlertCircle className="h-5 w-5 text-amber-500" />
               </div>
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-blue-800">Friendly AI Check</h3>
-                <div className="mt-2 text-sm text-blue-700">
-                  <p>
-                    Our AI helper will quickly check your content to keep StartOrigin friendly and spam-free:
-                  </p>
-                  <ul className="list-disc pl-5 mt-1 space-y-1">
-                    <li>✅ No spam, ads, or offensive language</li>
-                    <li>✅ Normal text in any language is welcome</li>
-                    <li>✅ Ideas, observations, and problems are all okay</li>
-                    <li>✅ News and thoughts are encouraged!</li>
-                    <li>❌ Please avoid jokes like "I can't stop farting"</li>
-                  </ul>
-                  <p className="mt-2 text-blue-600">
-                    Be yourself, share authentically! ✨
+                <h3 className="text-sm font-medium text-amber-800">Content Needs Adjustment</h3>
+                <div className="mt-2 text-sm text-amber-700">
+                  <p>{error}</p>
+                  <p className="mt-2">
+                    Please adjust your content to meet our simple guidelines above.
                   </p>
                 </div>
               </div>
             </div>
           </div>
+        )}
 
-          {error && (
-            <div className="rounded-md bg-amber-50 border border-amber-200 p-4">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <AlertCircle className="h-5 w-5 text-amber-500" />
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-amber-800">Content Needs Adjustment</h3>
-                  <div className="mt-2 text-sm text-amber-700">
-                    <p>{error}</p>
-                    <p className="mt-2">
-                      Please adjust your content to make it more appropriate for our community. 
-                      You can share ideas, problems, or observations - just keep it respectful!
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="flex gap-4">
-            <Button type="submit" disabled={isLoading || isValidating} className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
-              {isValidating ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Checking with AI...
-                </>
-              ) : isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  {initialData ? "Updating..." : "Sharing with Community..."}
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  {initialData ? "Update Post" : "Share with Community"}
-                </>
-              )}
-            </Button>
-            <Button type="button" variant="outline" onClick={() => router.back()} disabled={isLoading || isValidating}>
-              Cancel
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+        <div className="flex gap-4">
+          <Button type="submit" disabled={isLoading || isValidating} className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+            {isValidating ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Checking content...
+              </>
+            ) : isLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                {initialData ? "Updating..." : "Sharing with Community..."}
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4 mr-2" />
+                {initialData ? "Update Post" : "Share with Community"}
+              </>
+            )}
+          </Button>
+          <Button type="button" variant="outline" onClick={() => router.back()} disabled={isLoading || isValidating}>
+            Cancel
+          </Button>
+        </div>
+      </form>
+    </CardContent>
+  </Card>
   )
 }
