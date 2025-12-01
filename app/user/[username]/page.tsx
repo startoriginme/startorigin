@@ -639,7 +639,7 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
                           }}
                           className="gap-2 min-w-[140px]"
                         >
-                          <Globe className="h-4 w-4" />
+                         
                           Visit Website
                           <ExternalLink className="h-3 w-3" />
                         </Button>
