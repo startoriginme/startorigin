@@ -152,6 +152,22 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
           }
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'messages',
+          filter: `chat_id=eq.${activeChat}`
+        },
+        (payload) => {
+          // Удаляем сообщение локально
+          setMessages(prev => prev.filter(msg => msg.id !== payload.old.id))
+          
+          // Обновляем список чатов
+          setTimeout(() => loadChats(), 300)
+        }
+      )
       .subscribe()
 
     return () => {
@@ -198,7 +214,7 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
         chatParticipants.map(async (cp: any) => {
           const chat = cp.chats
           
-          // Получаем последнее сообщение
+          // Получаем последнее сообщение (не удаленное)
           const { data: lastMessage } = await supabase
             .from('messages')
             .select('*')
@@ -370,11 +386,21 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
 
   const deleteMessage = async (messageId: string) => {
     try {
+      // Удаляем сначала все реакции, связанные с сообщением
+      const { error: reactionsError } = await supabase
+        .from('message_reactions')
+        .delete()
+        .eq('message_id', messageId)
+
+      if (reactionsError) {
+        console.error('Error deleting reactions:', reactionsError)
+        return
+      }
+
+      // Удаляем само сообщение
       const { error } = await supabase
         .from('messages')
-        .update({
-          deleted_by: supabase.raw('array_append(deleted_by, ?)', [currentUser.id])
-        })
+        .delete()
         .eq('id', messageId)
 
       if (error) {
