@@ -229,9 +229,9 @@ export default async function ProblemsPage() {
         </div>
       </header>
 
-      {/* Minimal Hero Carousel */}
+      {/* Minimal Hero Carousel - 232px height */}
       <section className="border-b border-border bg-white">
-        <div className="container mx-auto px-4 py-12">
+        <div className="container mx-auto px-4 h-[232px] flex items-center justify-center">
           <HeroCarousel slides={heroSlides} />
         </div>
       </section>
