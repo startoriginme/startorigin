@@ -369,8 +369,6 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
   }
 
   const deleteMessage = async (messageId: string) => {
-    if (!confirm('Are you sure you want to delete this message?')) return
-
     try {
       const { error } = await supabase
         .from('messages')
