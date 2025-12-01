@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { X, Loader2, AlertCircle } from "lucide-react"
+import { X, Loader2, AlertCircle, Sparkles } from "lucide-react"
 
 type ProblemFormProps = {
   userId: string
@@ -46,38 +46,45 @@ const CATEGORIES = [
   "other",
 ]
 
-// Функция проверки проблемы через Gemini AI
-async function checkProblemWithAI(title: string, description: string): Promise<boolean> {
+// Список запрещенных и плохих слов (частично)
+const BAD_WORDS = [
+  // Маты (части слов)
+  "хуй", "пизд", "еба", "бля", "гондон", "мудак", "долбоёб",
+  // Английские плохие слова
+  "fuck", "shit", "asshole", "bitch", "dick", "pussy", "cunt",
+  // Оскорбительные выражения
+  "сука", "член", "трах", "секс", "секас"
+]
+
+// Функция проверки через Gemini AI (более дружелюбная)
+async function checkProblemWithAI(title: string, description: string): Promise<{approved: boolean, message?: string}> {
   try {
     const apiKey = "AIzaSyDGXbeDZsUEJJi8NX2la9_rpU7-H2SsrGE"
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`
 
-    const prompt = `Ты - модератор для платформы StartOrigin. Проверь, является ли проблема подходящей для публикации.
+    const prompt = `Ты - дружелюбный помощник для платформы StartOrigin. Оцени, можно ли опубликовать этот контент.
 
-Оцени проблему по следующим критериям:
+Критерии ОДОБРЕНИЯ (разреши если):
+1. Это нормальный текст на русском или английском (не бессмысленный набор символов)
+2. Нет явного спама, матов или оскорбительных слов
+3. Контент не является явной шуткой/троллингом по типу "Я не прекращаю пукать"
 
-1. **Качество текста**: 
-   - Текст должен быть осмысленным (не случайный набор символов типа "ldfffsdjvlkdsfvjld" или "isfvosdhvdfjsk")
-   - Должен содержать реальные слова и предложения
-   - Минимальная длина: 20 символов
+Критерии ОТКЛОНЕНИЯ (отклони только если):
+1. Это явный спам или реклама
+2. Содержатся маты, оскорбления или неприличный контент
+3. Это совсем бессмысленный текст без осмысленных слов
+4. Очень глупый/детский юмор, не подходящий для бизнес-платформы
 
-2. **Тематика**:
-   - Проблема должна быть связана с бизнесом, технологиями, образованием, здоровьем, экологией или социальными вопросами
-   - Не должна быть шутливой, глупой или неприличной
-   - Должна иметь потенциал для решения через стартап или инновации
+Если текст просто не идеален, но нормальный - разреши. Если это просто новость или мысль - разреши.
+Если сомневаешься - разреши.
 
-3. **Серьезность**:
-   - Не спам
-   - Не реклама
-   - Не бессмысленный текст
+Заголовок: "${title.substring(0, 100)}"
+Описание: "${description.substring(0, 500)}"
 
-Заголовок проблемы: "${title.substring(0, 100)}"
-Описание проблемы: "${description.substring(0, 500)}"
-
-Проанализируй и дай ответ в формате JSON:
+Ответь в формате JSON:
 {
-  "approved": boolean,
-  "reason": string (если не approved)
+  "approved": true/false,
+  "message": "Краткое объяснение на английском (если не approved)"
 }`
 
     const response = await fetch(apiUrl, {
@@ -104,72 +111,86 @@ async function checkProblemWithAI(title: string, description: string): Promise<b
 
     if (!response.ok) {
       console.error("API error:", await response.text())
-      throw new Error(`API request failed with status ${response.status}`)
+      return { approved: true } // В случае ошибки разрешаем
     }
 
     const data = await response.json()
     const aiResponse = data?.candidates?.[0]?.content?.parts?.[0]?.text || ""
     
-    console.log("AI Raw Response:", aiResponse)
+    console.log("AI Response:", aiResponse)
     
     try {
       // Пытаемся распарсить JSON ответ
       const jsonMatch = aiResponse.match(/\{[\s\S]*\}/)
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0])
-        return parsed.approved === true
+        return {
+          approved: parsed.approved === true || parsed.approved === undefined,
+          message: parsed.message
+        }
       }
       
-      // Если не JSON, проверяем текст ответа
+      // Если не JSON, анализируем текст
       const cleanResponse = aiResponse.toLowerCase().trim()
-      if (cleanResponse.includes('approved') || cleanResponse.includes('true')) {
-        return true
+      
+      // Если явно говорится об отклонении
+      if (cleanResponse.includes('reject') || 
+          cleanResponse.includes('not approved') ||
+          cleanResponse.includes('spam') ||
+          cleanResponse.includes('inappropriate')) {
+        return { 
+          approved: false,
+          message: "Content contains spam or inappropriate material"
+        }
       }
       
-      return false
+      // По умолчанию разрешаем
+      return { approved: true }
       
     } catch (parseError) {
       console.error("JSON parse error:", parseError)
-      // Если не удалось распарсить, проверяем содержание
-      if (aiResponse.toLowerCase().includes('spam') || 
-          aiResponse.toLowerCase().includes('nonsense') ||
-          aiResponse.toLowerCase().includes('gibberish') ||
-          aiResponse.toLowerCase().includes('reject')) {
-        return false
-      }
-      return true
+      return { approved: true } // При ошибке парсинга разрешаем
     }
     
   } catch (error) {
     console.error("Gemini AI проверка не удалась:", error)
-    // В случае ошибки API разрешаем публикацию, но логируем ошибку
-    return true
+    return { approved: true } // При ошибке разрешаем
   }
 }
 
-// Базовая проверка на спам (быстрая проверка перед AI)
-function basicSpamCheck(text: string): boolean {
-  if (!text || text.trim().length < 20) return false
+// Базовая проверка на явный спам и маты
+function basicContentCheck(text: string): {valid: boolean, message?: string} {
+  if (!text || text.trim().length === 0) {
+    return { valid: false, message: "Text cannot be empty" }
+  }
   
   const lowerText = text.toLowerCase()
   
-  // Проверка на повторяющиеся символы или слова
-  const repeatedCharPattern = /(.)\1{4,}/ // 5+ одинаковых символов подряд
-  if (repeatedCharPattern.test(lowerText)) return false
+  // Проверка на маты и плохие слова
+  for (const badWord of BAD_WORDS) {
+    if (lowerText.includes(badWord)) {
+      return { valid: false, message: "Content contains inappropriate language" }
+    }
+  }
   
-  // Проверка на слишком много специальных символов
-  const specialChars = lowerText.replace(/[a-zа-я0-9\s]/g, '').length
-  if (specialChars > text.length * 0.3) return false // Более 30% спецсимволов
+  // Проверка на явный спам (много повторяющихся символов)
+  const repeatedCharPattern = /(.)\1{6,}/ // 7+ одинаковых символов подряд
+  if (repeatedCharPattern.test(text)) {
+    return { valid: false, message: "Text appears to be spam" }
+  }
   
-  // Проверка на отсутствие пробелов в длинных текстах
-  if (text.length > 50 && !text.includes(' ')) return false
+  // Проверка на слишком много специальных символов (более 40%)
+  const specialChars = text.replace(/[a-zа-яё0-9\s.,!?;:-]/gi, '').length
+  if (specialChars > text.length * 0.4) {
+    return { valid: false, message: "Too many special characters" }
+  }
   
-  // Проверка на минимальное количество уникальных слов
-  const words = text.trim().split(/\s+/).filter(w => w.length > 2)
-  const uniqueWords = new Set(words)
-  if (uniqueWords.size < 2 && text.length > 30) return false
+  // Проверка на минимальную длину осмысленного текста
+  if (text.trim().length < 10) {
+    return { valid: false, message: "Text is too short" }
+  }
   
-  return true
+  return { valid: true }
 }
 
 export function ProblemForm({ userId, initialData }: ProblemFormProps) {
@@ -206,18 +227,21 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
     setError(null)
 
     try {
-      // Сначала базовая проверка на спам
-      if (!basicSpamCheck(title) || !basicSpamCheck(description)) {
-        setError("The problem content contains spam or meaningless text. Please provide a real problem with meaningful content.")
+      // Базовая проверка на маты и явный спам
+      const titleCheck = basicContentCheck(title)
+      const descCheck = basicContentCheck(description)
+      
+      if (!titleCheck.valid || !descCheck.valid) {
+        setError(titleCheck.message || descCheck.message || "Content validation failed")
         setIsValidating(false)
         return
       }
       
-      // Затем проверка через Gemini AI
-      const isProblemValid = await checkProblemWithAI(title, description)
+      // Проверка через Gemini AI (более интеллектуальная)
+      const aiCheck = await checkProblemWithAI(title, description)
       
-      if (!isProblemValid) {
-        setError("Origin AI checked the problem content and it's unacceptable for StartOrigin. Please, make the problem acceptable for publishing.")
+      if (!aiCheck.approved) {
+        setError(aiCheck.message || "Origin AI checked the problem content and it's unacceptable for StartOrigin. Please make sure your content is appropriate.")
         setIsValidating(false)
         return
       }
@@ -285,10 +309,10 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
       <CardContent className="pt-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="title">Problem Title *</Label>
+            <Label htmlFor="title">Share your idea or problem *</Label>
             <Input
               id="title"
-              placeholder="What problem are you facing?"
+              placeholder="What's on your mind? Share an idea, problem, or observation..."
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
@@ -302,7 +326,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
             <Label htmlFor="description">Description *</Label>
             <Textarea
               id="description"
-              placeholder="Describe the problem in detail. Be specific about the challenges you're facing..."
+              placeholder="Describe your thoughts in detail. This could be a problem you've noticed, an idea you have, or something interesting you observed..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               required
@@ -311,30 +335,31 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               disabled={isLoading || isValidating}
             />
             <p className="text-xs text-muted-foreground">
-              {description.length}/2000 characters. Describe your problem clearly with real words and sentences.
+              {description.length}/2000 characters. Be creative, share your thoughts!
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="contact">Contact</Label>
+            <Label htmlFor="contact">Contact (Optional)</Label>
             <Input
               id="contact"
-              placeholder="Telegram, WhatsApp, or Email"
+              placeholder="Telegram, WhatsApp, or Email if you want people to reach you"
               value={contact}
               onChange={(e) => setContact(e.target.value)}
               maxLength={100}
               disabled={isLoading || isValidating}
             />
-            <p className="text-xs text-muted-foreground">How can people reach you? (Optional)</p>
+            <p className="text-xs text-muted-foreground">Optional: Add contact if you're open to discussion</p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="category">Category</Label>
+            <Label htmlFor="category">Category (Optional)</Label>
             <Select value={category} onValueChange={setCategory} disabled={isLoading || isValidating}>
               <SelectTrigger id="category">
-                <SelectValue placeholder="Select a category" />
+                <SelectValue placeholder="Select a category if applicable" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="general">General Thoughts</SelectItem>
                 {CATEGORIES.map((cat) => (
                   <SelectItem key={cat} value={cat}>
                     {getCategoryLabel(cat)}
@@ -345,11 +370,11 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="tags">Tags</Label>
+            <Label htmlFor="tags">Tags (Optional)</Label>
             <div className="flex gap-2">
               <Input
                 id="tags"
-                placeholder="Add a tag"
+                placeholder="Add tags to help others find your post"
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -396,7 +421,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               disabled={isLoading || isValidating}
             />
             <Label htmlFor="cofounder" className="text-sm font-normal cursor-pointer">
-              I'm looking for a cofounder to solve this problem
+              I'm open to finding collaborators for this idea
             </Label>
           </div>
 
@@ -408,47 +433,55 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="open">Open</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="solved">Solved</SelectItem>
+                  <SelectItem value="open">Open for Discussion</SelectItem>
+                  <SelectItem value="in_progress">Working on It</SelectItem>
+                  <SelectItem value="solved">Solved/Completed</SelectItem>
                   <SelectItem value="closed">Closed</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           )}
 
-          <div className="rounded-md bg-blue-50 border border-blue-200 p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <AlertCircle className="h-5 w-5 text-blue-400" />
+          <div className="rounded-md bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 p-4">
+            <div className="flex items-start">
+              <div className="flex-shrink-0 mt-0.5">
+                <Sparkles className="h-5 w-5 text-blue-500" />
               </div>
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-blue-800">AI Validation</h3>
+                <h3 className="text-sm font-medium text-blue-800">Friendly AI Check</h3>
                 <div className="mt-2 text-sm text-blue-700">
                   <p>
-                    All problems are automatically checked by Origin AI to ensure quality:
+                    Our AI helper will quickly check your content to keep StartOrigin friendly and spam-free:
                   </p>
                   <ul className="list-disc pl-5 mt-1 space-y-1">
-                    <li>No spam, gibberish, or meaningless text</li>
-                    <li>Real problems with business/innovation potential</li>
-                    <li>Clear, serious, and properly formatted content</li>
-                    <li>Minimum 20 meaningful characters required</li>
+                    <li>✅ No spam, ads, or offensive language</li>
+                    <li>✅ Normal text in any language is welcome</li>
+                    <li>✅ Ideas, observations, and problems are all okay</li>
+                    <li>✅ News and thoughts are encouraged!</li>
+                    <li>❌ Please avoid jokes like "I can't stop farting"</li>
                   </ul>
+                  <p className="mt-2 text-blue-600">
+                    Be yourself, share authentically! ✨
+                  </p>
                 </div>
               </div>
             </div>
           </div>
 
           {error && (
-            <div className="rounded-md bg-destructive/10 border border-destructive/20 p-4">
+            <div className="rounded-md bg-amber-50 border border-amber-200 p-4">
               <div className="flex">
                 <div className="flex-shrink-0">
-                  <AlertCircle className="h-5 w-5 text-destructive" />
+                  <AlertCircle className="h-5 w-5 text-amber-500" />
                 </div>
                 <div className="ml-3">
-                  <h3 className="text-sm font-medium text-destructive">Validation Failed</h3>
-                  <div className="mt-2 text-sm text-destructive">
+                  <h3 className="text-sm font-medium text-amber-800">Content Needs Adjustment</h3>
+                  <div className="mt-2 text-sm text-amber-700">
                     <p>{error}</p>
+                    <p className="mt-2">
+                      Please adjust your content to make it more appropriate for our community. 
+                      You can share ideas, problems, or observations - just keep it respectful!
+                    </p>
                   </div>
                 </div>
               </div>
@@ -456,19 +489,22 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
           )}
 
           <div className="flex gap-4">
-            <Button type="submit" disabled={isLoading || isValidating} className="flex-1">
+            <Button type="submit" disabled={isLoading || isValidating} className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
               {isValidating ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Validating with AI...
+                  Checking with AI...
                 </>
               ) : isLoading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  {initialData ? "Updating..." : "Publishing..."}
+                  {initialData ? "Updating..." : "Sharing with Community..."}
                 </>
               ) : (
-                initialData ? "Update Problem" : "Publish Problem"
+                <>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  {initialData ? "Update Post" : "Share with Community"}
+                </>
               )}
             </Button>
             <Button type="button" variant="outline" onClick={() => router.back()} disabled={isLoading || isValidating}>
