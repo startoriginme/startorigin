@@ -73,9 +73,9 @@ export default async function ProblemsPage() {
     {
       id: 1,
       title: "Black Friday!",
-      description: "Invite a friend, and if a friend will publish a normal problem, you will get a collectible username!",
+      description: "Invite friends, get collectibles",
       buttonText: "Learn more",
-      buttonVariant: "default" as const,
+     buttonVariant: "outline" as const,
       link: "https://startorigin.me/problems/d13a2d85-21fa-4ccf-8129-d19ac726cdda",
       openInNewTab: true
     },
@@ -93,7 +93,7 @@ export default async function ProblemsPage() {
       title: "Origin AI",
       description: "Your AI friend that truly understands you",
       buttonText: "Try AI Chat",
-      buttonVariant: "default" as const,
+      buttonVariant: "outline" as const,
       link: "https://chat.startorigin.me/",
       openInNewTab: true
     }
