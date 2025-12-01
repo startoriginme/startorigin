@@ -7,7 +7,7 @@ import { notFound, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { Lightbulb, Plus, ArrowLeft, LogOut, User, Check, MessageCircle, Bell, Globe, ExternalLink } from "lucide-react"
+import { Lightbulb, Plus, ArrowLeft, LogOut, User, Check, MessageCircle, Globe, ExternalLink } from "lucide-react"
 import { ProblemCard } from "@/components/problem-card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -575,7 +575,7 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
                   )}
                 </div>
                 
-                <div className="space-y-4">
+                <div className="space-y-4 w-full">
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center justify-center gap-2">
                       <h2 className="text-2xl font-bold text-foreground break-words">
@@ -602,53 +602,66 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
                     )}
                   </div>
 
-                  {/* Кнопки действий */}
-                  <div className="flex flex-wrap justify-center gap-3 mt-4">
-                    {/* Кнопка "Visit Website" если есть сайт */}
-                    {profile.website && (
-                      <Button 
-                        variant="outline"
-                        onClick={() => {
-                          let url = profile.website
-                          if (!url.startsWith('http')) {
-                            url = 'https://' + url
-                          }
-                          window.open(url, '_blank', 'noopener,noreferrer')
-                        }}
-                        className="gap-2"
-                      >
-                        <Globe className="h-4 w-4" />
-                        Visit Website
-                        <ExternalLink className="h-3 w-3" />
-                      </Button>
-                    )}
-
-                    {/* Кнопка "Start Chat" если можно начать чат */}
+                  {/* Контейнер для кнопок в ряд */}
+                  <div className="flex justify-center items-start gap-3 mt-6">
+                    {/* Кнопка "Start Chat" слева */}
                     {canStartChat && (
-                      <Button 
-                        onClick={() => setShowChatModal(true)}
-                        className="gap-2"
-                      >
-                        <MessageCircle className="h-4 w-4" />
-                        Start a Chat
-                        {unreadChats.has(profile.id) && (
-                          <Badge 
-                            className="ml-1 h-5 w-5 flex items-center justify-center p-0 bg-blue-500 text-white"
-                            variant="default"
-                          >
-                            !
-                          </Badge>
-                        )}
-                      </Button>
+                      <div className="flex flex-col items-center gap-1">
+                        <Button 
+                          onClick={() => setShowChatModal(true)}
+                          className="gap-2 min-w-[140px]"
+                        >
+                          <MessageCircle className="h-4 w-4" />
+                          Start Chat
+                          {unreadChats.has(profile.id) && (
+                            <Badge 
+                              className="ml-1 h-5 w-5 flex items-center justify-center p-0 bg-blue-500 text-white"
+                              variant="default"
+                            >
+                              !
+                            </Badge>
+                          )}
+                        </Button>
+                      </div>
                     )}
 
-                    {/* Сообщение если чат отключен */}
-                    {currentUser && currentUser.id !== profile.id && profile.disable_chat && (
-                      <div className="text-sm text-muted-foreground italic mt-2">
-                        This user has disabled chat functionality
+                    {/* Кнопка "Visit Website" справа */}
+                    {profile.website && (
+                      <div className="flex flex-col items-center gap-1">
+                        <Button 
+                          variant="outline"
+                          onClick={() => {
+                            let url = profile.website
+                            if (!url.startsWith('http')) {
+                              url = 'https://' + url
+                            }
+                            window.open(url, '_blank', 'noopener,noreferrer')
+                          }}
+                          className="gap-2 min-w-[140px]"
+                        >
+                          <Globe className="h-4 w-4" />
+                          Visit Website
+                          <ExternalLink className="h-3 w-3" />
+                        </Button>
+                        
+                        {/* Сообщение если чат отключен - показываем ПОД кнопкой вебсайта */}
+                        {currentUser && currentUser.id !== profile.id && profile.disable_chat && !canStartChat && (
+                          <p className="text-xs text-muted-foreground italic mt-1 max-w-[140px] text-center">
+                            This user has disabled chat functionality
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
+
+                  {/* Если нет вебсайта, но чат отключен - показываем сообщение отдельно */}
+                  {currentUser && currentUser.id !== profile.id && profile.disable_chat && !canStartChat && !profile.website && (
+                    <div className="mt-2 text-center">
+                      <p className="text-sm text-muted-foreground italic">
+                        This user has disabled chat functionality
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>
