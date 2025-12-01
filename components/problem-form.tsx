@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { X, Loader2, AlertCircle, Sparkles } from "lucide-react"
+import { X, Loader2 } from "lucide-react"
 
 type ProblemFormProps = {
   userId: string
@@ -46,157 +46,6 @@ const CATEGORIES = [
   "other",
 ]
 
-// Список запрещенных и плохих слов (частично)
-const BAD_WORDS = [
-  // Маты (части слов)
-  "хуй", "пизд", "еба", "бля", "гондон", "мудак", "долбоёб",
-  // Английские плохие слова
-  "fuck", "shit", "asshole", "bitch", "dick", "pussy", "cunt",
-  // Оскорбительные выражения
-  "сука", "член", "трах", "секс", "секас"
-]
-
-// Функция проверки через Gemini AI (более дружелюбная)
-async function checkProblemWithAI(title: string, description: string): Promise<{approved: boolean, message?: string}> {
-  try {
-    const apiKey = "AIzaSyDGXbeDZsUEJJi8NX2la9_rpU7-H2SsrGE"
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`
-
-    const prompt = `Ты - дружелюбный помощник для платформы StartOrigin. Оцени, можно ли опубликовать этот контент.
-
-Критерии ОДОБРЕНИЯ (разреши если):
-1. Это нормальный текст на русском или английском (не бессмысленный набор символов)
-2. Нет явного спама, матов или оскорбительных слов
-3. Контент не является явной шуткой/троллингом по типу "Я не прекращаю пукать"
-
-Критерии ОТКЛОНЕНИЯ (отклони только если):
-1. Это явный спам или реклама
-2. Содержатся маты, оскорбления или неприличный контент
-3. Это совсем бессмысленный текст без осмысленных слов
-4. Очень глупый/детский юмор, не подходящий для бизнес-платформы
-
-Если текст просто не идеален, но нормальный - разреши. Если это просто новость или мысль - разреши.
-Если сомневаешься - разреши.
-
-Заголовок: "${title.substring(0, 100)}"
-Описание: "${description.substring(0, 500)}"
-
-Ответь в формате JSON:
-{
-  "approved": true/false,
-  "message": "Краткое объяснение на английском (если не approved)"
-}`
-
-    const response = await fetch(apiUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: prompt
-              }
-            ]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.1,
-          maxOutputTokens: 200,
-        }
-      })
-    })
-
-    if (!response.ok) {
-      console.error("API error:", await response.text())
-      return { approved: true } // В случае ошибки разрешаем
-    }
-
-    const data = await response.json()
-    const aiResponse = data?.candidates?.[0]?.content?.parts?.[0]?.text || ""
-    
-    console.log("AI Response:", aiResponse)
-    
-    try {
-      // Пытаемся распарсить JSON ответ
-      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0])
-        return {
-          approved: parsed.approved === true || parsed.approved === undefined,
-          message: parsed.message
-        }
-      }
-      
-      // Если не JSON, анализируем текст
-      const cleanResponse = aiResponse.toLowerCase().trim()
-      
-      // Если явно говорится об отклонении
-      if (cleanResponse.includes('reject') || 
-          cleanResponse.includes('not approved') ||
-          cleanResponse.includes('spam') ||
-          cleanResponse.includes('inappropriate')) {
-        return { 
-          approved: false,
-          message: "Content contains spam or inappropriate material"
-        }
-      }
-      
-      // По умолчанию разрешаем
-      return { approved: true }
-      
-    } catch (parseError) {
-      console.error("JSON parse error:", parseError)
-      return { approved: true } // При ошибке парсинга разрешаем
-    }
-    
-  } catch (error) {
-    console.error("Gemini AI проверка не удалась:", error)
-    return { approved: true } // При ошибке разрешаем
-  }
-}
-
-// Базовая проверка на явный спам и маты
-function basicContentCheck(text: string): {valid: boolean, message?: string} {
-  if (!text || text.trim().length === 0) {
-    return { valid: false, message: "Text cannot be empty" }
-  }
-  
-  // Минимальная длина - 10 символов (очень мало, но допустимо для заголовка)
-  if (text.trim().length < 10) {
-    return { valid: false, message: "Text is too short. Minimum 10 characters required." }
-  }
-  
-  const lowerText = text.toLowerCase()
-  
-  // Проверка на маты и плохие слова
-  for (const badWord of BAD_WORDS) {
-    if (lowerText.includes(badWord)) {
-      return { valid: false, message: "Content contains inappropriate language" }
-    }
-  }
-  
-  // Проверка на явный спам (много повторяющихся символов) - только для длинных текстов
-  if (text.length > 20) {
-    const repeatedCharPattern = /(.)\1{8,}/ // 9+ одинаковых символов подряд (только для явного спама)
-    if (repeatedCharPattern.test(text)) {
-      return { valid: false, message: "Text appears to be spam" }
-    }
-  }
-  
-  // Проверка на слишком много специальных символов (более 50%) - только для длинных текстов
-  if (text.length > 30) {
-    const specialChars = text.replace(/[a-zа-яё0-9\s.,!?;:'"()-]/gi, '').length
-    if (specialChars > text.length * 0.5) { // 50% спецсимволов
-      return { valid: false, message: "Too many special characters" }
-    }
-  }
-  
-  return { valid: true }
-}
-
 export function ProblemForm({ userId, initialData }: ProblemFormProps) {
   const [title, setTitle] = useState(initialData?.title || "")
   const [description, setDescription] = useState(initialData?.description || "")
@@ -208,7 +57,6 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
   const [lookingForCofounder, setLookingForCofounder] = useState(initialData?.looking_for_cofounder || false)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [isValidating, setIsValidating] = useState(false)
   const router = useRouter()
 
   const handleAddTag = () => {
@@ -225,42 +73,15 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (isLoading || isValidating) return
+    // 🔒 ЗАЩИТА ОТ МНОЖЕСТВЕННЫХ НАЖАТИЙ
+    if (isLoading) return
     
-    setIsValidating(true)
+    setIsLoading(true)
     setError(null)
 
-    try {
-      // Базовая проверка на маты и явный спам
-      const titleCheck = basicContentCheck(title)
-      const descCheck = basicContentCheck(description)
-      
-      if (!titleCheck.valid) {
-        setError(`Title: ${titleCheck.message}`)
-        setIsValidating(false)
-        return
-      }
-      
-      if (!descCheck.valid) {
-        setError(`Description: ${descCheck.message}`)
-        setIsValidating(false)
-        return
-      }
-      
-      // Проверка через Gemini AI (более интеллектуальная)
-      const aiCheck = await checkProblemWithAI(title, description)
-      
-      if (!aiCheck.approved) {
-        setError(aiCheck.message || "Origin AI checked the content and found it inappropriate. Please make sure your content is respectful and meaningful.")
-        setIsValidating(false)
-        return
-      }
-      
-      setIsValidating(false)
-      setIsLoading(true)
-      
-      const supabase = createClient()
+    const supabase = createClient()
 
+    try {
       if (initialData) {
         // Update existing problem
         const { error } = await supabase
@@ -280,6 +101,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
 
         if (error) throw error
         
+        // 🚀 ОПТИМИСТИЧНЫЙ РЕДИРЕКТ
         router.push(`/problems/${initialData.id}`)
         router.refresh()
       } else {
@@ -300,14 +122,15 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
 
         if (error) throw error
         
+        // 🚀 ОПТИМИСТИЧНЫЙ РЕДИРЕКТ - сразу переходим
         router.push(`/problems/${data.id}`)
         router.refresh()
       }
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred")
-      setIsValidating(false)
-      setIsLoading(false)
+      setIsLoading(false) // ❌ При ошибке снова разрешаем нажатия
     }
+    // ⚠️ Убрал finally - при успехе isLoading останется true, но это ок т.к. мы уходим со страницы
   }
 
   const getCategoryLabel = (category: string) => {
@@ -319,59 +142,54 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
       <CardContent className="pt-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="title">Share your idea or problem *</Label>
+            <Label htmlFor="title">Problem Title *</Label>
             <Input
               id="title"
-              placeholder="What's on your mind? Share an idea, problem, or observation..."
+              placeholder="What problem are you facing?"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
               maxLength={200}
-              disabled={isLoading || isValidating}
+              disabled={isLoading} // 🔒 Блокируем поля при загрузке
             />
-            <p className="text-xs text-muted-foreground">
-              {title.length}/200 characters. Minimum 10 characters.
-            </p>
+            <p className="text-xs text-muted-foreground">{title.length}/200 characters</p>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="description">Description *</Label>
             <Textarea
               id="description"
-              placeholder="Describe your thoughts in detail. This could be a problem you've noticed, an idea you have, or something interesting you observed..."
+              placeholder="Describe the problem in detail..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               required
               rows={8}
               maxLength={2000}
-              disabled={isLoading || isValidating}
+              disabled={isLoading} // 🔒 Блокируем поля при загрузке
             />
-            <p className="text-xs text-muted-foreground">
-              {description.length}/2000 characters. Minimum 10 characters. Be creative, share your thoughts!
-            </p>
+            <p className="text-xs text-muted-foreground">{description.length}/2000 characters</p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="contact">Contact (Optional)</Label>
+            <Label htmlFor="contact">Contact</Label>
             <Input
               id="contact"
-              placeholder="Telegram, WhatsApp, or Email if you want people to reach you"
+              placeholder="Telegram, WhatsApp, or Email"
               value={contact}
               onChange={(e) => setContact(e.target.value)}
               maxLength={100}
-              disabled={isLoading || isValidating}
+              disabled={isLoading} // 🔒 Блокируем поля при загрузке
             />
-            <p className="text-xs text-muted-foreground">Optional: Add contact if you're open to discussion</p>
+            <p className="text-xs text-muted-foreground">How can people reach you? (Optional)</p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="category">Category (Optional)</Label>
-            <Select value={category} onValueChange={setCategory} disabled={isLoading || isValidating}>
+            <Label htmlFor="category">Category</Label>
+            <Select value={category} onValueChange={setCategory} disabled={isLoading}>
               <SelectTrigger id="category">
-                <SelectValue placeholder="Select a category if applicable" />
+                <SelectValue placeholder="Select a category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="general">General Thoughts</SelectItem>
                 {CATEGORIES.map((cat) => (
                   <SelectItem key={cat} value={cat}>
                     {getCategoryLabel(cat)}
@@ -382,11 +200,11 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="tags">Tags (Optional)</Label>
+            <Label htmlFor="tags">Tags</Label>
             <div className="flex gap-2">
               <Input
                 id="tags"
-                placeholder="Add tags to help others find your post"
+                placeholder="Add a tag"
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -395,13 +213,13 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
                     handleAddTag()
                   }
                 }}
-                disabled={isLoading || isValidating}
+                disabled={isLoading} // 🔒 Блокируем поля при загрузке
               />
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleAddTag}
-                disabled={!tagInput.trim() || tags.length >= 5 || isLoading || isValidating}
+                disabled={!tagInput.trim() || tags.length >= 5 || isLoading}
               >
                 Add
               </Button>
@@ -415,7 +233,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
                       type="button" 
                       onClick={() => handleRemoveTag(tag)} 
                       className="ml-1 hover:text-destructive"
-                      disabled={isLoading || isValidating}
+                      disabled={isLoading} // 🔒 Блокируем кнопки при загрузке
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -430,100 +248,53 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               id="cofounder"
               checked={lookingForCofounder}
               onCheckedChange={(checked) => setLookingForCofounder(checked as boolean)}
-              disabled={isLoading || isValidating}
+              disabled={isLoading} // 🔒 Блокируем чекбокс при загрузке
             />
             <Label htmlFor="cofounder" className="text-sm font-normal cursor-pointer">
-              I'm open to finding collaborators for this idea
+              I'm looking for a cofounder to solve this problem
             </Label>
           </div>
 
           {initialData && (
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
-              <Select value={status} onValueChange={setStatus} disabled={isLoading || isValidating}>
+              <Select value={status} onValueChange={setStatus} disabled={isLoading}>
                 <SelectTrigger id="status">
                   <SelectValue />
                 </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="open">Open for Discussion</SelectItem>
-                <SelectItem value="in_progress">Working on It</SelectItem>
-                <SelectItem value="solved">Solved/Completed</SelectItem>
-                <SelectItem value="closed">Closed</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
-        <div className="rounded-md bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 p-4">
-          <div className="flex items-start">
-            <div className="flex-shrink-0 mt-0.5">
-              <Sparkles className="h-5 w-5 text-blue-500" />
+                <SelectContent>
+                  <SelectItem value="open">Open</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="solved">Solved</SelectItem>
+                  <SelectItem value="closed">Closed</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-blue-800">Friendly Content Check</h3>
-              <div className="mt-2 text-sm text-blue-700">
-                <p>
-                  We just do a quick check to keep the community friendly:
-                </p>
-                <ul className="list-disc pl-5 mt-1 space-y-1">
-                  <li>✅ Minimum 10 characters for title and description</li>
-                  <li>✅ No offensive language or hate speech</li>
-                  <li>✅ No obvious spam (like "aaaaaaaaaaa")</li>
-                  <li>✅ Normal text in any language is welcome</li>
-                  <li>✅ Share ideas, thoughts, problems - all good!</li>
-                </ul>
-                <p className="mt-2 text-blue-600">
-                  Most normal posts will be approved! ✨
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+          )}
 
-        {error && (
-          <div className="rounded-md bg-amber-50 border border-amber-200 p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <AlertCircle className="h-5 w-5 text-amber-500" />
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-amber-800">Content Needs Adjustment</h3>
-                <div className="mt-2 text-sm text-amber-700">
-                  <p>{error}</p>
-                  <p className="mt-2">
-                    Please adjust your content to meet our simple guidelines above.
-                  </p>
-                </div>
-              </div>
+          {error && (
+            <div className="rounded-md bg-destructive/10 p-3">
+              <p className="text-sm text-destructive">{error}</p>
             </div>
-          </div>
-        )}
+          )}
 
-        <div className="flex gap-4">
-          <Button type="submit" disabled={isLoading || isValidating} className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
-            {isValidating ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                Checking content...
-              </>
-            ) : isLoading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                {initialData ? "Updating..." : "Sharing with Community..."}
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4 mr-2" />
-                {initialData ? "Update Post" : "Share with Community"}
-              </>
-            )}
-          </Button>
-          <Button type="button" variant="outline" onClick={() => router.back()} disabled={isLoading || isValidating}>
-            Cancel
-          </Button>
-        </div>
-      </form>
-    </CardContent>
-  </Card>
+          <div className="flex gap-4">
+            <Button type="submit" disabled={isLoading} className="flex-1">
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  {initialData ? "Updating..." : "Publishing..."}
+                </>
+              ) : (
+                initialData ? "Update Problem" : "Publish Problem"
+              )}
+            </Button>
+            <Button type="button" variant="outline" onClick={() => router.back()} disabled={isLoading}>
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   )
 }
