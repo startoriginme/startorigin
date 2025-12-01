@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { ProblemsFeed } from "@/components/problems-feed"
 import { Button } from "@/components/ui/button"
-import { Lightbulb, Plus, ArrowRight, LogOut, User } from "lucide-react"
+import { Lightbulb, Plus, ArrowRight, LogOut, User, ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { redirect } from "next/navigation"
+import { HeroCarousel } from "@/components/hero-carousel"
 
 export default async function ProblemsPage() {
   const supabase = await createClient()
@@ -67,10 +68,51 @@ export default async function ProblemsPage() {
     redirect("/auth/login")
   }
 
+  // Hero slides data
+  const heroSlides = [
+    {
+      id: 1,
+      title: "Black Friday!",
+      description: "Invite a friend, and if a friend will publish a normal problem, you will get a collectible username!",
+      background: "bg-black",
+      textColor: "text-white",
+      buttonText: "Learn more",
+      buttonVariant: "default" as const,
+      link: "https://startorigin.me/problems/d13a2d85-21fa-4ccf-8129-d19ac726cdda",
+      openInNewTab: true
+    },
+    {
+      id: 2,
+      title: "OriginChat (Beta)",
+      description: "Chat with StartOrigin users on the platform.",
+      background: "bg-cover bg-center",
+      backgroundImage: "url('https://images.unsplash.com/photo-1662974770404-468fd9660389?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8Y2hhdHxlbnwwfHwwfHx8MA%3D%3D')",
+      textColor: "text-black",
+      buttonText: "Open Chat",
+      buttonVariant: "outline" as const,
+      link: "https://startorigin.me/user/chat",
+      openInNewTab: false,
+      overlay: "bg-white/70 backdrop-blur-sm"
+    },
+    {
+      id: 3,
+      title: "Origin AI",
+      description: "Your AI friend that truly understands you",
+      background: "bg-cover bg-center",
+      backgroundImage: "url('https://images.unsplash.com/photo-1727434032773-af3cd98375ba?w=500&auto=format&fit=crop&q=80&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')",
+      textColor: "text-black",
+      buttonText: "Try AI Chat",
+      buttonVariant: "default" as const,
+      link: "https://chat.startorigin.me/",
+      openInNewTab: true,
+      overlay: "bg-white/70 backdrop-blur-sm"
+    }
+  ]
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="border-b border-border bg-card">
+      <header className="border-b border-border bg-card sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <nav className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
@@ -197,26 +239,8 @@ export default async function ProblemsPage() {
         </div>
       </header>
 
-      {/* Minimal Hero Section */}
-      <section className="border-b border-border bg-card/50">
-        <div className="container mx-auto px-4 py-12">
-          <div className="mx-auto max-w-2xl text-center">
-            <h1 className="mb-4 text-3xl font-bold text-foreground">
-              Origin AI (Beta)
-
-            </h1>
-            <p className="mb-6 text-muted-foreground">
-              Your AI Friend That Truly Understands You
-            </p>
-            <Link href="https://chat.startorigin.me/" target="_blank">
-              <Button variant="outline" className="gap-2">
-                Start Now
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
+      {/* Hero Carousel Section */}
+      <HeroCarousel slides={heroSlides} />
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 flex-1">
