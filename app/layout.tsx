@@ -12,8 +12,8 @@ export const metadata: Metadata = {
   generator: 'v0.app',
   icons: {
     icon: "/lampochka.png",
-    shortcut: "/lampochka.png",
-    apple: "/lampochka.png",
+    shortcut: "/lightbulb.svg",
+    apple: "/lightbulb.svg",
   },
 }
 
