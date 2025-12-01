@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { ProblemsFeed } from "@/components/problems-feed"
 import { Button } from "@/components/ui/button"
-import { Lightbulb, Plus, ArrowRight, LogOut, User } from "lucide-react"
+import { Lightbulb, Plus, ArrowRight, LogOut, User, ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { redirect } from "next/navigation"
+import { HeroCarousel } from "@/components/hero-carousel"
 
 export default async function ProblemsPage() {
   const supabase = await createClient()
@@ -66,6 +67,37 @@ export default async function ProblemsPage() {
     await supabase.auth.signOut()
     redirect("/auth/login")
   }
+
+  // Hero slides data
+  const heroSlides = [
+    {
+      id: 1,
+      title: "Black Friday!",
+      description: "Invite friends, get collectibles",
+      buttonText: "Learn more",
+     buttonVariant: "outline" as const,
+      link: "https://startorigin.me/problems/d13a2d85-21fa-4ccf-8129-d19ac726cdda",
+      openInNewTab: true
+    },
+    {
+      id: 2,
+      title: "OriginChat (Beta)",
+      description: "Chat with StartOrigin users on the platform.",
+      buttonText: "Open Chat",
+      buttonVariant: "outline" as const,
+      link: "https://startorigin.me/user/chat",
+      openInNewTab: false
+    },
+    {
+      id: 3,
+      title: "Origin AI",
+      description: "Your AI friend that truly understands you",
+      buttonText: "Try AI Chat",
+      buttonVariant: "outline" as const,
+      link: "https://chat.startorigin.me/",
+      openInNewTab: true
+    }
+  ]
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -197,24 +229,10 @@ export default async function ProblemsPage() {
         </div>
       </header>
 
-      {/* Minimal Hero Section */}
-      <section className="border-b border-border bg-card/50">
-        <div className="container mx-auto px-4 py-12">
-          <div className="mx-auto max-w-2xl text-center">
-            <h1 className="mb-4 text-3xl font-bold text-foreground">
-              Origin AI (Beta)
-
-            </h1>
-            <p className="mb-6 text-muted-foreground">
-              Your AI Friend That Truly Understands You
-            </p>
-            <Link href="https://chat.startorigin.me/" target="_blank">
-              <Button variant="outline" className="gap-2">
-                Start Now
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
-          </div>
+      {/* Minimal Hero Carousel - 232px height */}
+      <section className="border-b border-border bg-white">
+        <div className="container mx-auto px-4 h-[232px] flex items-center justify-center">
+          <HeroCarousel slides={heroSlides} />
         </div>
       </section>
 
