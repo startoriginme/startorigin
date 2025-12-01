@@ -408,79 +408,58 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
   console.log('Rendering profile. Unread messages:', unreadMessagesCount)
   console.log('Unread chats for this profile:', unreadChats.has(profile.id))
 
-  return (
+return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4">
           <nav className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link href="/" className="flex items-center gap-2">
-                <Lightbulb className="h-6 w-6 text-primary" />
-                <span className="text-xl font-bold text-foreground">StartOrigin</span>
-              </Link>
-            </div>
+            <Link href="/" className="flex items-center gap-2">
+              <Lightbulb className="h-6 w-6 text-primary" />
+              <span className="text-xl font-bold text-foreground">StartOrigin</span>
+            </Link>
             
-            <div className="flex items-center gap-2 sm:gap-4">
-              {currentUser ? (
+            {/* Desktop Navigation - hidden on mobile */}
+            <div className="hidden md:flex items-center gap-4">
+              {user ? (
                 <>
                   <Link href="/problems/new">
                     <Button className="gap-2">
                       <Plus className="h-4 w-4" />
-                      <span className="hidden sm:inline">Share Problem</span>
+                      Share Problem
                     </Button>
                   </Link>
                   
+                  {/* Avatar Dropdown */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 relative">
+                      <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
                         <Avatar className="h-8 w-8">
                           <AvatarImage 
-                            src={currentUserProfile?.avatar_url || ""} 
+                            src={userProfile?.avatar_url || ""} 
                             className="object-cover"
                           />
                           <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
-                            {getInitials(currentUserProfile?.display_name || currentUserProfile?.username)}
+                            {getInitials(userProfile?.display_name || userProfile?.username)}
                           </AvatarFallback>
                         </Avatar>
-                        {unreadMessagesCount > 0 && (
-                          <Badge 
-                            className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-blue-500 text-white text-xs"
-                            variant="default"
-                          >
-                            {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
-                          </Badge>
-                        )}
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56">
                       <DropdownMenuItem asChild>
-                        <Link href="/profile" className="flex items-center gap-2 cursor-pointer w-full">
+                        <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
                           <User className="h-4 w-4" />
                           <span>Profile</span>
                         </Link>
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => setShowChatsModal(true)}
-                        className="flex items-center justify-between cursor-pointer w-full"
-                      >
-                        <div className="flex items-center gap-2">
-                          <MessageCircle className="h-4 w-4" />
-                          <span>Chats</span>
-                        </div>
-                        {unreadMessagesCount > 0 && (
-                          <Badge 
-                            className="h-5 w-5 flex items-center justify-center p-0 bg-blue-500 text-white text-xs"
-                            variant="default"
-                          >
-                            {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
-                          </Badge>
-                        )}
-                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2 cursor-pointer">
-                        <LogOut className="h-4 w-4" />
-                        <span>Sign Out</span>
+                      <DropdownMenuItem asChild>
+                        <form action={handleLogout} className="w-full">
+                          <button type="submit" className="flex items-center gap-2 w-full text-left cursor-pointer">
+                            <LogOut className="h-4 w-4" />
+                            <span>Sign Out</span>
+                          </button>
+                        </form>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -488,26 +467,70 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
               ) : (
                 <>
                   <Link href="/auth/login">
-                    <Button variant="outline" size="sm" className="hidden sm:flex">Sign In</Button>
+                    <Button variant="outline">Sign In</Button>
                   </Link>
                   <Link href="/auth/sign-up">
-                    <Button size="sm" className="hidden sm:flex">Get Started</Button>
+                    <Button>Get Started</Button>
                   </Link>
+                </>
+              )}
+            </div>
+
+            {/* Mobile Navigation - hidden on desktop */}
+            <div className="flex items-center gap-2 md:hidden">
+              {user ? (
+                <>
+                  {/* Mobile Plus Button */}
+                  <Link href="/problems/new">
+                    <Button size="icon" className="h-9 w-9">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                  
+                  {/* Mobile Avatar Dropdown */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="sm:hidden">
-                        <User className="h-4 w-4" />
-                      </Button>
+                      <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage 
+                            src={userProfile?.avatar_url || ""} 
+                            className="object-cover"
+                          />
+                          <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
+                            {getInitials(userProfile?.display_name || userProfile?.username)}
+                          </AvatarFallback>
+                        </Avatar>
+                      </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
+                    <DropdownMenuContent align="end" className="w-56">
                       <DropdownMenuItem asChild>
-                        <Link href="/auth/login" className="cursor-pointer">Sign In</Link>
+                        <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
+                          <User className="h-4 w-4" />
+                          <span>Profile</span>
+                        </Link>
                       </DropdownMenuItem>
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <Link href="/auth/sign-up" className="cursor-pointer">Get Started</Link>
+                        <form action={handleLogout} className="w-full">
+                          <button type="submit" className="flex items-center gap-2 w-full text-left cursor-pointer">
+                            <LogOut className="h-4 w-4" />
+                            <span>Sign Out</span>
+                          </button>
+                        </form>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
+                </>
+              ) : (
+                <>
+                  <Link href="/auth/login">
+                    <Button variant="outline" size="sm">
+                      Sign In
+                    </Button>
+                  </Link>
+                  <Link href="/auth/sign-up">
+                    <Button size="sm">Get Started</Button>
+                  </Link>
                 </>
               )}
             </div>
