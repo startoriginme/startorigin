@@ -7,7 +7,7 @@ import { notFound, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { Lightbulb, Plus, ArrowLeft, LogOut, User, Check, MessageCircle, Bell } from "lucide-react"
+import { Lightbulb, Plus, ArrowLeft, LogOut, User, Check, MessageCircle, Bell, Globe, ExternalLink } from "lucide-react"
 import { ProblemCard } from "@/components/problem-card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -47,7 +47,6 @@ function getAllUsernames(mainUsername: string): string[] {
 
 export default function PublicProfilePage({ params }: PublicProfilePageProps) {
   const [showChatModal, setShowChatModal] = useState(false)
-  const [showChatsModal, setShowChatsModal] = useState(false)
   const [profile, setProfile] = useState<any>(null)
   const [problems, setProblems] = useState<any[]>([])
   const [currentUser, setCurrentUser] = useState<any>(null)
@@ -55,7 +54,6 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
   const [allUsernames, setAllUsernames] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [userUpvotes, setUserUpvotes] = useState<Set<string>>(new Set())
-  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
   const [unreadChats, setUnreadChats] = useState<Set<string>>(new Set())
   const [shouldRedirect, setShouldRedirect] = useState(false)
   const router = useRouter()
@@ -83,11 +81,9 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
             event: '*',
             schema: 'public',
             table: 'messages',
-            filter: `recipient_id=eq.${currentUser.id}`,
           },
-          (payload) => {
+          () => {
             // При любом изменении сообщений обновляем счетчики
-            loadUnreadMessagesCount()
             loadUnreadChats()
           }
         )
@@ -99,48 +95,60 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
     }
   }, [currentUser])
 
-  const loadUnreadMessagesCount = async () => {
-    if (!currentUser) return
-
-    try {
-      const { count, error } = await supabase
-        .from('messages')
-        .select('*', { count: 'exact', head: true })
-        .eq('recipient_id', currentUser.id)
-        .eq('is_read', false)
-
-      console.log('Unread messages count:', count, error)
-      
-      if (!error && count !== null) {
-        setUnreadMessagesCount(count)
-      } else if (error) {
-        console.error('Error loading unread messages count:', error)
-      }
-    } catch (error) {
-      console.error('Error in loadUnreadMessagesCount:', error)
-    }
-  }
-
   const loadUnreadChats = async () => {
     if (!currentUser) return
 
     try {
       // Получаем уникальных отправителей с непрочитанными сообщениями
-      const { data, error } = await supabase
-        .from('messages')
-        .select('sender_id')
-        .eq('recipient_id', currentUser.id)
-        .eq('is_read', false)
+      // Используем таблицу chat_participants для поиска чатов пользователя
+      const { data: chatParticipants, error: chatError } = await supabase
+        .from('chat_participants')
+        .select(`
+          chat_id,
+          chats:chats (
+            id,
+            participants:chat_participants (
+              user_id
+            )
+          )
+        `)
+        .eq('user_id', currentUser.id)
 
-      console.log('Unread chats data:', data, error)
-      
-      if (!error && data) {
-        const senderIds = new Set(data.map(msg => msg.sender_id))
-        console.log('Unread sender IDs:', Array.from(senderIds))
-        setUnreadChats(senderIds)
-      } else if (error) {
-        console.error('Error loading unread chats:', error)
+      if (chatError) {
+        console.error('Error loading chat participants:', chatError)
+        return
       }
+
+      if (!chatParticipants) return
+
+      // Для каждого чата получаем непрочитанные сообщения
+      const unreadSenderIds = new Set<string>()
+
+      for (const cp of chatParticipants) {
+        const chat = cp.chats
+        
+        // Находим другого участника чата
+        const otherParticipant = chat.participants?.find(
+          (p: any) => p.user_id !== currentUser.id
+        )
+        
+        if (!otherParticipant) continue
+
+        // Проверяем есть ли непрочитанные сообщения от этого пользователя
+        const { data: unreadMessages, error: messagesError } = await supabase
+          .from('messages')
+          .select('id')
+          .eq('chat_id', chat.id)
+          .eq('sender_id', otherParticipant.user_id)
+          .eq('is_read', false)
+          .limit(1)
+
+        if (!messagesError && unreadMessages && unreadMessages.length > 0) {
+          unreadSenderIds.add(otherParticipant.user_id)
+        }
+      }
+
+      setUnreadChats(unreadSenderIds)
     } catch (error) {
       console.error('Error in loadUnreadChats:', error)
     }
@@ -158,8 +166,6 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
       setCurrentUser(user)
 
       if (user) {
-        console.log('Loading unread messages for user:', user.id)
-        await loadUnreadMessagesCount()
         await loadUnreadChats()
       }
 
@@ -177,9 +183,6 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
 
       // Проверяем, является ли этот профиль профилем текущего пользователя
       if (user) {
-        console.log('Checking if profile belongs to current user')
-        console.log('User ID:', user.id, 'Profile ID:', profileData.id)
-        
         // Сначала проверяем по прямому ID
         if (user.id === profileData.id) {
           console.log('Redirecting: same user ID')
@@ -190,7 +193,7 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
         // Затем проверяем по username и алиасам текущего пользователя
         const { data: currentProfile } = await supabase
           .from("profiles")
-          .select("avatar_url, display_name, username")
+          .select("avatar_url, display_name, username, website, disable_chat")
           .eq("id", user.id)
           .single()
         
@@ -199,8 +202,6 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
 
         if (currentProfile?.username) {
           const currentUserAllUsernames = await getAllUsernamesCombined(currentProfile.username, user.id)
-          console.log('Current user all usernames:', currentUserAllUsernames)
-          console.log('Requested username:', username)
           
           // Проверяем, совпадает ли запрошенный username с любым из username текущего пользователя
           if (currentUserAllUsernames.includes(username)) {
@@ -303,38 +304,32 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
     console.log('Searching for profile with username/alias:', username)
     
     // Сначала ищем в базе данных по алиасам
-    const { data: aliasData, error: aliasError } = await supabase
+    const { data: aliasData } = await supabase
       .from("user_aliases")
       .select("user_id")
       .eq("alias", username)
       .single()
 
-    console.log('Alias search result:', aliasData, aliasError)
-
-    if (!aliasError && aliasData) {
-      const { data: profileData, error: profileError } = await supabase
+    if (aliasData) {
+      const { data: profileData } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", aliasData.user_id)
         .single()
 
-      console.log('Profile by alias result:', profileData, profileError)
-
-      if (!profileError && profileData) {
+      if (profileData) {
         return profileData
       }
     }
 
     // Если не нашли в алиасах, ищем по основному username
-    const { data: profileData, error: profileError } = await supabase
+    const { data: profileData } = await supabase
       .from("profiles")
       .select("*")
       .eq("username", username)
       .single()
 
-    console.log('Profile by username result:', profileData, profileError)
-
-    if (!profileError && profileData) {
+    if (profileData) {
       return profileData
     }
 
@@ -343,15 +338,13 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
       if (mainUsername === username || aliases.includes(username)) {
         console.log('Found in static map, main username:', mainUsername)
         
-        const { data: staticProfileData, error: staticError } = await supabase
+        const { data: staticProfileData } = await supabase
           .from("profiles")
           .select("*")
           .eq("username", mainUsername)
           .single()
 
-        console.log('Static profile result:', staticProfileData, staticError)
-
-        if (!staticError && staticProfileData) {
+        if (staticProfileData) {
           return staticProfileData
         }
       }
@@ -405,8 +398,10 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
   const verifiedUsers = ["startorigin", "nikolaev", "winter", "gerxog"]
   const isVerifiedUser = profile.username ? verifiedUsers.includes(profile.username) : false
 
-  console.log('Rendering profile. Unread messages:', unreadMessagesCount)
-  console.log('Unread chats for this profile:', unreadChats.has(profile.id))
+  // Проверяем, можно ли начать чат с этим пользователем
+  const canStartChat = currentUser && 
+    currentUser.id !== profile.id && 
+    !profile.disable_chat
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -580,33 +575,56 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
                   )}
                 </div>
                 
-                <div className="space-y-2">
-                  <div className="flex flex-wrap items-center justify-center gap-2">
-                    <h2 className="text-2xl font-bold text-foreground break-words">
-                      {profile.display_name || profile.username || "Anonymous"}
-                    </h2>
-                    {isVerifiedUser && (
-                      <div className="text-blue-500 flex-shrink-0" title="Verified">
-                        <Check className="h-5 w-5" />
-                      </div>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                      <h2 className="text-2xl font-bold text-foreground break-words">
+                        {profile.display_name || profile.username || "Anonymous"}
+                      </h2>
+                      {isVerifiedUser && (
+                        <div className="text-blue-500 flex-shrink-0" title="Verified">
+                          <Check className="h-5 w-5" />
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex flex-wrap items-center justify-center gap-1">
+                      {allUsernames.map((userName, index) => (
+                        <span key={userName} className="text-muted-foreground">
+                          @{userName}
+                          {index < allUsernames.length - 1 && <span>, </span>}
+                        </span>
+                      ))}
+                    </div>
+                    
+                    {profile.bio && (
+                      <p className="mt-4 text-foreground max-w-2xl mx-auto">{profile.bio}</p>
                     )}
                   </div>
-                  
-                  <div className="flex flex-wrap items-center justify-center gap-1">
-                    {allUsernames.map((userName, index) => (
-                      <span key={userName} className="text-muted-foreground">
-                        @{userName}
-                        {index < allUsernames.length - 1 && <span>, </span>}
-                      </span>
-                    ))}
-                  </div>
-                  
-                  {profile.bio && (
-                    <p className="mt-4 text-foreground max-w-2xl">{profile.bio}</p>
-                  )}
 
-                  {currentUser && currentUser.id !== profile.id && (
-                    <div className="mt-6">
+                  {/* Кнопки действий */}
+                  <div className="flex flex-wrap justify-center gap-3 mt-4">
+                    {/* Кнопка "Visit Website" если есть сайт */}
+                    {profile.website && (
+                      <Button 
+                        variant="outline"
+                        onClick={() => {
+                          let url = profile.website
+                          if (!url.startsWith('http')) {
+                            url = 'https://' + url
+                          }
+                          window.open(url, '_blank', 'noopener,noreferrer')
+                        }}
+                        className="gap-2"
+                      >
+                        <Globe className="h-4 w-4" />
+                        Visit Website
+                        <ExternalLink className="h-3 w-3" />
+                      </Button>
+                    )}
+
+                    {/* Кнопка "Start Chat" если можно начать чат */}
+                    {canStartChat && (
                       <Button 
                         onClick={() => setShowChatModal(true)}
                         className="gap-2"
@@ -622,8 +640,15 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
                           </Badge>
                         )}
                       </Button>
-                    </div>
-                  )}
+                    )}
+
+                    {/* Сообщение если чат отключен */}
+                    {currentUser && currentUser.id !== profile.id && profile.disable_chat && (
+                      <div className="text-sm text-muted-foreground italic mt-2">
+                        This user has disabled chat functionality
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -666,27 +691,6 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
           isOpen={showChatModal}
           onClose={() => setShowChatModal(false)}
           recipientUser={profile}
-          currentUser={{
-            id: currentUser.id,
-            username: currentUserProfile?.username,
-            display_name: currentUserProfile?.display_name,
-            avatar_url: currentUserProfile?.avatar_url
-          }}
-          hasUnreadMessages={unreadChats.has(profile.id)}
-        />
-      )}
-
-      {/* Модальное окно всех чатов */}
-      {showChatsModal && currentUser && (
-        <ChatModal
-          isOpen={showChatsModal}
-          onClose={() => setShowChatsModal(false)}
-          recipientUser={{
-            id: "",
-            username: "all-chats",
-            display_name: "All Chats", 
-            avatar_url: null
-          }}
           currentUser={{
             id: currentUser.id,
             username: currentUserProfile?.username,
