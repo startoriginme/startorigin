@@ -1,9 +1,9 @@
 // components/chat-modal.tsx
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { X, Search, Send, Trash2, MessageCircle, Menu, MoreHorizontal, Smile } from "lucide-react"
+import { X, Search, Send, Trash2, MessageCircle, Menu, MoreHorizontal, Smile, Ban, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -14,8 +14,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import Link from "next/link"
 
 interface ChatModalProps {
   isOpen: boolean
@@ -67,7 +69,34 @@ interface SearchedUser {
   avatar_url: string | null
 }
 
+interface BlockedUser {
+  id: string
+  blocked_user_id: string
+  created_at: string
+}
+
 const EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏", "🔥", "👏"]
+
+// Мемоизированный компонент аватарки для предотвращения лишних ререндеров
+const MemoizedAvatar = ({ user, size = 8 }: { user: SearchedUser, size?: number }) => {
+  const getInitials = useCallback((name: string | null) => {
+    if (!name) return "U"
+    return name[0].toUpperCase()
+  }, [])
+
+  return (
+    <Avatar className={`h-${size} w-${size}`}>
+      <AvatarImage 
+        src={user.avatar_url || ""} 
+        className="object-cover"
+        alt={user.display_name || user.username || ""}
+      />
+      <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
+        {getInitials(user.display_name || user.username)}
+      </AvatarFallback>
+    </Avatar>
+  )
+}
 
 export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatModalProps) {
   const [activeChat, setActiveChat] = useState<string | null>(null)
@@ -80,10 +109,53 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
   const [isSending, setIsSending] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [showReactionPicker, setShowReactionPicker] = useState<string | null>(null)
+  const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const supabase = createClient()
+
+  // Загружаем заблокированных пользователей
+  const loadBlockedUsers = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('blocks')
+        .select('*')
+        .eq('blocker_id', currentUser.id)
+
+      if (error) throw error
+      setBlockedUsers(data || [])
+    } catch (error) {
+      console.error('Error loading blocked users:', error)
+    }
+  }, [currentUser.id, supabase])
+
+  // Мемоизированная функция для группировки сообщений по датам
+  const groupMessagesByDate = useCallback((messages: Message[]) => {
+    const groups: { [key: string]: Message[] } = {}
+    
+    messages.forEach(message => {
+      const date = new Date(message.created_at)
+      const dateKey = date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+      
+      if (!groups[dateKey]) {
+        groups[dateKey] = []
+      }
+      groups[dateKey].push(message)
+    })
+    
+    return groups
+  }, [])
+
+  // Мемоизированные сгруппированные сообщения
+  const groupedMessages = useMemo(() => 
+    groupMessagesByDate(messages), 
+    [messages, groupMessagesByDate]
+  )
 
   // Фокус на инпут при открытии
   useEffect(() => {
@@ -109,13 +181,14 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
     }, 100)
   }
 
-  // Загружаем чаты текущего пользователя
+  // Загружаем чаты и заблокированных пользователей
   useEffect(() => {
     if (isOpen) {
       loadChats()
+      loadBlockedUsers()
       setSearchResults([])
     }
-  }, [isOpen])
+  }, [isOpen, loadBlockedUsers])
 
   // Подписываемся на новые сообщения только для активного чата
   useEffect(() => {
@@ -263,6 +336,13 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
 
   const createNewChat = async (user: SearchedUser) => {
     try {
+      // Проверяем, не заблокирован ли пользователь
+      const isBlocked = blockedUsers.some(block => block.blocked_user_id === user.id)
+      if (isBlocked) {
+        alert("You cannot message a blocked user")
+        return null
+      }
+
       // Создаем новый чат
       const { data: newChat, error: createError } = await supabase
         .from('chats')
@@ -506,6 +586,13 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
 
   const startChatWithUser = async (user: SearchedUser) => {
     try {
+      // Проверяем, не заблокирован ли пользователь
+      const isBlocked = blockedUsers.some(block => block.blocked_user_id === user.id)
+      if (isBlocked) {
+        alert("You cannot message a blocked user")
+        return
+      }
+
       // Ищем существующий чат с этим пользователем
       const existingChat = chats.find(chat =>
         chat.participants.some((p: any) => p.id === user.id)
@@ -545,6 +632,105 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
     return otherUser || recipientUser
   }
 
+  const deleteChat = async (chatId: string) => {
+    if (!confirm("Are you sure you want to delete this chat? This action cannot be undone.")) return
+
+    try {
+      // Удаляем все сообщения в чате
+      const { error: messagesError } = await supabase
+        .from('messages')
+        .delete()
+        .eq('chat_id', chatId)
+
+      if (messagesError) throw messagesError
+
+      // Удаляем участников чата
+      const { error: participantsError } = await supabase
+        .from('chat_participants')
+        .delete()
+        .eq('chat_id', chatId)
+
+      if (participantsError) throw participantsError
+
+      // Удаляем сам чат
+      const { error: chatError } = await supabase
+        .from('chats')
+        .delete()
+        .eq('id', chatId)
+
+      if (chatError) throw chatError
+
+      // Обновляем локальное состояние
+      setChats(prev => prev.filter(chat => chat.id !== chatId))
+      if (activeChat === chatId) {
+        setActiveChat(null)
+        setMessages([])
+      }
+      
+      alert("Chat deleted successfully")
+    } catch (error) {
+      console.error('Error deleting chat:', error)
+      alert("Failed to delete chat")
+    }
+  }
+
+  const blockUser = async (userId: string) => {
+    if (!confirm("Are you sure you want to block this user? You will not receive messages from them.")) return
+
+    try {
+      const { error } = await supabase
+        .from('blocks')
+        .insert({
+          blocker_id: currentUser.id,
+          blocked_user_id: userId
+        })
+
+      if (error) throw error
+
+      // Обновляем локальное состояние
+      setBlockedUsers(prev => [...prev, {
+        id: Date.now().toString(),
+        blocker_id: currentUser.id,
+        blocked_user_id: userId,
+        created_at: new Date().toISOString()
+      }])
+
+      // Если есть активный чат с этим пользователем, удаляем его
+      const chatWithUser = chats.find(chat =>
+        chat.participants.some((p: any) => p.id === userId)
+      )
+      
+      if (chatWithUser) {
+        deleteChat(chatWithUser.id)
+      }
+
+      alert("User blocked successfully")
+    } catch (error) {
+      console.error('Error blocking user:', error)
+      alert("Failed to block user")
+    }
+  }
+
+  const unblockUser = async (userId: string) => {
+    try {
+      const { error } = await supabase
+        .from('blocks')
+        .delete()
+        .eq('blocker_id', currentUser.id)
+        .eq('blocked_user_id', userId)
+
+      if (error) throw error
+
+      // Обновляем локальное состояние
+      setBlockedUsers(prev => prev.filter(block => block.blocked_user_id !== userId))
+      
+      alert("User unblocked successfully")
+    } catch (error) {
+      console.error('Error unblocking user:', error)
+      alert("Failed to unblock user")
+    }
+  }
+
   const ReactionPicker = ({ messageId, onClose }: { messageId: string, onClose: () => void }) => (
     <div className="absolute bottom-full left-0 mb-2 bg-background border border-border rounded-lg shadow-lg p-2 z-10">
       <div className="flex gap-1">
@@ -564,118 +750,276 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
     </div>
   )
 
-  // Сайдбар для мобильных
-  const ChatSidebar = () => (
-    <div className="w-full h-full flex flex-col">
-      <div className="p-4 border-b border-border">
-        <div className="flex items-center gap-2 mb-4">
-          <Search className="h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search users..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && searchUsers()}
-            className="flex-1"
-          />
+  // Мемоизированная функция для рендеринга сообщений по группам дат
+  const renderMessages = () => {
+    return Object.entries(groupedMessages).map(([date, dateMessages]) => (
+      <div key={date} className="space-y-3 sm:space-y-4">
+        {/* Дата заголовок */}
+        <div className="flex justify-center my-4">
+          <Badge variant="outline" className="px-3 py-1 bg-background">
+            {date}
+          </Badge>
         </div>
-        <Button variant="outline" className="w-full" onClick={searchUsers} disabled={isLoading}>
-          {isLoading ? "Searching..." : "Search"}
-        </Button>
-      </div>
-
-      <ScrollArea className="flex-1">
-        <div className="p-2">
-          {/* Результаты поиска */}
-          {searchResults.length > 0 && (
-            <div className="mb-4">
-              <h3 className="text-sm font-medium mb-2 px-2">Search Results</h3>
-              {searchResults.map(user => (
+        
+        {/* Сообщения для этой даты */}
+        {dateMessages.map(message => {
+          const isBlockedUser = blockedUsers.some(block => 
+            block.blocked_user_id === message.sender_id
+          )
+          
+          if (isBlockedUser) return null
+          
+          return (
+            <div
+              key={message.id}
+              className={`flex gap-2 sm:gap-3 group relative ${
+                message.sender_id === currentUser.id ? 'justify-end' : 'justify-start'
+              }`}
+            >
+              {message.sender_id !== currentUser.id && (
+                <MemoizedAvatar user={getCurrentChatUser()} size={8} />
+              )}
+              
+              <div className={`max-w-[85%] sm:max-w-[70%] min-w-0 ${
+                message.sender_id === currentUser.id ? 'order-first' : ''
+              }`}>
                 <div
-                  key={user.id}
-                  className="p-3 rounded-lg cursor-pointer hover:bg-accent transition-colors mb-2"
-                  onClick={() => startChatWithUser(user)}
-                >
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage 
-                        src={user.avatar_url || ""} 
-                        className="object-cover"
-                      />
-                      <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
-                        {user.display_name?.[0] || user.username?.[0] || "U"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">
-                        {user.display_name || user.username}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        @{user.username}
-                      </p>
-                    </div>
-                    <MessageCircle className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Список чатов */}
-          <h3 className="text-sm font-medium mb-2 px-2">Your Chats</h3>
-          {chats.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>No chats yet</p>
-            </div>
-          ) : (
-            chats.map(chat => {
-              const otherUser = chat.participants.find((p: any) => p.id !== currentUser.id)
-              if (!otherUser) return null
-
-              return (
-                <div
-                  key={chat.id}
-                  className={`p-3 rounded-lg cursor-pointer hover:bg-accent transition-colors ${
-                    activeChat === chat.id ? 'bg-accent' : ''
+                  className={`rounded-lg p-3 text-sm sm:text-base relative ${
+                    message.sender_id === currentUser.id
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted'
                   }`}
-                  onClick={() => {
-                    setActiveChat(chat.id)
-                    loadMessages(chat.id)
-                    setMobileSidebarOpen(false)
-                  }}
                 >
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage 
-                        src={otherUser.avatar_url || ""} 
-                        className="object-cover"
-                      />
-                      <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
-                        {otherUser.display_name?.[0] || otherUser.username?.[0] || "U"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">
-                        {otherUser.display_name || otherUser.username}
-                      </p>
-                      {chat.last_message && (
-                        <p className="text-xs text-muted-foreground truncate">
-                          {chat.last_message.content}
-                        </p>
-                      )}
-                    </div>
+                  <p className="break-words whitespace-pre-wrap">{message.content}</p>
+                  
+                  {/* Меню сообщения */}
+                  <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-6 w-6">
+                          <MoreHorizontal className="h-3 w-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setShowReactionPicker(message.id)}>
+                          <Smile className="h-4 w-4 mr-2" />
+                          Add Reaction
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => deleteMessage(message.id)}>
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
-              )
-            })
-          )}
+                
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <span className="text-xs text-muted-foreground">
+                    {formatTime(message.created_at)}
+                  </span>
+                  
+                  {/* Реакции */}
+                  {message.reactions && message.reactions.length > 0 && (
+                    <div className="flex gap-1 flex-wrap">
+                      {Object.entries(
+                        message.reactions.reduce((acc: any, reaction) => {
+                          acc[reaction.emoji] = (acc[reaction.emoji] || 0) + 1
+                          return acc
+                        }, {})
+                      ).map(([emoji, count]) => (
+                        <Badge
+                          key={emoji}
+                          variant="secondary"
+                          className="text-xs cursor-pointer hover:bg-accent px-1 py-0 h-5"
+                          onClick={() => {
+                            const userReaction = message.reactions.find(
+                              r => r.user_id === currentUser.id && r.emoji === emoji
+                            )
+                            if (userReaction) {
+                              removeReaction(message.id, emoji)
+                            } else {
+                              addReaction(message.id, emoji)
+                            }
+                          }}
+                        >
+                          {emoji} {count}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Picker для реакций */}
+              {showReactionPicker === message.id && (
+                <ReactionPicker 
+                  messageId={message.id} 
+                  onClose={() => setShowReactionPicker(null)}
+                />
+              )}
+            </div>
+          )
+        })}
+      </div>
+    ))
+  }
+
+  // Сайдбар для мобильных
+  const ChatSidebar = () => {
+    const currentChatUserMemo = useMemo(() => getCurrentChatUser(), [activeChat, chats, recipientUser])
+
+    return (
+      <div className="w-full h-full flex flex-col">
+        <div className="p-4 border-b border-border">
+          <div className="flex items-center gap-2 mb-4">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search users..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && searchUsers()}
+              className="flex-1"
+            />
+          </div>
+          <Button variant="outline" className="w-full" onClick={searchUsers} disabled={isLoading}>
+            {isLoading ? "Searching..." : "Search"}
+          </Button>
         </div>
-      </ScrollArea>
-    </div>
-  )
+
+        <ScrollArea className="flex-1">
+          <div className="p-2">
+            {/* Результаты поиска */}
+            {searchResults.length > 0 && (
+              <div className="mb-4">
+                <h3 className="text-sm font-medium mb-2 px-2">Search Results</h3>
+                {searchResults.map(user => {
+                  const isBlocked = blockedUsers.some(block => block.blocked_user_id === user.id)
+                  return (
+                    <div
+                      key={user.id}
+                      className={`p-3 rounded-lg cursor-pointer hover:bg-accent transition-colors mb-2 ${
+                        isBlocked ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                      onClick={() => !isBlocked && startChatWithUser(user)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <MemoizedAvatar user={user} size={10} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-sm truncate">
+                              {user.display_name || user.username}
+                            </p>
+                            {isBlocked && (
+                              <Badge variant="destructive" className="text-xs">
+                                Blocked
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">
+                            @{user.username}
+                          </p>
+                        </div>
+                        <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Список чатов */}
+            <h3 className="text-sm font-medium mb-2 px-2">Your Chats</h3>
+            {chats.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>No chats yet</p>
+              </div>
+            ) : (
+              chats.map(chat => {
+                const otherUser = chat.participants.find((p: any) => p.id !== currentUser.id)
+                if (!otherUser) return null
+                
+                const isBlocked = blockedUsers.some(block => block.blocked_user_id === otherUser.id)
+
+                return (
+                  <div
+                    key={chat.id}
+                    className={`p-3 rounded-lg cursor-pointer hover:bg-accent transition-colors mb-2 ${
+                      activeChat === chat.id ? 'bg-accent' : ''
+                    } ${isBlocked ? 'opacity-50' : ''}`}
+                    onClick={() => !isBlocked && {
+                      setActiveChat(chat.id)
+                      loadMessages(chat.id)
+                      setMobileSidebarOpen(false)
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <MemoizedAvatar user={otherUser} size={10} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-sm truncate">
+                              {otherUser.display_name || otherUser.username}
+                            </p>
+                            {isBlocked && (
+                              <Badge variant="destructive" className="text-xs">
+                                Blocked
+                              </Badge>
+                            )}
+                          </div>
+                          {chat.last_message && (
+                            <p className="text-xs text-muted-foreground truncate">
+                              {chat.last_message.content}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild>
+                            <Link href={`/profile/${otherUser.username}`} className="cursor-pointer">
+                              <User className="h-4 w-4 mr-2" />
+                              View Profile
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => deleteChat(chat.id)}>
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete Chat
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          {isBlocked ? (
+                            <DropdownMenuItem onClick={() => unblockUser(otherUser.id)}>
+                              <Ban className="h-4 w-4 mr-2" />
+                              Unblock User
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem onClick={() => blockUser(otherUser.id)}>
+                              <Ban className="h-4 w-4 mr-2" />
+                              Block User
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        </ScrollArea>
+      </div>
+    )
+  }
 
   if (!isOpen) return null
 
   const currentChatUser = getCurrentChatUser()
+  const isBlocked = blockedUsers.some(block => block.blocked_user_id === currentChatUser.id)
 
   return (
     <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
@@ -693,27 +1037,59 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
                 <ChatSidebar />
               </SheetContent>
             </Sheet>
-            <Avatar className="h-8 w-8">
-              <AvatarImage 
-                src={currentChatUser.avatar_url || ""} 
-                className="object-cover"
-              />
-              <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
-                {currentChatUser.display_name?.[0] || currentChatUser.username?.[0] || "U"}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <p className="font-medium text-sm">
-                {currentChatUser.display_name || currentChatUser.username}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                @{currentChatUser.username}
-              </p>
+            <MemoizedAvatar user={currentChatUser} size={8} />
+            <div className="flex items-center gap-2">
+              <div>
+                <p className="font-medium text-sm">
+                  {currentChatUser.display_name || currentChatUser.username}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  @{currentChatUser.username}
+                </p>
+              </div>
+              {isBlocked && (
+                <Badge variant="destructive" className="text-xs">
+                  Blocked
+                </Badge>
+              )}
             </div>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                  <Link href={`/profile/${currentChatUser.username}`} className="cursor-pointer">
+                    <User className="h-4 w-4 mr-2" />
+                    View Profile
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => deleteChat(activeChat || "")}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Chat
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {isBlocked ? (
+                  <DropdownMenuItem onClick={() => unblockUser(currentChatUser.id)}>
+                    <Ban className="h-4 w-4 mr-2" />
+                    Unblock User
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem onClick={() => blockUser(currentChatUser.id)}>
+                    <Ban className="h-4 w-4 mr-2" />
+                    Block User
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button variant="ghost" size="icon" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         {/* Сайдбар с чатами - десктоп */}
@@ -726,176 +1102,110 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
           {/* Заголовок чата - десктоп */}
           <div className="hidden sm:flex p-4 border-b border-border items-center justify-between">
             <div className="flex items-center gap-3">
-              <Avatar className="h-8 w-8">
-                <AvatarImage 
-                  src={currentChatUser.avatar_url || ""} 
-                  className="object-cover"
-                />
-                <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
-                  {currentChatUser.display_name?.[0] || currentChatUser.username?.[0] || "U"}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="font-medium">
-                  {currentChatUser.display_name || currentChatUser.username}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  @{currentChatUser.username}
-                </p>
+              <MemoizedAvatar user={currentChatUser} size={8} />
+              <div className="flex items-center gap-2">
+                <div>
+                  <p className="font-medium">
+                    {currentChatUser.display_name || currentChatUser.username}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    @{currentChatUser.username}
+                  </p>
+                </div>
+                {isBlocked && (
+                  <Badge variant="destructive" className="text-xs">
+                    Blocked
+                  </Badge>
+                )}
               </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link href={`/profile/${currentChatUser.username}`} className="cursor-pointer">
+                      <User className="h-4 w-4 mr-2" />
+                      View Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => deleteChat(activeChat || "")}>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Chat
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {isBlocked ? (
+                    <DropdownMenuItem onClick={() => unblockUser(currentChatUser.id)}>
+                      <Ban className="h-4 w-4 mr-2" />
+                      Unblock User
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem onClick={() => blockUser(currentChatUser.id)}>
+                      <Ban className="h-4 w-4 mr-2" />
+                      Block User
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button variant="ghost" size="icon" onClick={onClose}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
           {/* Сообщения */}
           <ScrollArea className="flex-1 min-h-0">
             <div className="p-3 sm:p-4">
-              <div className="space-y-3 sm:space-y-4 max-h-full">
-                {messages.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>No messages yet. Start the conversation!</p>
-                  </div>
-                ) : (
-                  messages.map(message => (
-                    <div
-                      key={message.id}
-                      className={`flex gap-2 sm:gap-3 group relative ${
-                        message.sender_id === currentUser.id ? 'justify-end' : 'justify-start'
-                      }`}
-                    >
-                      {message.sender_id !== currentUser.id && (
-                        <Avatar className="h-6 w-6 sm:h-8 sm:w-8 flex-shrink-0">
-                          <AvatarImage 
-                            src={currentChatUser.avatar_url || ""} 
-                            className="object-cover"
-                          />
-                          <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
-                            {currentChatUser.display_name?.[0] || currentChatUser.username?.[0] || "U"}
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
-                      
-                      <div className={`max-w-[85%] sm:max-w-[70%] min-w-0 ${
-                        message.sender_id === currentUser.id ? 'order-first' : ''
-                      }`}>
-                        <div
-                          className={`rounded-lg p-3 text-sm sm:text-base relative ${
-                            message.sender_id === currentUser.id
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-muted'
-                          }`}
-                        >
-                          <p className="break-words whitespace-pre-wrap">{message.content}</p>
-                          
-                          {/* Меню сообщения */}
-                          <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-6 w-6">
-                                  <MoreHorizontal className="h-3 w-3" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => setShowReactionPicker(message.id)}>
-                                  <Smile className="h-4 w-4 mr-2" />
-                                  Add Reaction
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => deleteMessage(message.id)}>
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <span className="text-xs text-muted-foreground">
-                            {formatTime(message.created_at)}
-                          </span>
-                          
-                          {/* Реакции */}
-                          {message.reactions && message.reactions.length > 0 && (
-                            <div className="flex gap-1 flex-wrap">
-                              {Object.entries(
-                                message.reactions.reduce((acc: any, reaction) => {
-                                  acc[reaction.emoji] = (acc[reaction.emoji] || 0) + 1
-                                  return acc
-                                }, {})
-                              ).map(([emoji, count]) => (
-                                <Badge
-                                  key={emoji}
-                                  variant="secondary"
-                                  className="text-xs cursor-pointer hover:bg-accent px-1 py-0 h-5"
-                                  onClick={() => {
-                                    const userReaction = message.reactions.find(
-                                      r => r.user_id === currentUser.id && r.emoji === emoji
-                                    )
-                                    if (userReaction) {
-                                      removeReaction(message.id, emoji)
-                                    } else {
-                                      addReaction(message.id, emoji)
-                                    }
-                                  }}
-                                >
-                                  {emoji} {count}
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      
-                      {/* Picker для реакций */}
-                      {showReactionPicker === message.id && (
-                        <ReactionPicker 
-                          messageId={message.id} 
-                          onClose={() => setShowReactionPicker(null)}
-                        />
-                      )}
-                    </div>
-                  ))
-                )}
-                <div ref={messagesEndRef} />
-              </div>
+              {messages.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>{isBlocked ? "This user is blocked. No messages available." : "No messages yet. Start the conversation!"}</p>
+                </div>
+              ) : (
+                renderMessages()
+              )}
+              <div ref={messagesEndRef} />
             </div>
           </ScrollArea>
 
           {/* Ввод сообщения */}
-          <div className="p-3 sm:p-4 border-t border-border">
-            <div className="flex gap-2">
-              <Input
-                ref={inputRef}
-                placeholder="Type a message..."
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault() // Предотвращаем стандартное поведение
-                    sendMessage()
-                  }
-                }}
-                className="flex-1"
-                disabled={isSending}
-              />
-              <Button 
-                onClick={sendMessage} 
-                disabled={!newMessage.trim() || isSending}
-                size="sm"
-                className="sm:px-3"
-              >
-                {isSending ? (
-                  <div className="animate-spin">
+          {!isBlocked && (
+            <div className="p-3 sm:p-4 border-t border-border">
+              <div className="flex gap-2">
+                <Input
+                  ref={inputRef}
+                  placeholder="Type a message..."
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      sendMessage()
+                    }
+                  }}
+                  className="flex-1"
+                  disabled={isSending}
+                />
+                <Button 
+                  onClick={sendMessage} 
+                  disabled={!newMessage.trim() || isSending}
+                  size="sm"
+                  className="sm:px-3"
+                >
+                  {isSending ? (
+                    <div className="animate-spin">
+                      <Send className="h-4 w-4" />
+                    </div>
+                  ) : (
                     <Send className="h-4 w-4" />
-                  </div>
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-              </Button>
+                  )}
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
