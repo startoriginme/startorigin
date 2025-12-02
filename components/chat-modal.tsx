@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { X, Search, Send, Trash2, MessageCircle, Menu, MoreHorizontal, Smile, Ban, User } from "lucide-react"
+import { X, Search, Send, Trash2, MessageCircle, Menu, MoreHorizontal, Smile, Ban, User, Bell } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -17,6 +17,24 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import Link from "next/link"
 
 interface ChatModalProps {
@@ -45,6 +63,7 @@ interface Message {
   deleted_by: string[]
   chat_id: string
   reactions: Reaction[]
+  is_read: boolean
 }
 
 interface Reaction {
@@ -71,6 +90,7 @@ interface SearchedUser {
 
 interface BlockedUser {
   id: string
+  blocker_id: string
   blocked_user_id: string
   created_at: string
 }
@@ -110,6 +130,31 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [showReactionPicker, setShowReactionPicker] = useState<string | null>(null)
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([])
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean
+    title: string
+    description: string
+    onConfirm: () => void
+    confirmText?: string
+    cancelText?: string
+  }>({
+    isOpen: false,
+    title: "",
+    description: "",
+    onConfirm: () => {},
+    confirmText: "Confirm",
+    cancelText: "Cancel"
+  })
+  const [notificationDialog, setNotificationDialog] = useState<{
+    isOpen: boolean
+    title: string
+    description: string
+  }>({
+    isOpen: false,
+    title: "",
+    description: ""
+  })
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -127,8 +172,36 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
       setBlockedUsers(data || [])
     } catch (error) {
       console.error('Error loading blocked users:', error)
+      showNotification("Error", "Failed to load blocked users")
     }
   }, [currentUser.id, supabase])
+
+  // Показать диалог подтверждения
+  const showConfirmDialog = useCallback((
+    title: string, 
+    description: string, 
+    onConfirm: () => void,
+    confirmText?: string,
+    cancelText?: string
+  ) => {
+    setConfirmDialog({
+      isOpen: true,
+      title,
+      description,
+      onConfirm,
+      confirmText,
+      cancelText
+    })
+  }, [])
+
+  // Показать диалог уведомления
+  const showNotification = useCallback((title: string, description: string) => {
+    setNotificationDialog({
+      isOpen: true,
+      title,
+      description
+    })
+  }, [])
 
   // Мемоизированная функция для группировки сообщений по датам
   const groupMessagesByDate = useCallback((messages: Message[]) => {
@@ -248,6 +321,31 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
     }
   }, [activeChat])
 
+  // Подписка на уведомления о непрочитанных сообщениях
+  useEffect(() => {
+    const channel = supabase
+      .channel(`unread_messages:${currentUser.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `sender_id=neq.${currentUser.id}`
+        },
+        (payload) => {
+          const newMessage = payload.new as Message
+          // Обновляем счетчик непрочитанных для соответствующего чата
+          loadChats()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [currentUser.id, supabase])
+
   const loadChats = async () => {
     try {
       setIsLoading(true)
@@ -282,12 +380,12 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
         return
       }
 
-      // Загружаем последние сообщения для каждого чата
+      // Загружаем последние сообщения и количество непрочитанных для каждого чата
       const chatsWithMessages = await Promise.all(
         chatParticipants.map(async (cp: any) => {
           const chat = cp.chats
           
-          // Получаем последнее сообщение (не удаленное)
+          // Получаем последнее сообщение
           const { data: lastMessage } = await supabase
             .from('messages')
             .select('*')
@@ -296,12 +394,20 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
             .limit(1)
             .single()
 
+          // Считаем количество непрочитанных сообщений
+          const { count: unreadCount } = await supabase
+            .from('messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('chat_id', chat.id)
+            .eq('is_read', false)
+            .neq('sender_id', currentUser.id)
+
           return {
             id: chat.id,
             created_at: chat.created_at,
             participants: chat.participants.map((p: any) => p.user),
             last_message: lastMessage || undefined,
-            unread_count: 0
+            unread_count: unreadCount || 0
           }
         })
       )
@@ -323,6 +429,8 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
       if (existingChat) {
         setActiveChat(existingChat.id)
         await loadMessages(existingChat.id)
+        // Помечаем сообщения как прочитанные
+        await markMessagesAsRead(existingChat.id)
       } else {
         // Создаем новый чат с получателем
         await createNewChat(recipientUser)
@@ -334,12 +442,41 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
     }
   }
 
+  // Пометить сообщения как прочитанные
+  const markMessagesAsRead = async (chatId: string) => {
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .update({ is_read: true })
+        .eq('chat_id', chatId)
+        .eq('is_read', false)
+        .neq('sender_id', currentUser.id)
+
+      if (error) throw error
+
+      // Обновляем локальное состояние
+      setMessages(prev => prev.map(msg => ({
+        ...msg,
+        is_read: true
+      })))
+
+      // Обновляем счетчик непрочитанных в чатах
+      setChats(prev => prev.map(chat => 
+        chat.id === chatId 
+          ? { ...chat, unread_count: 0 }
+          : chat
+      ))
+    } catch (error) {
+      console.error('Error marking messages as read:', error)
+    }
+  }
+
   const createNewChat = async (user: SearchedUser) => {
     try {
       // Проверяем, не заблокирован ли пользователь
       const isBlocked = blockedUsers.some(block => block.blocked_user_id === user.id)
       if (isBlocked) {
-        alert("You cannot message a blocked user")
+        showNotification("Cannot Message", "You cannot message a blocked user")
         return null
       }
 
@@ -352,6 +489,7 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
 
       if (createError || !newChat) {
         console.error('Error creating chat:', createError)
+        showNotification("Error", "Failed to create chat")
         return null
       }
 
@@ -365,6 +503,7 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
 
       if (participantsError) {
         console.error('Error adding participants:', participantsError)
+        showNotification("Error", "Failed to add participants")
         return null
       }
 
@@ -379,9 +518,11 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
       setChats(prev => [newChatObj, ...prev])
       setActiveChat(newChat.id)
       
+      showNotification("Success", "Chat created successfully")
       return newChat.id
     } catch (error) {
       console.error('Error in createNewChat:', error)
+      showNotification("Error", "Failed to create chat")
       return null
     }
   }
@@ -415,10 +556,14 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
       // Обеспечиваем что у каждого сообщения есть массив reactions
       const messagesWithReactions = filteredMessages.map(msg => ({
         ...msg,
-        reactions: msg.reactions || []
+        reactions: msg.reactions || [],
+        is_read: msg.is_read || false
       }))
 
       setMessages(messagesWithReactions)
+
+      // Помечаем сообщения как прочитанные
+      await markMessagesAsRead(chatId)
     } catch (error) {
       console.error('Error in loadMessages:', error)
     }
@@ -434,21 +579,23 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
         .insert({
           chat_id: activeChat,
           sender_id: currentUser.id,
-          content: newMessage.trim()
+          content: newMessage.trim(),
+          is_read: false
         })
         .select()
         .single()
 
       if (error) {
         console.error('Error sending message:', error)
-        alert('Failed to send message')
+        showNotification("Error", "Failed to send message")
         return
       }
 
       // Добавляем сообщение локально для мгновенного отображения
       setMessages(prev => [...prev, {
         ...data,
-        reactions: []
+        reactions: [],
+        is_read: true
       }])
 
       setNewMessage("")
@@ -456,9 +603,12 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
       setTimeout(() => {
         inputRef.current?.focus()
       }, 50)
+
+      // Обновляем список чатов
+      setTimeout(() => loadChats(), 300)
     } catch (error) {
       console.error('Error in sendMessage:', error)
-      alert('Failed to send message')
+      showNotification("Error", "Failed to send message")
     } finally {
       setIsSending(false)
     }
@@ -466,31 +616,42 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
 
   const deleteMessage = async (messageId: string) => {
     try {
-      // Удаляем сначала все реакции, связанные с сообщением
-      const { error: reactionsError } = await supabase
-        .from('message_reactions')
-        .delete()
-        .eq('message_id', messageId)
+      showConfirmDialog(
+        "Delete Message",
+        "Are you sure you want to delete this message? This action cannot be undone.",
+        async () => {
+          // Удаляем сначала все реакции, связанные с сообщением
+          const { error: reactionsError } = await supabase
+            .from('message_reactions')
+            .delete()
+            .eq('message_id', messageId)
 
-      if (reactionsError) {
-        console.error('Error deleting reactions:', reactionsError)
-        return
-      }
+          if (reactionsError) {
+            console.error('Error deleting reactions:', reactionsError)
+            showNotification("Error", "Failed to delete reactions")
+            return
+          }
 
-      // Удаляем само сообщение
-      const { error } = await supabase
-        .from('messages')
-        .delete()
-        .eq('id', messageId)
+          // Удаляем само сообщение
+          const { error } = await supabase
+            .from('messages')
+            .delete()
+            .eq('id', messageId)
 
-      if (error) {
-        console.error('Error deleting message:', error)
-      } else {
-        // Удаляем сообщение локально
-        setMessages(prev => prev.filter(msg => msg.id !== messageId))
-      }
+          if (error) {
+            console.error('Error deleting message:', error)
+            showNotification("Error", "Failed to delete message")
+          } else {
+            // Удаляем сообщение локально
+            setMessages(prev => prev.filter(msg => msg.id !== messageId))
+            showNotification("Success", "Message deleted successfully")
+          }
+        },
+        "Delete"
+      )
     } catch (error) {
       console.error('Error in deleteMessage:', error)
+      showNotification("Error", "Failed to delete message")
     }
   }
 
@@ -506,6 +667,7 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
 
       if (error) {
         console.error('Error adding reaction:', error)
+        showNotification("Error", "Failed to add reaction")
       } else {
         // Обновляем сообщения локально
         setMessages(prev => prev.map(msg => 
@@ -524,6 +686,7 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
       }
     } catch (error) {
       console.error('Error in addReaction:', error)
+      showNotification("Error", "Failed to add reaction")
     }
   }
 
@@ -538,6 +701,7 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
 
       if (error) {
         console.error('Error removing reaction:', error)
+        showNotification("Error", "Failed to remove reaction")
       } else {
         // Обновляем сообщения локально
         setMessages(prev => prev.map(msg => 
@@ -553,6 +717,7 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
       }
     } catch (error) {
       console.error('Error in removeReaction:', error)
+      showNotification("Error", "Failed to remove reaction")
     }
   }
 
@@ -573,12 +738,14 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
 
       if (error) {
         console.error('Error searching users:', error)
+        showNotification("Error", "Failed to search users")
         return
       }
 
       setSearchResults(data || [])
     } catch (error) {
       console.error('Error in searchUsers:', error)
+      showNotification("Error", "Failed to search users")
     } finally {
       setIsLoading(false)
     }
@@ -589,7 +756,7 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
       // Проверяем, не заблокирован ли пользователь
       const isBlocked = blockedUsers.some(block => block.blocked_user_id === user.id)
       if (isBlocked) {
-        alert("You cannot message a blocked user")
+        showNotification("Cannot Message", "You cannot message a blocked user")
         return
       }
 
@@ -614,6 +781,7 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
       setMobileSidebarOpen(false)
     } catch (error) {
       console.error('Error starting chat:', error)
+      showNotification("Error", "Failed to start chat")
     }
   }
 
@@ -633,101 +801,118 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
   }
 
   const deleteChat = async (chatId: string) => {
-    if (!confirm("Are you sure you want to delete this chat? This action cannot be undone.")) return
-
     try {
-      // Удаляем все сообщения в чате
-      const { error: messagesError } = await supabase
-        .from('messages')
-        .delete()
-        .eq('chat_id', chatId)
+      showConfirmDialog(
+        "Delete Chat",
+        "Are you sure you want to delete this chat? This action cannot be undone.",
+        async () => {
+          // Удаляем все сообщения в чате
+          const { error: messagesError } = await supabase
+            .from('messages')
+            .delete()
+            .eq('chat_id', chatId)
 
-      if (messagesError) throw messagesError
+          if (messagesError) throw messagesError
 
-      // Удаляем участников чата
-      const { error: participantsError } = await supabase
-        .from('chat_participants')
-        .delete()
-        .eq('chat_id', chatId)
+          // Удаляем участников чата
+          const { error: participantsError } = await supabase
+            .from('chat_participants')
+            .delete()
+            .eq('chat_id', chatId)
 
-      if (participantsError) throw participantsError
+          if (participantsError) throw participantsError
 
-      // Удаляем сам чат
-      const { error: chatError } = await supabase
-        .from('chats')
-        .delete()
-        .eq('id', chatId)
+          // Удаляем сам чат
+          const { error: chatError } = await supabase
+            .from('chats')
+            .delete()
+            .eq('id', chatId)
 
-      if (chatError) throw chatError
+          if (chatError) throw chatError
 
-      // Обновляем локальное состояние
-      setChats(prev => prev.filter(chat => chat.id !== chatId))
-      if (activeChat === chatId) {
-        setActiveChat(null)
-        setMessages([])
-      }
-      
-      alert("Chat deleted successfully")
+          // Обновляем локальное состояние
+          setChats(prev => prev.filter(chat => chat.id !== chatId))
+          if (activeChat === chatId) {
+            setActiveChat(null)
+            setMessages([])
+          }
+          
+          showNotification("Success", "Chat deleted successfully")
+        },
+        "Delete"
+      )
     } catch (error) {
       console.error('Error deleting chat:', error)
-      alert("Failed to delete chat")
+      showNotification("Error", "Failed to delete chat")
     }
   }
 
   const blockUser = async (userId: string) => {
-    if (!confirm("Are you sure you want to block this user? You will not receive messages from them.")) return
-
     try {
-      const { error } = await supabase
-        .from('blocks')
-        .insert({
-          blocker_id: currentUser.id,
-          blocked_user_id: userId
-        })
+      showConfirmDialog(
+        "Block User",
+        "Are you sure you want to block this user? You will not receive messages from them.",
+        async () => {
+          const { error } = await supabase
+            .from('blocks')
+            .insert({
+              blocker_id: currentUser.id,
+              blocked_user_id: userId
+            })
 
-      if (error) throw error
+          if (error) throw error
 
-      // Обновляем локальное состояние
-      setBlockedUsers(prev => [...prev, {
-        id: Date.now().toString(),
-        blocker_id: currentUser.id,
-        blocked_user_id: userId,
-        created_at: new Date().toISOString()
-      }])
+          // Обновляем локальное состояние
+          setBlockedUsers(prev => [...prev, {
+            id: Date.now().toString(),
+            blocker_id: currentUser.id,
+            blocked_user_id: userId,
+            created_at: new Date().toISOString()
+          }])
 
-      // Если есть активный чат с этим пользователем, удаляем его
-      const chatWithUser = chats.find(chat =>
-        chat.participants.some((p: any) => p.id === userId)
+          // Если есть активный чат с этим пользователем, удаляем его
+          const chatWithUser = chats.find(chat =>
+            chat.participants.some((p: any) => p.id === userId)
+          )
+          
+          if (chatWithUser) {
+            deleteChat(chatWithUser.id)
+          }
+
+          showNotification("Success", "User blocked successfully")
+        },
+        "Block"
       )
-      
-      if (chatWithUser) {
-        deleteChat(chatWithUser.id)
-      }
-
-      alert("User blocked successfully")
     } catch (error) {
       console.error('Error blocking user:', error)
-      alert("Failed to block user")
+      showNotification("Error", "Failed to block user")
     }
   }
 
   const unblockUser = async (userId: string) => {
     try {
-      const { error } = await supabase
-        .from('blocks')
-        .delete()
-        .eq('blocker_id', currentUser.id)
-        .eq('blocked_user_id', userId)
+      showConfirmDialog(
+        "Unblock User",
+        "Are you sure you want to unblock this user? You will be able to receive messages from them again.",
+        async () => {
+          const { error } = await supabase
+            .from('blocks')
+            .delete()
+            .eq('blocker_id', currentUser.id)
+            .eq('blocked_user_id', userId)
 
-      if (error) throw error
+          if (error) throw error
 
-      // Обновляем локальное состояние
-      setBlockedUsers(prev => prev.filter(block => block.blocked_user_id !== userId))
-      
-      alert("User unblocked successfully")
+          // Обновляем локальное состояние
+          setBlockedUsers(prev => prev.filter(block => block.blocked_user_id !== userId))
+          
+          showNotification("Success", "User unblocked successfully")
+        },
+        "Unblock"
+      )
     } catch (error) {
       console.error('Error unblocking user:', error)
-      alert("Failed to unblock user")
+      showNotification("Error", "Failed to unblock user")
     }
   }
 
@@ -980,37 +1165,50 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
                           )}
                         </div>
                       </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem asChild>
-                            <Link href={`/profile/${otherUser.username}`} className="cursor-pointer">
-                              <User className="h-4 w-4 mr-2" />
-                              View Profile
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => deleteChat(chat.id)}>
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete Chat
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          {isBlocked ? (
-                            <DropdownMenuItem onClick={() => unblockUser(otherUser.id)}>
-                              <Ban className="h-4 w-4 mr-2" />
-                              Unblock User
+                      <div className="flex items-center gap-2">
+                        {/* Счетчик непрочитанных сообщений */}
+                        {chat.unread_count > 0 && (
+                          <div className="relative">
+                            <div className="absolute -top-2 -right-2">
+                              <Badge variant="default" className="h-5 w-5 p-0 flex items-center justify-center rounded-full bg-blue-500 text-white text-xs font-bold">
+                                {chat.unread_count > 9 ? '9+' : chat.unread_count}
+                              </Badge>
+                            </div>
+                            <Bell className="h-4 w-4 text-blue-500" />
+                          </div>
+                        )}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem asChild>
+                              <Link href={`/user/${otherUser.username}`} className="cursor-pointer">
+                                <User className="h-4 w-4 mr-2" />
+                                View Profile
+                              </Link>
                             </DropdownMenuItem>
-                          ) : (
-                            <DropdownMenuItem onClick={() => blockUser(otherUser.id)}>
-                              <Ban className="h-4 w-4 mr-2" />
-                              Block User
+                            <DropdownMenuItem onClick={() => deleteChat(chat.id)}>
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete Chat
                             </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                            <DropdownMenuSeparator />
+                            {isBlocked ? (
+                              <DropdownMenuItem onClick={() => unblockUser(otherUser.id)}>
+                                <Ban className="h-4 w-4 mr-2" />
+                                Unblock User
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem onClick={() => blockUser(otherUser.id)}>
+                                <Ban className="h-4 w-4 mr-2" />
+                                Block User
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
                   </div>
                 )
@@ -1028,90 +1226,26 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
   const isBlocked = blockedUsers.some(block => block.blocked_user_id === currentChatUser.id)
 
   return (
-    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
-      <div className="bg-background border border-border rounded-lg shadow-lg w-full h-full max-w-6xl max-h-[90vh] flex flex-col sm:flex-row">
-        {/* Мобильный header */}
-        <div className="sm:hidden p-4 border-b border-border flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <Menu className="h-4 w-4" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-80 p-0">
-                <ChatSidebar />
-              </SheetContent>
-            </Sheet>
-            <MemoizedAvatar user={currentChatUser} size={8} />
-            <div className="flex items-center gap-2">
-              <div>
-                <p className="font-medium text-sm">
-                  {currentChatUser.display_name || currentChatUser.username}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  @{currentChatUser.username}
-                </p>
-              </div>
-              {isBlocked && (
-                <Badge variant="destructive" className="text-xs">
-                  Blocked
-                </Badge>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem asChild>
-                  <Link href={`/profile/${currentChatUser.username}`} className="cursor-pointer">
-                    <User className="h-4 w-4 mr-2" />
-                    View Profile
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => deleteChat(activeChat || "")}>
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Chat
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                {isBlocked ? (
-                  <DropdownMenuItem onClick={() => unblockUser(currentChatUser.id)}>
-                    <Ban className="h-4 w-4 mr-2" />
-                    Unblock User
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem onClick={() => blockUser(currentChatUser.id)}>
-                    <Ban className="h-4 w-4 mr-2" />
-                    Block User
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Сайдбар с чатами - десктоп */}
-        <div className="hidden sm:flex w-80 border-r border-border flex-col">
-          <ChatSidebar />
-        </div>
-
-        {/* Основная область чата */}
-        <div className="flex-1 flex flex-col min-h-0">
-          {/* Заголовок чата - десктоп */}
-          <div className="hidden sm:flex p-4 border-b border-border items-center justify-between">
+    <>
+      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+        <div className="bg-background border border-border rounded-lg shadow-lg w-full h-full max-w-6xl max-h-[90vh] flex flex-col sm:flex-row">
+          {/* Мобильный header */}
+          <div className="sm:hidden p-4 border-b border-border flex items-center justify-between">
             <div className="flex items-center gap-3">
+              <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <Menu className="h-4 w-4" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-80 p-0">
+                  <ChatSidebar />
+                </SheetContent>
+              </Sheet>
               <MemoizedAvatar user={currentChatUser} size={8} />
               <div className="flex items-center gap-2">
                 <div>
-                  <p className="font-medium">
+                  <p className="font-medium text-sm">
                     {currentChatUser.display_name || currentChatUser.username}
                   </p>
                   <p className="text-xs text-muted-foreground">
@@ -1134,7 +1268,7 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem asChild>
-                    <Link href={`/profile/${currentChatUser.username}`} className="cursor-pointer">
+                    <Link href={`/user/${currentChatUser.username}`} className="cursor-pointer">
                       <User className="h-4 w-4 mr-2" />
                       View Profile
                     </Link>
@@ -1163,57 +1297,163 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
             </div>
           </div>
 
-          {/* Сообщения */}
-          <ScrollArea className="flex-1 min-h-0">
-            <div className="p-3 sm:p-4">
-              {messages.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>{isBlocked ? "This user is blocked. No messages available." : "No messages yet. Start the conversation!"}</p>
-                </div>
-              ) : (
-                renderMessages()
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-          </ScrollArea>
+          {/* Сайдбар с чатами - десктоп */}
+          <div className="hidden sm:flex w-80 border-r border-border flex-col">
+            <ChatSidebar />
+          </div>
 
-          {/* Ввод сообщения */}
-          {!isBlocked && (
-            <div className="p-3 sm:p-4 border-t border-border">
-              <div className="flex gap-2">
-                <Input
-                  ref={inputRef}
-                  placeholder="Type a message..."
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      sendMessage()
-                    }
-                  }}
-                  className="flex-1"
-                  disabled={isSending}
-                />
-                <Button 
-                  onClick={sendMessage} 
-                  disabled={!newMessage.trim() || isSending}
-                  size="sm"
-                  className="sm:px-3"
-                >
-                  {isSending ? (
-                    <div className="animate-spin">
-                      <Send className="h-4 w-4" />
-                    </div>
-                  ) : (
-                    <Send className="h-4 w-4" />
+          {/* Основная область чата */}
+          <div className="flex-1 flex flex-col min-h-0">
+            {/* Заголовок чата - десктоп */}
+            <div className="hidden sm:flex p-4 border-b border-border items-center justify-between">
+              <div className="flex items-center gap-3">
+                <MemoizedAvatar user={currentChatUser} size={8} />
+                <div className="flex items-center gap-2">
+                  <div>
+                    <p className="font-medium">
+                      {currentChatUser.display_name || currentChatUser.username}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      @{currentChatUser.username}
+                    </p>
+                  </div>
+                  {isBlocked && (
+                    <Badge variant="destructive" className="text-xs">
+                      Blocked
+                    </Badge>
                   )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem asChild>
+                      <Link href={`/user/${currentChatUser.username}`} className="cursor-pointer">
+                        <User className="h-4 w-4 mr-2" />
+                        View Profile
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => deleteChat(activeChat || "")}>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Chat
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    {isBlocked ? (
+                      <DropdownMenuItem onClick={() => unblockUser(currentChatUser.id)}>
+                        <Ban className="h-4 w-4 mr-2" />
+                        Unblock User
+                      </DropdownMenuItem>
+                    ) : (
+                      <DropdownMenuItem onClick={() => blockUser(currentChatUser.id)}>
+                        <Ban className="h-4 w-4 mr-2" />
+                        Block User
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button variant="ghost" size="icon" onClick={onClose}>
+                  <X className="h-4 w-4" />
                 </Button>
               </div>
             </div>
-          )}
+
+            {/* Сообщения */}
+            <ScrollArea className="flex-1 min-h-0">
+              <div className="p-3 sm:p-4">
+                {messages.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>{isBlocked ? "This user is blocked. No messages available." : "No messages yet. Start the conversation!"}</p>
+                  </div>
+                ) : (
+                  renderMessages()
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+            </ScrollArea>
+
+            {/* Ввод сообщения */}
+            {!isBlocked && (
+              <div className="p-3 sm:p-4 border-t border-border">
+                <div className="flex gap-2">
+                  <Input
+                    ref={inputRef}
+                    placeholder="Type a message..."
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        sendMessage()
+                      }
+                    }}
+                    className="flex-1"
+                    disabled={isSending}
+                  />
+                  <Button 
+                    onClick={sendMessage} 
+                    disabled={!newMessage.trim() || isSending}
+                    size="sm"
+                    className="sm:px-3"
+                  >
+                    {isSending ? (
+                      <div className="animate-spin">
+                        <Send className="h-4 w-4" />
+                      </div>
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Диалог подтверждения */}
+      <AlertDialog open={confirmDialog.isOpen} onOpenChange={(open) => setConfirmDialog(prev => ({ ...prev, isOpen: open }))}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{confirmDialog.title}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmDialog.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}>
+              {confirmDialog.cancelText}
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              confirmDialog.onConfirm()
+              setConfirmDialog(prev => ({ ...prev, isOpen: false }))
+            }}>
+              {confirmDialog.confirmText}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Диалог уведомления */}
+      <Dialog open={notificationDialog.isOpen} onOpenChange={(open) => setNotificationDialog(prev => ({ ...prev, isOpen: open }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{notificationDialog.title}</DialogTitle>
+            <DialogDescription>
+              {notificationDialog.description}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setNotificationDialog(prev => ({ ...prev, isOpen: false }))}>
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
