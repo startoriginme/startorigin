@@ -7,79 +7,93 @@
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
+  --card: rgba(255, 255, 255, 0.85);
   --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
+  --popover: rgba(255, 255, 255, 0.9);
   --popover-foreground: oklch(0.145 0 0);
   --primary: oklch(0.205 0 0);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
+  --muted: rgba(248, 250, 252, 0.8);
   --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
+  --accent: rgba(241, 245, 249, 0.8);
   --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --destructive: rgba(239, 68, 68, 0.9);
+  --destructive-foreground: oklch(1 0 0);
+  --border: rgba(203, 213, 225, 0.4);
+  --input: rgba(255, 255, 255, 0.85);
+  --ring: rgba(148, 163, 184, 0.3);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
+  --radius: 1rem;
+  --sidebar: rgba(248, 250, 252, 0.9);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary: rgba(15, 23, 42, 0.9);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent: rgba(241, 245, 249, 0.8);
   --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-border: rgba(203, 213, 225, 0.4);
+  --sidebar-ring: rgba(148, 163, 184, 0.3);
   
-  /* Mint color for button hover */
-  --mint: oklch(0.85 0.1 180);
+  /* Liquid Glass Effects */
+  --glass-blur: 20px;
+  --glass-border: rgba(255, 255, 255, 0.25);
+  --glass-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
+  --glass-highlight: rgba(255, 255, 255, 0.15);
+  --glass-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+  --glass-gradient-hover: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%);
+  
+  /* Mint color для совместимости */
+  --mint: rgba(183, 235, 224, 0.9);
   --mint-foreground: oklch(0.2 0.05 180);
 }
 
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
+  --card: rgba(15, 23, 42, 0.8);
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
+  --popover: rgba(15, 23, 42, 0.85);
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.985 0 0);
   --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
+  --secondary: rgba(30, 41, 59, 0.8);
   --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
+  --muted: rgba(30, 41, 59, 0.8);
   --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
+  --accent: rgba(30, 41, 59, 0.8);
   --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
+  --destructive: rgba(220, 38, 38, 0.9);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: rgba(71, 85, 105, 0.4);
+  --input: rgba(30, 41, 59, 0.8);
+  --ring: rgba(71, 85, 105, 0.5);
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
+  --sidebar: rgba(15, 23, 42, 0.8);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary: rgba(99, 102, 241, 0.9);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent: rgba(30, 41, 59, 0.8);
   --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
+  --sidebar-border: rgba(71, 85, 105, 0.4);
+  --sidebar-ring: rgba(71, 85, 105, 0.5);
   
-  /* Mint color for dark mode */
-  --mint: oklch(0.7 0.15 180);
+  /* Liquid Glass Effects для темной темы */
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --glass-highlight: rgba(255, 255, 255, 0.05);
+  --glass-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+  --glass-gradient-hover: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+  
+  --mint: rgba(20, 184, 166, 0.8);
   --mint-foreground: oklch(0.95 0.02 180);
 }
 
@@ -112,71 +126,673 @@
   --color-chart-5: var(--chart-5);
   --color-mint: var(--mint);
   --color-mint-foreground: var(--mint-foreground);
+  
+  /* Glass эффекты */
+  --glass-blur: var(--glass-blur);
+  --glass-border: var(--glass-border);
+  --glass-shadow: var(--glass-shadow);
+  --glass-highlight: var(--glass-highlight);
+  
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --sidebar: var(--sidebar);
+  --sidebar-foreground: var(--sidebar-foreground);
+  --sidebar-primary: var(--sidebar-primary);
+  --sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --sidebar-accent: var(--sidebar-accent);
+  --sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --sidebar-border: var(--sidebar-border);
+  --sidebar-ring: var(--sidebar-ring);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    transition: background-color 0.3s ease, border-color 0.3s ease, transform 0.3s ease, opacity 0.3s ease;
   }
+  
   body {
     @apply bg-background text-foreground;
     font-family: 'Montserrat', sans-serif;
+    background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  
+  .dark body {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  }
+  
+  /* Улучшенный скроллбар */
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full border backdrop-blur-sm;
+    background: var(--glass-gradient);
+    border: 1px solid var(--glass-border);
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--glass-gradient-hover);
+  }
+  
+  /* Selection стиль */
+  ::selection {
+    @apply bg-primary/20 text-foreground;
+  }
+  
+  /* Liquid background эффекты */
+  body::before {
+    content: '';
+    @apply fixed inset-0 -z-50;
+    background: 
+      radial-gradient(circle at 20% 80%, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(236, 72, 153, 0.1) 0%, transparent 50%);
+    animation: liquid-float 20s ease-in-out infinite alternate;
+  }
+  
+  .dark body::before {
+    background: 
+      radial-gradient(circle at 20% 80%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(236, 72, 153, 0.05) 0%, transparent 50%);
   }
 }
 
 @layer components {
-  /* Button hover effects with mint color */
-  .btn-hover-mint {
-    @apply transition-colors duration-200;
+  /* === СУЩЕСТВУЮЩИЕ КЛАССЫ С LIQUID GLASS ЭФФЕКТАМИ === */
+  
+  /* Все кнопки с эффектом жидкого стекла */
+  button:not([data-no-mint-hover]),
+  .btn,
+  [type='button'],
+  [type='submit'],
+  [type='reset'],
+  .button {
+    @apply relative overflow-hidden rounded-lg transition-all duration-300 backdrop-blur-sm;
+    background: var(--glass-gradient);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
   }
   
-  .btn-hover-mint:hover {
-    background-color: var(--mint) !important;
-    color: var(--mint-foreground) !important;
-    border-color: var(--mint) !important;
-  }
-  
-  /* Apply mint hover to all buttons */
-  button:not([data-no-mint-hover]):hover,
+  button:hover:not([data-no-mint-hover]),
   .btn:hover,
   [type='button']:hover,
   [type='submit']:hover,
-  [type='reset']:hover {
-    background-color: var(--mint) !important;
-    color: var(--mint-foreground) !important;
-    border-color: var(--mint) !important;
+  [type='reset']:hover,
+  .button:hover {
+    transform: translateY(-2px);
+    background: var(--glass-gradient-hover);
+    border-color: var(--glass-highlight);
+    box-shadow: 
+      0 12px 40px rgba(31, 38, 135, 0.2),
+      0 8px 24px rgba(31, 38, 135, 0.15);
+  }
+  
+  /* Primary кнопки */
+  button.bg-primary,
+  .btn.bg-primary {
+    @apply text-white border-transparent;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    box-shadow: 
+      0 4px 15px rgba(102, 126, 234, 0.3),
+      var(--glass-shadow);
+  }
+  
+  button.bg-primary:hover,
+  .btn.bg-primary:hover {
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    box-shadow: 
+      0 8px 25px rgba(102, 126, 234, 0.4),
+      0 12px 40px rgba(118, 75, 162, 0.3);
+  }
+  
+  /* Кнопки с outline */
+  button.bg-transparent,
+  .btn.bg-transparent,
+  button[class*="outline"],
+  .btn[class*="outline"] {
+    background: transparent;
+    border-color: var(--glass-border);
+  }
+  
+  /* Карточки */
+  .card,
+  [class*="card"],
+  [class*="Card"] {
+    @apply rounded-xl transition-all duration-300 backdrop-blur-md;
+    background: var(--glass-gradient);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+  }
+  
+  .card:hover,
+  [class*="card"]:hover,
+  [class*="Card"]:hover {
+    transform: translateY(-4px);
+    border-color: var(--glass-highlight);
+    box-shadow: 
+      0 16px 48px rgba(31, 38, 135, 0.2),
+      0 8px 32px rgba(31, 38, 135, 0.15);
+  }
+  
+  /* Input поля */
+  input,
+  textarea,
+  select,
+  .input,
+  [class*="input"],
+  [class*="Input"] {
+    @apply rounded-lg transition-all duration-300 backdrop-blur-sm;
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid var(--glass-border);
+    box-shadow: 
+      inset 0 2px 4px rgba(0, 0, 0, 0.05),
+      0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+  
+  .dark input,
+  .dark textarea,
+  .dark select,
+  .dark .input {
+    background: rgba(30, 41, 59, 0.7);
+    box-shadow: 
+      inset 0 2px 4px rgba(0, 0, 0, 0.2),
+      0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+  
+  input:focus,
+  textarea:focus,
+  select:focus,
+  .input:focus {
+    @apply outline-none ring-2;
+    border-color: var(--glass-highlight);
+    box-shadow: 
+      inset 0 2px 4px rgba(0, 0, 0, 0.1),
+      0 0 0 3px rgba(99, 102, 241, 0.1);
+  }
+  
+  /* Header */
+  header,
+  [role="banner"],
+  .header {
+    @apply backdrop-blur-xl;
+    background: linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.95) 0%,
+      rgba(255, 255, 255, 0.9) 100%
+    );
+    border-bottom: 1px solid var(--glass-border);
+    box-shadow: 0 4px 30px rgba(31, 38, 135, 0.1);
+  }
+  
+  .dark header,
+  .dark [role="banner"],
+  .dark .header {
+    background: linear-gradient(
+      to bottom,
+      rgba(15, 23, 42, 0.95) 0%,
+      rgba(15, 23, 42, 0.9) 100%
+    );
+  }
+  
+  /* Footer */
+  footer,
+  [role="contentinfo"],
+  .footer {
+    @apply backdrop-blur-xl;
+    background: linear-gradient(
+      to top,
+      rgba(255, 255, 255, 0.95) 0%,
+      rgba(255, 255, 255, 0.9) 100%
+    );
+    border-top: 1px solid var(--glass-border);
+  }
+  
+  .dark footer,
+  .dark [role="contentinfo"],
+  .dark .footer {
+    background: linear-gradient(
+      to top,
+      rgba(15, 23, 42, 0.95) 0%,
+      rgba(15, 23, 42, 0.9) 100%
+    );
+  }
+  
+  /* Навигационные элементы */
+  nav,
+  .nav,
+  .navbar,
+  .navigation {
+    @apply backdrop-blur-lg;
+    background: var(--glass-gradient);
+    border: 1px solid var(--glass-border);
+  }
+  
+  /* Badge / теги */
+  .badge,
+  [class*="badge"],
+  [class*="Badge"],
+  .tag {
+    @apply rounded-full px-3 py-1 text-sm font-medium backdrop-blur-sm transition-all duration-300;
+    background: var(--glass-gradient);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+  }
+  
+  .badge:hover,
+  [class*="badge"]:hover,
+  [class*="Badge"]:hover,
+  .tag:hover {
+    background: var(--glass-gradient-hover);
+    border-color: var(--glass-highlight);
+  }
+  
+  /* Аватарки */
+  .avatar,
+  [class*="avatar"],
+  [class*="Avatar"] {
+    @apply rounded-full border-2 backdrop-blur-sm;
+    border-color: var(--glass-border);
+    box-shadow: var(--glass-shadow);
+  }
+  
+  /* Dropdown меню */
+  .dropdown-menu,
+  [class*="dropdown"],
+  [class*="Dropdown"],
+  .menu {
+    @apply rounded-lg backdrop-blur-xl;
+    background: var(--glass-gradient);
+    border: 1px solid var(--glass-border);
+    box-shadow: 
+      var(--glass-shadow),
+      0 20px 60px rgba(31, 38, 135, 0.1);
+  }
+  
+  /* Модальные окна */
+  .modal,
+  [class*="modal"],
+  [class*="Modal"],
+  .dialog {
+    @apply rounded-2xl backdrop-blur-2xl;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.95) 0%,
+      rgba(255, 255, 255, 0.9) 100%
+    );
+    border: 1px solid var(--glass-border);
+    box-shadow: 
+      0 32px 64px rgba(31, 38, 135, 0.2),
+      0 16px 48px rgba(31, 38, 135, 0.15);
+  }
+  
+  .dark .modal,
+  .dark [class*="modal"],
+  .dark [class*="Modal"],
+  .dark .dialog {
+    background: linear-gradient(
+      135deg,
+      rgba(15, 23, 42, 0.95) 0%,
+      rgba(15, 23, 42, 0.9) 100%
+    );
+  }
+  
+  /* Табы / вкладки */
+  .tabs,
+  [class*="tab"],
+  [class*="Tab"] {
+    @apply backdrop-blur-sm;
+    background: var(--glass-gradient);
+    border: 1px solid var(--glass-border);
+  }
+  
+  /* Прогресс бары */
+  .progress,
+  [class*="progress"],
+  [class*="Progress"] {
+    @apply rounded-full overflow-hidden backdrop-blur-sm;
+    background: var(--glass-gradient);
+    border: 1px solid var(--glass-border);
+  }
+  
+  .progress-bar,
+  [class*="progress-bar"] {
+    @apply rounded-full;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  }
+  
+  /* Спиннеры / лоадеры */
+  .spinner,
+  [class*="spinner"],
+  [class*="loader"],
+  .loader {
+    @apply rounded-full border-4 border-t-transparent;
+    border-color: var(--glass-border);
+    border-top-color: #667eea;
+    animation: spin 1s linear infinite;
+  }
+  
+  /* Toast / уведомления */
+  .toast,
+  [class*="toast"],
+  [class*="Toast"],
+  .notification {
+    @apply rounded-lg backdrop-blur-xl;
+    background: var(--glass-gradient);
+    border: 1px solid var(--glass-border);
+    box-shadow: 
+      var(--glass-shadow),
+      0 20px 40px rgba(31, 38, 135, 0.1);
+  }
+  
+  /* Tooltip */
+  .tooltip,
+  [class*="tooltip"],
+  [class*="Tooltip"] {
+    @apply rounded-lg backdrop-blur-xl;
+    background: var(--glass-gradient);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+  }
+  
+  /* Accordion */
+  .accordion,
+  [class*="accordion"],
+  [class*="Accordion"] {
+    @apply backdrop-blur-sm;
+    background: var(--glass-gradient);
+    border: 1px solid var(--glass-border);
+  }
+  
+  /* Alert */
+  .alert,
+  [class*="alert"],
+  [class*="Alert"] {
+    @apply rounded-lg backdrop-blur-lg;
+    background: var(--glass-gradient);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+  }
+  
+  /* Hero секция */
+  .hero,
+  [class*="hero"],
+  .banner {
+    @apply relative overflow-hidden;
+    background: linear-gradient(
+      135deg,
+      rgba(99, 102, 241, 0.1) 0%,
+      rgba(168, 85, 247, 0.1) 50%,
+      rgba(236, 72, 153, 0.1) 100%
+    );
+  }
+  
+  .hero::before,
+  [class*="hero"]::before {
+    content: '';
+    @apply absolute inset-0 -z-10;
+    background: radial-gradient(
+      circle at 20% 80%,
+      rgba(99, 102, 241, 0.15) 0%,
+      transparent 50%
+    );
+    animation: liquid-pulse 8s ease-in-out infinite;
+  }
+  
+  /* Секции с контентом */
+  section,
+  .section,
+  .container {
+    @apply relative;
+  }
+  
+  section::after,
+  .section::after {
+    content: '';
+    @apply absolute inset-0 -z-10 opacity-0 transition-opacity duration-500;
+    background: radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.05) 0%, transparent 70%);
+  }
+  
+  section:hover::after,
+  .section:hover::after {
+    @apply opacity-100;
+  }
+  
+  /* Текстовые эффекты для заголовков */
+  h1, h2, h3, h4, h5, h6,
+  [class*="heading"],
+  [class*="title"] {
+    @apply relative;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6,
+  .dark [class*="heading"],
+  .dark [class*="title"] {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+  
+  /* Списки */
+  ul, ol,
+  .list,
+  [class*="list"] {
+    @apply space-y-2;
+  }
+  
+  li {
+    @apply pl-2 backdrop-blur-sm rounded-lg transition-all duration-300;
+    background: var(--glass-gradient);
+    border: 1px solid transparent;
+  }
+  
+  li:hover {
+    background: var(--glass-gradient-hover);
+    border-color: var(--glass-border);
+  }
+  
+  /* Таблицы */
+  table,
+  .table {
+    @apply w-full backdrop-blur-sm rounded-xl overflow-hidden;
+    background: var(--glass-gradient);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+  }
+  
+  th, td {
+    @apply p-4 border-b;
+    border-color: var(--glass-border);
+  }
+  
+  tr:hover {
+    background: var(--glass-gradient-hover);
   }
 }
 
 @layer utilities {
-  /* Utility class for explicit mint hover */
+  /* Mint hover эффект для совместимости */
+  .btn-hover-mint,
   .hover-mint:hover {
-    background-color: var(--mint) !important;
+    background: linear-gradient(135deg, rgba(183, 235, 224, 0.9) 0%, rgba(183, 235, 224, 0.7) 100%) !important;
     color: var(--mint-foreground) !important;
-    border-color: var(--mint) !important;
+    border-color: rgba(183, 235, 224, 0.5) !important;
   }
   
-  .text-mint {
-    color: var(--mint);
+  .dark .btn-hover-mint,
+  .dark .hover-mint:hover {
+    background: linear-gradient(135deg, rgba(20, 184, 166, 0.8) 0%, rgba(20, 184, 166, 0.6) 100%) !important;
   }
   
-  .bg-mint {
-    background-color: var(--mint);
+  /* Liquid glass утилиты */
+  .glass-effect {
+    backdrop-filter: blur(var(--glass-blur));
+    background: var(--glass-gradient);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
   }
   
-  .border-mint {
-    border-color: var(--mint);
+  .glass-effect-hover:hover {
+    background: var(--glass-gradient-hover);
+    border-color: var(--glass-highlight);
+    transform: translateY(-2px);
+    box-shadow: 
+      0 12px 40px rgba(31, 38, 135, 0.2),
+      0 8px 24px rgba(31, 38, 135, 0.15);
   }
-} 
+  
+  /* Градиентный текст */
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+  }
+  
+  .dark .text-gradient {
+    background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+  }
+  
+  /* Анимации */
+  @keyframes liquid-float {
+    0% {
+      transform: translate(0, 0) scale(1);
+    }
+    33% {
+      transform: translate(10px, -10px) scale(1.05);
+    }
+    66% {
+      transform: translate(-10px, 10px) scale(0.95);
+    }
+    100% {
+      transform: translate(0, 0) scale(1);
+    }
+  }
+  
+  @keyframes liquid-pulse {
+    0%, 100% {
+      opacity: 0.5;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.8;
+      transform: scale(1.1);
+    }
+  }
+  
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  
+  /* Soft glow эффекты */
+  .soft-glow {
+    box-shadow: 
+      0 0 20px rgba(99, 102, 241, 0.1),
+      0 0 40px rgba(99, 102, 241, 0.05),
+      var(--glass-shadow);
+  }
+  
+  .soft-glow-hover:hover {
+    box-shadow: 
+      0 0 30px rgba(99, 102, 241, 0.2),
+      0 0 60px rgba(99, 102, 241, 0.1),
+      0 12px 40px rgba(31, 38, 135, 0.2);
+  }
+  
+  /* Background patterns */
+  .bg-grid-light {
+    background-image: 
+      linear-gradient(rgba(99, 102, 241, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(99, 102, 241, 0.05) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  
+  .bg-dots-light {
+    background-image: radial-gradient(rgba(99, 102, 241, 0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+  
+  /* Liquid transitions */
+  .liquid-transition {
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* Depth эффекты */
+  .depth-1 {
+    box-shadow: 
+      0 1px 2px rgba(0, 0, 0, 0.05),
+      var(--glass-shadow);
+  }
+  
+  .depth-2 {
+    box-shadow: 
+      0 4px 8px rgba(0, 0, 0, 0.1),
+      var(--glass-shadow);
+  }
+  
+  .depth-3 {
+    box-shadow: 
+      0 8px 16px rgba(0, 0, 0, 0.15),
+      var(--glass-shadow);
+  }
+  
+  .depth-4 {
+    box-shadow: 
+      0 16px 32px rgba(0, 0, 0, 0.2),
+      var(--glass-shadow);
+  }
+  
+  /* Blur уровни */
+  .blur-sm {
+    backdrop-filter: blur(4px);
+  }
+  
+  .blur-md {
+    backdrop-filter: blur(8px);
+  }
+  
+  .blur-lg {
+    backdrop-filter: blur(16px);
+  }
+  
+  .blur-xl {
+    backdrop-filter: blur(24px);
+  }
+  
+  .blur-2xl {
+    backdrop-filter: blur(32px);
+  }
+  
+  /* Glass border варианты */
+  .border-glass {
+    border: 1px solid var(--glass-border);
+  }
+  
+  .border-glass-thick {
+    border: 2px solid var(--glass-border);
+  }
+  
+  /* Highlight эффект */
+  .highlight {
+    position: relative;
+  }
+  
+  .highlight::after {
+    content: '';
+    @apply absolute inset-0 -z-10 rounded-xl;
+    background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
+    animation: highlight-shimmer 3s ease-in-out infinite;
+  }
+}
