@@ -90,42 +90,24 @@ export function HeroCarousel({ slides }: HeroCarouselProps) {
 
       {/* Navigation buttons */}
       {slides.length > 1 && (
-        <>
-          <div className="absolute top-1/2 left-0 right-0 flex justify-between -translate-y-1/2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 rounded-full hover:bg-gray-100"
-              onClick={prevSlide}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 rounded-full hover:bg-gray-100"
-              onClick={nextSlide}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {/* Dots indicator */}
-          <div className="absolute -bottom-8 left-0 right-0 flex justify-center gap-2">
-            {slides.map((_, index) => (
-              <button
-                key={index}
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  index === currentSlide 
-                    ? "w-8 bg-primary" 
-                    : "w-2 bg-gray-300 hover:bg-gray-400"
-                }`}
-                onClick={() => goToSlide(index)}
-                aria-label={`Go to slide ${index + 1}`}
-              />
-            ))}
-          </div>
-        </>
+        <div className="absolute top-1/2 left-0 right-0 flex justify-between -translate-y-1/2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-full hover:bg-gray-100"
+            onClick={prevSlide}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-full hover:bg-gray-100"
+            onClick={nextSlide}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
       )}
     </div>
   )
