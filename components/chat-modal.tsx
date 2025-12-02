@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { X, Search, Send, Trash2, MessageCircle, Menu, MoreHorizontal, Smile, Ban, User, Bell } from "lucide-react"
+import { X, Search, Send, Trash2, MessageCircle, Menu, MoreHorizontal, Smile, Ban, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -128,32 +128,18 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
     description: string
     onConfirm: () => void
   } | null>(null)
-  const [notification, setNotification] = useState<{
-    isOpen: boolean
-    title: string
-    description: string
-  } | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const supabase = createClient()
 
-  // Показать диалог подтверждения
+  // Показать диалог подтверждения (вместо alert)
   const showConfirm = (title: string, description: string, onConfirm: () => void) => {
     setConfirmDialog({
       isOpen: true,
       title,
       description,
       onConfirm
-    })
-  }
-
-  // Показать уведомление
-  const showAlert = (title: string, description: string) => {
-    setNotification({
-      isOpen: true,
-      title,
-      description
     })
   }
 
@@ -233,64 +219,14 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
       loadBlockedUsers()
       setSearchResults([])
     }
-  }, [isOpen])
+  }, [isOpen, loadBlockedUsers])
 
-  // Подписываемся на новые сообщения
-  useEffect(() => {
-    if (!currentUser.id) return
-
-    const channel = supabase
-      .channel(`user_chats:${currentUser.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `sender_id=neq.${currentUser.id}`
-        },
-        async (payload) => {
-          const newMessage = payload.new as Message
-          
-          // Проверяем, относится ли сообщение к чатам текущего пользователя
-          const isUserChat = chats.some(chat => chat.id === newMessage.chat_id)
-          
-          if (isUserChat) {
-            // Обновляем счетчик непрочитанных для этого чата
-            setChats(prev => prev.map(chat => 
-              chat.id === newMessage.chat_id 
-                ? { ...chat, unread_count: chat.unread_count + 1 }
-                : chat
-            ))
-            
-            // Если это активный чат, загружаем сообщение
-            if (activeChat === newMessage.chat_id) {
-              const { data: reactions } = await supabase
-                .from('message_reactions')
-                .select('*')
-                .eq('message_id', newMessage.id)
-              
-              setMessages(prev => [...prev, {
-                ...newMessage,
-                reactions: reactions || []
-              }])
-            }
-          }
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [currentUser.id, chats, activeChat])
-
-  // Подписка на сообщения активного чата
+  // Подписываемся на новые сообщения только для активного чата
   useEffect(() => {
     if (!activeChat) return
 
     const channel = supabase
-      .channel(`chat_messages:${activeChat}`)
+      .channel(`chat:${activeChat}`)
       .on(
         'postgres_changes',
         {
@@ -308,25 +244,15 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
             .select('*')
             .eq('message_id', newMessage.id)
           
-          setMessages(prev => [...prev, {
-            ...newMessage,
-            reactions: reactions || []
-          }])
-          
-          // Если сообщение не от текущего пользователя, обновляем счетчик
-          if (newMessage.sender_id !== currentUser.id) {
-            setChats(prev => prev.map(chat => 
-              chat.id === activeChat 
-                ? { ...chat, unread_count: 0, last_message: newMessage }
-                : chat
-            ))
-          } else {
-            // Если от текущего пользователя, просто обновляем последнее сообщение
-            setChats(prev => prev.map(chat => 
-              chat.id === activeChat 
-                ? { ...chat, last_message: newMessage }
-                : chat
-            ))
+          // Добавляем только если сообщение для активного чата
+          if (newMessage.chat_id === activeChat) {
+            setMessages(prev => [...prev, {
+              ...newMessage,
+              reactions: reactions || []
+            }])
+            
+            // Обновляем список чатов чтобы показать последнее сообщение
+            setTimeout(() => loadChats(), 300)
           }
         }
       )
@@ -339,7 +265,11 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
           filter: `chat_id=eq.${activeChat}`
         },
         (payload) => {
+          // Удаляем сообщение локально
           setMessages(prev => prev.filter(msg => msg.id !== payload.old.id))
+          
+          // Обновляем список чатов
+          setTimeout(() => loadChats(), 300)
         }
       )
       .subscribe()
@@ -347,20 +277,28 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [activeChat, currentUser.id])
+  }, [activeChat])
 
   const loadChats = async () => {
     try {
       setIsLoading(true)
       
-      // Загружаем чаты пользователя
+      // Загружаем чаты пользователя с участниками
       const { data: chatParticipants, error } = await supabase
         .from('chat_participants')
         .select(`
           chat_id,
           chats (
             id,
-            created_at
+            created_at,
+            participants:chat_participants (
+              user:profiles (
+                id,
+                username,
+                display_name,
+                avatar_url
+              )
+            )
           )
         `)
         .eq('user_id', currentUser.id)
@@ -375,27 +313,12 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
         return
       }
 
-      // Загружаем информацию о чатах
-      const chatsWithDetails = await Promise.all(
+      // Загружаем последние сообщения и счетчик непрочитанных для каждого чата
+      const chatsWithMessages = await Promise.all(
         chatParticipants.map(async (cp: any) => {
           const chat = cp.chats
           
-          // Загружаем участников чата
-          const { data: participantsData } = await supabase
-            .from('chat_participants')
-            .select(`
-              user:profiles (
-                id,
-                username,
-                display_name,
-                avatar_url
-              )
-            `)
-            .eq('chat_id', chat.id)
-
-          const participants = participantsData?.map((p: any) => p.user) || []
-          
-          // Получаем последнее сообщение
+          // Получаем последнее сообщение (не удаленное)
           const { data: lastMessage } = await supabase
             .from('messages')
             .select('*')
@@ -404,7 +327,7 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
             .limit(1)
             .single()
 
-          // Считаем непрочитанные сообщения (от других пользователей)
+          // Считаем непрочитанные сообщения от других пользователей
           const { count: unreadCount } = await supabase
             .from('messages')
             .select('*', { count: 'exact', head: true })
@@ -415,7 +338,7 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
           return {
             id: chat.id,
             created_at: chat.created_at,
-            participants: participants,
+            participants: chat.participants.map((p: any) => p.user),
             last_message: lastMessage || undefined,
             unread_count: unreadCount || 0
           }
@@ -423,7 +346,7 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
       )
 
       // Сортируем по дате последнего сообщения или созданию чата
-      const sortedChats = chatsWithDetails.sort((a, b) => {
+      const sortedChats = chatsWithMessages.sort((a, b) => {
         const aDate = a.last_message?.created_at || a.created_at
         const bDate = b.last_message?.created_at || b.created_at
         return new Date(bDate).getTime() - new Date(aDate).getTime()
@@ -462,9 +385,12 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
         .eq('is_read', false)
         .neq('sender_id', currentUser.id)
 
-      if (error) throw error
+      if (error) {
+        console.error('Error marking messages as read:', error)
+        return
+      }
 
-      // Обновляем счетчик в локальном состоянии
+      // Обновляем локальный счетчик
       setChats(prev => prev.map(chat => 
         chat.id === chatId 
           ? { ...chat, unread_count: 0 }
@@ -480,7 +406,7 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
       // Проверяем, не заблокирован ли пользователь
       const isBlocked = blockedUsers.some(block => block.blocked_user_id === user.id)
       if (isBlocked) {
-        showAlert("Cannot Message", "You cannot message a blocked user")
+        showConfirm("Cannot Message", "You cannot message a blocked user", () => {})
         return null
       }
 
@@ -493,7 +419,6 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
 
       if (createError || !newChat) {
         console.error('Error creating chat:', createError)
-        showAlert("Error", "Failed to create chat")
         return null
       }
 
@@ -507,7 +432,6 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
 
       if (participantsError) {
         console.error('Error adding participants:', participantsError)
-        showAlert("Error", "Failed to add participants")
         return null
       }
 
@@ -525,7 +449,6 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
       return newChat.id
     } catch (error) {
       console.error('Error in createNewChat:', error)
-      showAlert("Error", "Failed to create chat")
       return null
     }
   }
@@ -582,14 +505,14 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
           chat_id: activeChat,
           sender_id: currentUser.id,
           content: newMessage.trim(),
-          is_read: true
+          is_read: false // Сообщение от себя не прочитано получателем
         })
         .select()
         .single()
 
       if (error) {
         console.error('Error sending message:', error)
-        showAlert("Error", "Failed to send message")
+        showConfirm("Error", "Failed to send message", () => {})
         return
       }
 
@@ -605,15 +528,11 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
         inputRef.current?.focus()
       }, 50)
       
-      // Обновляем последнее сообщение в чате
-      setChats(prev => prev.map(chat => 
-        chat.id === activeChat 
-          ? { ...chat, last_message: data }
-          : chat
-      ))
+      // Обновляем список чатов
+      setTimeout(() => loadChats(), 300)
     } catch (error) {
       console.error('Error in sendMessage:', error)
-      showAlert("Error", "Failed to send message")
+      showConfirm("Error", "Failed to send message", () => {})
     } finally {
       setIsSending(false)
     }
@@ -633,7 +552,6 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
 
           if (reactionsError) {
             console.error('Error deleting reactions:', reactionsError)
-            showAlert("Error", "Failed to delete reactions")
             return
           }
 
@@ -645,15 +563,12 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
 
           if (error) {
             console.error('Error deleting message:', error)
-            showAlert("Error", "Failed to delete message")
           } else {
             // Удаляем сообщение локально
             setMessages(prev => prev.filter(msg => msg.id !== messageId))
-            showAlert("Success", "Message deleted successfully")
           }
         } catch (error) {
           console.error('Error in deleteMessage:', error)
-          showAlert("Error", "Failed to delete message")
         }
       }
     )
@@ -754,7 +669,7 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
       // Проверяем, не заблокирован ли пользователь
       const isBlocked = blockedUsers.some(block => block.blocked_user_id === user.id)
       if (isBlocked) {
-        showAlert("Cannot Message", "You cannot message a blocked user")
+        showConfirm("Cannot Message", "You cannot message a blocked user", () => {})
         return
       }
 
@@ -779,7 +694,6 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
       setMobileSidebarOpen(false)
     } catch (error) {
       console.error('Error starting chat:', error)
-      showAlert("Error", "Failed to start chat")
     }
   }
 
@@ -810,10 +724,7 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
             .delete()
             .eq('chat_id', chatId)
 
-          if (messagesError) {
-            showAlert("Error", "Failed to delete messages")
-            return
-          }
+          if (messagesError) throw messagesError
 
           // Удаляем участников чата
           const { error: participantsError } = await supabase
@@ -821,10 +732,7 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
             .delete()
             .eq('chat_id', chatId)
 
-          if (participantsError) {
-            showAlert("Error", "Failed to delete participants")
-            return
-          }
+          if (participantsError) throw participantsError
 
           // Удаляем сам чат
           const { error: chatError } = await supabase
@@ -832,10 +740,7 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
             .delete()
             .eq('id', chatId)
 
-          if (chatError) {
-            showAlert("Error", "Failed to delete chat")
-            return
-          }
+          if (chatError) throw chatError
 
           // Обновляем локальное состояние
           setChats(prev => prev.filter(chat => chat.id !== chatId))
@@ -843,11 +748,8 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
             setActiveChat(null)
             setMessages([])
           }
-          
-          showAlert("Success", "Chat deleted successfully")
         } catch (error) {
           console.error('Error deleting chat:', error)
-          showAlert("Error", "Failed to delete chat")
         }
       }
     )
@@ -859,13 +761,6 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
       "Are you sure you want to block this user? You will not receive messages from them.",
       async () => {
         try {
-          // Проверяем, не заблокирован ли уже пользователь
-          const alreadyBlocked = blockedUsers.some(block => block.blocked_user_id === userId)
-          if (alreadyBlocked) {
-            showAlert("Already Blocked", "This user is already blocked")
-            return
-          }
-
           const { error } = await supabase
             .from('blocks')
             .insert({
@@ -874,15 +769,7 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
             })
 
           if (error) {
-            console.error('Supabase error:', error)
-            // Проверяем конкретную ошибку
-            if (error.code === '23505') {
-              showAlert("Already Blocked", "This user is already blocked")
-            } else if (error.code === '23503') {
-              showAlert("User Not Found", "User does not exist")
-            } else {
-              throw error
-            }
+            console.error('Error blocking user:', error)
             return
           }
 
@@ -902,11 +789,8 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
           if (chatWithUser) {
             await deleteChat(chatWithUser.id)
           }
-
-          showAlert("Success", "User blocked successfully")
         } catch (error) {
           console.error('Error blocking user:', error)
-          showAlert("Error", "Failed to block user. Please try again.")
         }
       }
     )
@@ -926,17 +810,13 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
 
           if (error) {
             console.error('Error unblocking user:', error)
-            showAlert("Error", "Failed to unblock user")
             return
           }
 
           // Обновляем локальное состояние
           setBlockedUsers(prev => prev.filter(block => block.blocked_user_id !== userId))
-          
-          showAlert("Success", "User unblocked successfully")
         } catch (error) {
           console.error('Error unblocking user:', error)
-          showAlert("Error", "Failed to unblock user")
         }
       }
     )
@@ -1183,6 +1063,7 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
                                 Blocked
                               </Badge>
                             )}
+                            {/* Синий кружок с количеством непрочитанных сообщений */}
                             {chat.unread_count > 0 && !isBlocked && (
                               <Badge className="h-5 w-5 p-0 flex items-center justify-center rounded-full bg-blue-500 text-white text-xs font-bold">
                                 {chat.unread_count > 9 ? '9+' : chat.unread_count}
@@ -1451,23 +1332,6 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
               setConfirmDialog(null)
             }}>
               Continue
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Модалка уведомления */}
-      <AlertDialog open={!!notification} onOpenChange={(open) => !open && setNotification(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{notification?.title}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {notification?.description}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setNotification(null)}>
-              OK
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
