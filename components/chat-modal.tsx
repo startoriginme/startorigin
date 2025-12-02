@@ -901,7 +901,11 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
                       className={`p-3 rounded-lg cursor-pointer hover:bg-accent transition-colors mb-2 ${
                         isBlocked ? 'opacity-50 cursor-not-allowed' : ''
                       }`}
-                      onClick={() => !isBlocked && startChatWithUser(user)}
+                      onClick={() => {
+                        if (!isBlocked) {
+                          startChatWithUser(user)
+                        }
+                      }}
                     >
                       <div className="flex items-center gap-3">
                         <MemoizedAvatar user={user} size={10} />
@@ -947,10 +951,12 @@ export function ChatModal({ isOpen, onClose, recipientUser, currentUser }: ChatM
                     className={`p-3 rounded-lg cursor-pointer hover:bg-accent transition-colors mb-2 ${
                       activeChat === chat.id ? 'bg-accent' : ''
                     } ${isBlocked ? 'opacity-50' : ''}`}
-                    onClick={() => !isBlocked && {
-                      setActiveChat(chat.id)
-                      loadMessages(chat.id)
-                      setMobileSidebarOpen(false)
+                    onClick={() => {
+                      if (!isBlocked) {
+                        setActiveChat(chat.id)
+                        loadMessages(chat.id)
+                        setMobileSidebarOpen(false)
+                      }
                     }}
                   >
                     <div className="flex items-center justify-between">
