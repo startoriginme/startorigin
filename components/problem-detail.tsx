@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical, Share2, Copy, Twitter, MessageCircle, Flag, Shield, Check, Heart, User } from "lucide-react"
+import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical, Share2, Copy, Twitter, MessageCircle, Flag, Shield, Check, Heart, User, ThumbsUp } from "lucide-react"
 import Link from "next/link"
 import {
   AlertDialog,
@@ -71,8 +71,8 @@ type ProblemDetailProps = {
   problem: Problem
   userId?: string
   initialHasUpvoted: boolean
-  initialIsInterested: boolean
-  initialInterestedCount: number
+  initialIsInterested?: boolean
+  initialInterestedCount?: number
 }
 
 // Карта алиасов пользователей
@@ -191,18 +191,18 @@ export function ProblemDetail({
   problem, 
   userId, 
   initialHasUpvoted,
-  initialIsInterested,
-  initialInterestedCount
+  initialIsInterested = false,
+  initialInterestedCount = 0
 }: ProblemDetailProps) {
   const [isClient, setIsClient] = useState(false)
-  const [upvotes, setUpvotes] = useState(problem.upvotes)
+  const [upvotes, setUpvotes] = useState(problem.upvotes || 0)
   const [hasUpvoted, setHasUpvoted] = useState(initialHasUpvoted)
   const [isUpvoting, setIsUpvoting] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isShareOpen, setIsShareOpen] = useState(false)
   const [authorAllUsernames, setAuthorAllUsernames] = useState<string[]>([])
   const [isInterested, setIsInterested] = useState(initialIsInterested)
-  const [interestedCount, setInterestedCount] = useState(initialInterestedCount)
+  const [interestedCount, setInterestedCount] = useState(initialInterestedCount || 0)
   const [isInterestedLoading, setIsInterestedLoading] = useState(false)
   const [interestedUsers, setInterestedUsers] = useState<InterestedUser[]>([])
   const [showInterestedDialog, setShowInterestedDialog] = useState(false)
@@ -248,14 +248,20 @@ export function ProblemDetail({
 
     try {
       if (hasUpvoted) {
-        const { error } = await supabase.from("upvotes").delete().eq("problem_id", problem.id).eq("user_id", userId)
+        const { error } = await supabase
+          .from("upvotes")
+          .delete()
+          .eq("problem_id", problem.id)
+          .eq("user_id", userId)
 
         if (!error) {
           setUpvotes((prev) => prev - 1)
           setHasUpvoted(false)
         }
       } else {
-        const { error } = await supabase.from("upvotes").insert({ problem_id: problem.id, user_id: userId })
+        const { error } = await supabase
+          .from("upvotes")
+          .insert({ problem_id: problem.id, user_id: userId })
 
         if (!error) {
           setUpvotes((prev) => prev + 1)
@@ -358,6 +364,9 @@ export function ProblemDetail({
       }
 
       setInterestedUsers(data || [])
+      
+      // Обновляем счетчик на основе данных
+      setInterestedCount(data?.length || 0)
     } catch (error) {
       console.error("Error loading interested users:", error)
     } finally {
@@ -377,7 +386,11 @@ export function ProblemDetail({
     const supabase = createClient()
 
     try {
-      const { error } = await supabase.from("problems").delete().eq("id", problem.id).eq("author_id", userId!)
+      const { error } = await supabase
+        .from("problems")
+        .delete()
+        .eq("id", problem.id)
+        .eq("author_id", userId!)
 
       if (!error) {
         router.push("/problems")
@@ -660,17 +673,22 @@ export function ProblemDetail({
                   <span className="text-sm font-semibold">{upvotes}</span>
                 </Button>
 
-                {/* Interested Button */}
+                {/* Interested Button - ЗЕЛЕНАЯ */}
                 <div className="flex flex-col items-center">
                   <Button
                     variant={isInterested ? "default" : "outline"}
                     size="sm"
-                    className="flex-col gap-1 h-auto py-2 px-3 min-w-[60px] bg-pink-50 border-pink-200 hover:bg-pink-100 text-pink-700 hover:text-pink-800 data-[state=open]:bg-pink-100"
+                    className={`
+                      flex-col gap-1 h-auto py-2 px-3 min-w-[60px] 
+                      ${isInterested 
+                        ? 'bg-green-600 hover:bg-green-700 text-white border-green-600' 
+                        : 'bg-green-50 border-green-200 hover:bg-green-100 text-green-700 hover:text-green-800'
+                      }
+                    `}
                     onClick={handleInterested}
                     disabled={isInterestedLoading}
-                    data-state={isInterested ? "open" : "closed"}
                   >
-                    <Heart className={`h-5 w-5 ${isInterested ? "fill-pink-600" : ""}`} />
+                    <ThumbsUp className="h-5 w-5" />
                     <span className="text-sm font-semibold">{interestedCount}</span>
                   </Button>
                   <button
@@ -828,7 +846,7 @@ export function ProblemDetail({
               </div>
             ) : interestedUsers.length === 0 ? (
               <div className="text-center py-8">
-                <Heart className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
+                <ThumbsUp className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
                 <p className="text-muted-foreground">No one has shown interest yet</p>
                 <p className="text-sm text-muted-foreground mt-2">Be the first to click "Interested"</p>
               </div>
@@ -874,7 +892,7 @@ export function ProblemDetail({
                         </p>
                       </div>
                       
-                      <Heart className="h-5 w-5 text-pink-500 fill-pink-200 flex-shrink-0" />
+                      <ThumbsUp className="h-5 w-5 text-green-500 flex-shrink-0" />
                     </div>
                   )
                 })}
@@ -885,7 +903,13 @@ export function ProblemDetail({
           <div className="pt-4 border-t">
             <Button
               variant={isInterested ? "default" : "outline"}
-              className="w-full gap-2 bg-pink-50 border-pink-200 hover:bg-pink-100 text-pink-700 hover:text-pink-800"
+              className={`
+                w-full gap-2
+                ${isInterested 
+                  ? 'bg-green-600 hover:bg-green-700 text-white' 
+                  : 'bg-green-50 border-green-200 hover:bg-green-100 text-green-700 hover:text-green-800'
+                }
+              `}
               onClick={() => {
                 handleInterested()
                 if (!isInterested) {
@@ -898,7 +922,7 @@ export function ProblemDetail({
               }}
               disabled={isInterestedLoading}
             >
-              <Heart className={`h-4 w-4 ${isInterested ? "fill-pink-600" : ""}`} />
+              <ThumbsUp className="h-4 w-4" />
               {isInterested ? "You're Interested" : "I'm Interested"}
             </Button>
           </div>
@@ -943,5 +967,3 @@ export function ProblemDetail({
         </CardContent>
       </Card>
     </div>
-  )
-}
