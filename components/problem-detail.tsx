@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical, Share2, Copy, Twitter, MessageCircle, Flag, Shield, Check, Heart, User, ThumbsUp } from "lucide-react"
+import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical, Share2, Copy, Twitter, MessageCircle, Flag, Shield, Check, Heart, User, Sprout } from "lucide-react"
 import Link from "next/link"
 import {
   AlertDialog,
@@ -718,7 +718,7 @@ export function ProblemDetail({
                     onClick={handleInterested}
                     disabled={isInterestedLoading}
                   >
-                    <ThumbsUp className="h-5 w-5" />
+                    <Sprout className="h-5 w-5" />
                     <span className="text-sm font-semibold">{interestedCount}</span>
                   </Button>
                   <button
