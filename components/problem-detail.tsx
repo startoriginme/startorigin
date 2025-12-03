@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useEffect, ReactNode } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical, Share2, Copy, Twitter, MessageCircle, Flag, Shield, Check, Heart, User, Sprout } from "lucide-react"
+import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical, Share2, Copy, Twitter, MessageCircle, Flag, Shield, Check } from "lucide-react"
 import Link from "next/link"
 import {
   AlertDialog,
@@ -26,15 +26,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import { useToast } from "@/components/ui/use-toast"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 type Profile = {
   id: string
@@ -60,19 +52,10 @@ type Problem = {
   profiles: Profile | null
 }
 
-type InterestedUser = {
-  id: string
-  user_id: string
-  created_at: string
-  profiles: Profile
-}
-
 type ProblemDetailProps = {
   problem: Problem
   userId?: string
   initialHasUpvoted: boolean
-  initialIsInterested?: boolean
-  initialInterestedCount?: number
 }
 
 // Карта алиасов пользователей
@@ -147,20 +130,23 @@ async function getAllUsernamesCombined(mainUsername: string, userId?: string): P
 }
 
 // Функция для преобразования текста с упоминаниями в ссылки
-const parseMentions = (text: string): ReactNode => {
+const parseMentions = (text: string) => {
   if (!text) return text;
   
+  // Регулярное выражение для поиска упоминаний вида @username
   const mentionRegex = /@([a-zA-Z0-9_-]+)/g;
   
-  const parts: ReactNode[] = [];
+  const parts = [];
   let lastIndex = 0;
   let match;
 
   while ((match = mentionRegex.exec(text)) !== null) {
+    // Добавляем текст до упоминания
     if (match.index > lastIndex) {
       parts.push(text.slice(lastIndex, match.index));
     }
 
+    // Добавляем ссылку для упоминания
     const username = match[1];
     const mainUsername = getMainUsername(username)
     parts.push(
@@ -177,16 +163,12 @@ const parseMentions = (text: string): ReactNode => {
     lastIndex = match.index + match[0].length;
   }
 
+  // Добавляем оставшийся текст
   if (lastIndex < text.length) {
     parts.push(text.slice(lastIndex));
   }
 
-  // Всегда возвращаем React элемент
-  if (parts.length === 0) {
-    return <>{text}</>;
-  }
-  
-  return <>{parts}</>;
+  return parts.length > 0 ? parts : text;
 };
 
 // Список подтвержденных пользователей
@@ -195,30 +177,21 @@ const verifiedUsers = ["startorigin", "nikolaev", "winter", "gerxog"]
 export function ProblemDetail({ 
   problem, 
   userId, 
-  initialHasUpvoted,
-  initialIsInterested = false,
-  initialInterestedCount = 0
+  initialHasUpvoted
 }: ProblemDetailProps) {
   const [isClient, setIsClient] = useState(false)
-  const [upvotes, setUpvotes] = useState(problem.upvotes || 0)
+  const [upvotes, setUpvotes] = useState(problem.upvotes)
   const [hasUpvoted, setHasUpvoted] = useState(initialHasUpvoted)
   const [isUpvoting, setIsUpvoting] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isShareOpen, setIsShareOpen] = useState(false)
   const [authorAllUsernames, setAuthorAllUsernames] = useState<string[]>([])
-  const [isInterested, setIsInterested] = useState(initialIsInterested)
-  const [interestedCount, setInterestedCount] = useState(initialInterestedCount || 0)
-  const [isInterestedLoading, setIsInterestedLoading] = useState(false)
-  const [interestedUsers, setInterestedUsers] = useState<InterestedUser[]>([])
-  const [showInterestedDialog, setShowInterestedDialog] = useState(false)
-  const [isLoadingInterestedUsers, setIsLoadingInterestedUsers] = useState(false)
   
   const router = useRouter()
   const { toast } = useToast()
 
   useEffect(() => {
     setIsClient(true)
-    loadInterestedUsers()
   }, [])
 
   useEffect(() => {
@@ -239,6 +212,7 @@ export function ProblemDetail({
 
   const isAuthor = userId === problem.author_id
   
+  // Получаем основной username автора
   const authorMainUsername = problem.profiles?.username ? getMainUsername(problem.profiles.username) : null
   const isVerifiedUser = authorMainUsername ? verifiedUsers.includes(authorMainUsername) : false
 
@@ -253,20 +227,14 @@ export function ProblemDetail({
 
     try {
       if (hasUpvoted) {
-        const { error } = await supabase
-          .from("upvotes")
-          .delete()
-          .eq("problem_id", problem.id)
-          .eq("user_id", userId)
+        const { error } = await supabase.from("upvotes").delete().eq("problem_id", problem.id).eq("user_id", userId)
 
         if (!error) {
           setUpvotes((prev) => prev - 1)
           setHasUpvoted(false)
         }
       } else {
-        const { error } = await supabase
-          .from("upvotes")
-          .insert({ problem_id: problem.id, user_id: userId })
+        const { error } = await supabase.from("upvotes").insert({ problem_id: problem.id, user_id: userId })
 
         if (!error) {
           setUpvotes((prev) => prev + 1)
@@ -280,122 +248,12 @@ export function ProblemDetail({
     }
   }
 
-  const handleInterested = async () => {
-    if (!userId) {
-      router.push("/auth/login")
-      return
-    }
-
-    setIsInterestedLoading(true)
-    const supabase = createClient()
-
-    try {
-      if (isInterested) {
-        const { error } = await supabase
-          .from("interested_users")
-          .delete()
-          .eq("problem_id", problem.id)
-          .eq("user_id", userId)
-
-        if (!error) {
-          setInterestedCount((prev) => prev - 1)
-          setIsInterested(false)
-          setInterestedUsers(prev => prev.filter(user => user.user_id !== userId))
-        }
-      } else {
-        const { error } = await supabase
-          .from("interested_users")
-          .insert({ 
-            problem_id: problem.id, 
-            user_id: userId 
-          })
-
-        if (!error) {
-          setInterestedCount((prev) => prev + 1)
-          setIsInterested(true)
-          
-          // Добавляем текущего пользователя в список
-          const { data: currentUserProfile } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", userId)
-            .single()
-            
-          if (currentUserProfile) {
-            setInterestedUsers(prev => [...prev, {
-              id: Date.now().toString(),
-              user_id: userId,
-              created_at: new Date().toISOString(),
-              profiles: currentUserProfile
-            }])
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Error toggling interest:", error)
-    } finally {
-      setIsInterestedLoading(false)
-    }
-  }
-
-  const loadInterestedUsers = async () => {
-    if (!problem.id) return
-    
-    setIsLoadingInterestedUsers(true)
-    const supabase = createClient()
-    
-    try {
-      const { data, error } = await supabase
-        .from("interested_users")
-        .select(`
-          id,
-          user_id,
-          created_at,
-          profiles (
-            id,
-            username,
-            display_name,
-            avatar_url,
-            bio,
-            is_verified
-          )
-        `)
-        .eq("problem_id", problem.id)
-        .order("created_at", { ascending: false })
-
-      if (error) {
-        console.error("Error loading interested users:", error)
-        return
-      }
-
-      setInterestedUsers(data || [])
-      
-      // Обновляем счетчик на основе данных
-      setInterestedCount(data?.length || 0)
-    } catch (error) {
-      console.error("Error loading interested users:", error)
-    } finally {
-      setIsLoadingInterestedUsers(false)
-    }
-  }
-
-  const handleShowInterestedUsers = async () => {
-    setShowInterestedDialog(true)
-    if (interestedUsers.length === 0) {
-      await loadInterestedUsers()
-    }
-  }
-
   const handleDelete = async () => {
     setIsDeleting(true)
     const supabase = createClient()
 
     try {
-      const { error } = await supabase
-        .from("problems")
-        .delete()
-        .eq("id", problem.id)
-        .eq("author_id", userId!)
+      const { error } = await supabase.from("problems").delete().eq("id", problem.id).eq("author_id", userId!)
 
       if (!error) {
         router.push("/problems")
@@ -409,8 +267,6 @@ export function ProblemDetail({
   }
 
   const copyToClipboard = async () => {
-    if (!isClient) return;
-    
     const url = `${window.location.origin}/problems/${problem.id}`
     try {
       await navigator.clipboard.writeText(url)
@@ -429,8 +285,6 @@ export function ProblemDetail({
   }
 
   const shareOnTwitter = () => {
-    if (!isClient) return;
-    
     const text = `Take a look on ${problem.profiles?.username || "someone"}'s problem on StartOrigin.me - it's a platform, where you can publish problems you face and find co-founders to solve it.`
     const url = `${window.location.origin}/problems/${problem.id}`
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`
@@ -439,8 +293,6 @@ export function ProblemDetail({
   }
 
   const shareOnTelegram = () => {
-    if (!isClient) return;
-    
     const text = `Take a look on ${problem.profiles?.username || "someone"}'s problem on StartOrigin.me - it's a platform, where you can publish problems you face and find co-founders to solve it.`
     const url = `${window.location.origin}/problems/${problem.id}`
     const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`
@@ -449,9 +301,10 @@ export function ProblemDetail({
   }
 
   const handleReport = () => {
-    if (!isClient) return;
-    
+    // Google Forms URL для жалоб - ЗАМЕНИ НА СВОЙ URL
     const googleFormUrl = "https://forms.gle/RPUEPZBQEJHZT4GFA"
+    
+    // Автозаполнение полей
     const prefillUrl = `${googleFormUrl}?entry.123456789=${encodeURIComponent(problem.title)}&entry.987654321=${encodeURIComponent(window.location.href)}`
     
     window.open(prefillUrl, '_blank', 'noopener,noreferrer')
@@ -494,35 +347,6 @@ export function ProblemDetail({
     return <Mail className="h-4 w-4" />
   }
 
-  const formatRelativeTime = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
-    
-    if (diffInSeconds < 60) return 'just now'
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`
-    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`
-    return formatDate(dateString)
-  }
-
-  // Если не клиент, возвращаем базовую разметку
-  if (!isClient) {
-    return (
-      <div className="mx-auto max-w-4xl space-y-6">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="animate-pulse space-y-4">
-              <div className="h-8 bg-gray-200 rounded w-3/4"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-              <div className="h-32 bg-gray-200 rounded"></div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       {/* Problem Card */}
@@ -562,6 +386,7 @@ export function ProblemDetail({
 
               {/* Кнопки действий */}
               <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
+                {/* Кнопка пожаловаться - скрыта для автора */}
                 {!isAuthor && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
@@ -596,8 +421,10 @@ export function ProblemDetail({
                   </AlertDialog>
                 )}
 
+                {/* Кнопки автора */}
                 {isAuthor && (
                   <div className="flex gap-2 w-full sm:w-auto">
+                    {/* Основные кнопки для десктопа */}
                     <div className="hidden sm:flex gap-2 flex-1 sm:flex-none">
                       <Link href={`/problems/${problem.id}/edit`} className="flex-1 sm:flex-none">
                         <Button variant="outline" size="sm" className="gap-2 bg-transparent w-full sm:w-auto">
@@ -633,6 +460,7 @@ export function ProblemDetail({
                       </AlertDialog>
                     </div>
 
+                    {/* Dropdown меню для мобильных */}
                     <div className="sm:hidden flex-1">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -659,6 +487,7 @@ export function ProblemDetail({
                         </DropdownMenuContent>
                       </DropdownMenu>
 
+                      {/* Скрытый триггер для диалога удаления */}
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <button data-delete-trigger className="hidden" />
@@ -688,10 +517,9 @@ export function ProblemDetail({
               </div>
             </div>
 
-            {/* Upvote, Interested и мета-информация */}
+            {/* Upvote и мета-информация */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t">
               <div className="flex items-center gap-4">
-                {/* Upvote Button */}
                 <Button
                   variant={hasUpvoted ? "default" : "outline"}
                   size="sm"
@@ -703,38 +531,13 @@ export function ProblemDetail({
                   <span className="text-sm font-semibold">{upvotes}</span>
                 </Button>
 
-                {/* Interested Button - ЗЕЛЕНАЯ */}
-                <div className="flex flex-col items-center">
-                  <Button
-                    variant={isInterested ? "default" : "outline"}
-                    size="sm"
-                    className={`
-                      flex-col gap-1 h-auto py-2 px-3 min-w-[60px] 
-                      ${isInterested 
-                        ? 'bg-green-600 hover:bg-green-700 text-white border-green-600' 
-                        : 'bg-green-50 border-green-200 hover:bg-green-100 text-green-700 hover:text-green-800'
-                      }
-                    `}
-                    onClick={handleInterested}
-                    disabled={isInterestedLoading}
-                  >
-                    <Sprout className="h-5 w-5" />
-                    <span className="text-sm font-semibold">{interestedCount}</span>
-                  </Button>
-                  <button
-                    onClick={handleShowInterestedUsers}
-                    className="text-xs text-muted-foreground hover:text-foreground mt-1 transition-colors"
-                  >
-                    Interested
-                  </button>
-                </div>
-
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <Calendar className="h-4 w-4" />
                     <span>{formatDate(problem.created_at)}</span>
                   </div>
                   
+                  {/* Кнопка поделиться */}
                   <div className="relative">
                     <DropdownMenu open={isShareOpen} onOpenChange={setIsShareOpen}>
                       <DropdownMenuTrigger asChild>
@@ -785,6 +588,7 @@ export function ProblemDetail({
               href={authorMainUsername ? `/user/${authorMainUsername}` : "#"}
               className={authorMainUsername ? "cursor-pointer" : "cursor-default"}
             >
+              {/* Кастомный аватар с галочкой верификации */}
               <div className="relative h-16 w-16">
                 <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-border bg-muted">
                   {problem.profiles?.avatar_url ? (
@@ -801,6 +605,7 @@ export function ProblemDetail({
                     </div>
                   )}
                 </div>
+                {/* Галочка верификации */}
                 {isVerifiedUser && (
                   <div className="absolute -bottom-1 -right-1 bg-blue-500 rounded-full p-0.5 border-2 border-background">
                     <Check className="h-3 w-3 text-white" />
@@ -830,6 +635,7 @@ export function ProblemDetail({
                 )}
               </div>
               
+              {/* Отображаем все username через запятую */}
               {authorAllUsernames.length > 0 && (
                 <div className="flex flex-wrap items-center gap-1 mb-2">
                   {authorAllUsernames.map((userName, index) => (
@@ -858,106 +664,6 @@ export function ProblemDetail({
           </div>
         </CardContent>
       </Card>
-
-      {/* Interested Users Dialog */}
-      <Dialog open={showInterestedDialog} onOpenChange={setShowInterestedDialog}>
-        <DialogContent className="max-w-md max-h-[80vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Interested in Developing</DialogTitle>
-            <DialogDescription>
-              {interestedCount} {interestedCount === 1 ? 'person is' : 'people are'} interested in this problem
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="flex-1 overflow-y-auto pr-2 -mr-2">
-            {isLoadingInterestedUsers ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              </div>
-            ) : interestedUsers.length === 0 ? (
-              <div className="text-center py-8">
-                <ThumbsUp className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-                <p className="text-muted-foreground">No one has shown interest yet</p>
-                <p className="text-sm text-muted-foreground mt-2">Be the first to click "Interested"</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {interestedUsers.map((user) => {
-                  const userMainUsername = user.profiles.username ? getMainUsername(user.profiles.username) : null
-                  const isUserVerified = userMainUsername ? verifiedUsers.includes(userMainUsername) : false
-                  
-                  return (
-                    <div key={user.id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent transition-colors">
-                      <Link 
-                        href={userMainUsername ? `/user/${userMainUsername}` : "#"}
-                        className="flex-shrink-0"
-                        onClick={() => setShowInterestedDialog(false)}
-                      >
-                        <Avatar className="h-10 w-10 border-2 border-background">
-                          <AvatarImage src={user.profiles.avatar_url || ""} />
-                          <AvatarFallback>
-                            {getInitials(user.profiles.display_name || user.profiles.username)}
-                          </AvatarFallback>
-                        </Avatar>
-                      </Link>
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <Link 
-                            href={userMainUsername ? `/user/${userMainUsername}` : "#"}
-                            className="font-medium text-foreground hover:text-primary transition-colors truncate"
-                            onClick={() => setShowInterestedDialog(false)}
-                          >
-                            {user.profiles.display_name || userMainUsername || "User"}
-                          </Link>
-                          {isUserVerified && (
-                            <Check className="h-4 w-4 text-blue-500 flex-shrink-0" title="Verified" />
-                          )}
-                        </div>
-                        {userMainUsername && (
-                          <p className="text-sm text-muted-foreground truncate">@{userMainUsername}</p>
-                        )}
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Interested {formatRelativeTime(user.created_at)}
-                        </p>
-                      </div>
-                      
-                      <ThumbsUp className="h-5 w-5 text-green-500 flex-shrink-0" />
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-          
-          <div className="pt-4 border-t">
-            <Button
-              variant={isInterested ? "default" : "outline"}
-              className={`
-                w-full gap-2
-                ${isInterested 
-                  ? 'bg-green-600 hover:bg-green-700 text-white' 
-                  : 'bg-green-50 border-green-200 hover:bg-green-100 text-green-700 hover:text-green-800'
-                }
-              `}
-              onClick={() => {
-                handleInterested()
-                if (!isInterested) {
-                  setShowInterestedDialog(false)
-                  toast({
-                    title: "Interest shown!",
-                    description: "You've shown interest in this problem",
-                  })
-                }
-              }}
-              disabled={isInterestedLoading}
-            >
-              <ThumbsUp className="h-4 w-4" />
-              {isInterested ? "You're Interested" : "I'm Interested"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Moderation Section */}
       <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
@@ -998,4 +704,4 @@ export function ProblemDetail({
       </Card>
     </div>
   )
-}
+}  
