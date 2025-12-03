@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, ReactNode } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
@@ -147,12 +147,12 @@ async function getAllUsernamesCombined(mainUsername: string, userId?: string): P
 }
 
 // Функция для преобразования текста с упоминаниями в ссылки
-const parseMentions = (text: string) => {
+const parseMentions = (text: string): ReactNode => {
   if (!text) return text;
   
   const mentionRegex = /@([a-zA-Z0-9_-]+)/g;
   
-  const parts = [];
+  const parts: ReactNode[] = [];
   let lastIndex = 0;
   let match;
 
@@ -181,7 +181,12 @@ const parseMentions = (text: string) => {
     parts.push(text.slice(lastIndex));
   }
 
-  return parts.length > 0 ? parts : text;
+  // Всегда возвращаем React элемент
+  if (parts.length === 0) {
+    return <>{text}</>;
+  }
+  
+  return <>{parts}</>;
 };
 
 // Список подтвержденных пользователей
@@ -404,6 +409,8 @@ export function ProblemDetail({
   }
 
   const copyToClipboard = async () => {
+    if (!isClient) return;
+    
     const url = `${window.location.origin}/problems/${problem.id}`
     try {
       await navigator.clipboard.writeText(url)
@@ -422,6 +429,8 @@ export function ProblemDetail({
   }
 
   const shareOnTwitter = () => {
+    if (!isClient) return;
+    
     const text = `Take a look on ${problem.profiles?.username || "someone"}'s problem on StartOrigin.me - it's a platform, where you can publish problems you face and find co-founders to solve it.`
     const url = `${window.location.origin}/problems/${problem.id}`
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`
@@ -430,6 +439,8 @@ export function ProblemDetail({
   }
 
   const shareOnTelegram = () => {
+    if (!isClient) return;
+    
     const text = `Take a look on ${problem.profiles?.username || "someone"}'s problem on StartOrigin.me - it's a platform, where you can publish problems you face and find co-founders to solve it.`
     const url = `${window.location.origin}/problems/${problem.id}`
     const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`
@@ -438,6 +449,8 @@ export function ProblemDetail({
   }
 
   const handleReport = () => {
+    if (!isClient) return;
+    
     const googleFormUrl = "https://forms.gle/RPUEPZBQEJHZT4GFA"
     const prefillUrl = `${googleFormUrl}?entry.123456789=${encodeURIComponent(problem.title)}&entry.987654321=${encodeURIComponent(window.location.href)}`
     
@@ -491,6 +504,23 @@ export function ProblemDetail({
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`
     if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`
     return formatDate(dateString)
+  }
+
+  // Если не клиент, возвращаем базовую разметку
+  if (!isClient) {
+    return (
+      <div className="mx-auto max-w-4xl space-y-6">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="animate-pulse space-y-4">
+              <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+              <div className="h-32 bg-gray-200 rounded"></div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -967,3 +997,5 @@ export function ProblemDetail({
         </CardContent>
       </Card>
     </div>
+  )
+}
