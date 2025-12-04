@@ -105,9 +105,14 @@ export default async function ProblemsPage() {
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4">
           <nav className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
+            <Link href="/" className="flex items-center gap-2 relative">
               <Lightbulb className="h-6 w-6 text-primary" />
               <span className="text-xl font-bold text-foreground">StartOrigin</span>
+              
+              {/* Гирлянда (елочная) */}
+              <span className="absolute -top-3 -right-4 text-xs font-bold bg-gradient-to-r from-yellow-400 via-pink-500 to-green-400 bg-clip-text text-transparent animate-pulse">
+                🎄✨
+              </span>
             </Link>
             
             {/* Desktop Navigation - hidden on mobile */}
