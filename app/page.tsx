@@ -77,7 +77,7 @@ export default async function ProblemsPage() {
       buttonText: "Learn more",
      buttonVariant: "outline" as const,
       link: "https://startorigin.me/problems/d13a2d85-21fa-4ccf-8129-d19ac726cdda",
-      openInNewTab: true
+      openInNewTab: false
     },
     {
       id: 2,
@@ -95,6 +95,15 @@ export default async function ProblemsPage() {
       buttonText: "Try AI Chat",
       buttonVariant: "outline" as const,
       link: "https://chat.startorigin.me/",
+      openInNewTab: true
+    },
+      {
+      id: 4,
+      title: "It's Winter!",
+      description: "Stream on Winter's channel",
+      buttonText: "Subscribe",
+      buttonVariant: "outline" as const,
+      link: "https://t.me/winter",
       openInNewTab: true
     }
   ]
