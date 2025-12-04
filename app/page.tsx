@@ -102,17 +102,44 @@ export default async function ProblemsPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-4">
+      <header className="border-b border-border bg-card relative">
+        {/* Гирлянда на всю ширину хедера */}
+        <div className="absolute top-0 left-0 right-0 h-4 overflow-hidden z-0">
+          <div className="flex justify-center">
+            <div className="relative h-4 flex">
+              {/* Провод гирлянды */}
+              <div className="absolute top-1.5 left-0 right-0 h-0.5 bg-gray-400/30"></div>
+              
+              {/* Лампочки */}
+              {[...Array(15)].map((_, i) => (
+                <div 
+                  key={i}
+                  className="relative mx-1"
+                  style={{
+                    animationDelay: `${i * 0.15}s`
+                  }}
+                >
+                  <div className={`w-2 h-2 rounded-full ${
+                    i % 3 === 0 ? 'bg-red-500 animate-pulse' :
+                    i % 3 === 1 ? 'bg-green-500 animate-pulse' :
+                    'bg-yellow-500 animate-pulse'
+                  }`}></div>
+                  <div className={`absolute top-0.5 left-0.5 w-1 h-1 rounded-full bg-white/70 blur-sm ${
+                    i % 3 === 0 ? 'animate-pulse' :
+                    i % 3 === 1 ? 'animate-pulse delay-75' :
+                    'animate-pulse delay-150'
+                  }`}></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="container mx-auto px-4 py-4 relative z-10">
           <nav className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2 relative">
-              <Lightbulb className="h-6 w-6 text-primary" />
-              <span className="text-xl font-bold text-foreground">StartOrigin</span>
-              
-              {/* Гирлянда (елочная) */}
-              <span className="absolute -top-3 -right-4 text-xs font-bold bg-gradient-to-r from-yellow-400 via-pink-500 to-green-400 bg-clip-text text-transparent animate-pulse">
-                🎄✨
-              </span>
+              <Lightbulb className="h-6 w-6 text-primary relative z-10" />
+              <span className="text-xl font-bold text-foreground relative z-10">StartOrigin</span>
             </Link>
             
             {/* Desktop Navigation - hidden on mobile */}
