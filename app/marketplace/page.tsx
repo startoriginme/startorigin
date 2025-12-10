@@ -35,11 +35,6 @@ import {
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-} from "@/components/ui/sheet"
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -49,34 +44,41 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
 
-// Список занятых username, которые не нужно проверять в базе
+// List of reserved usernames that don't need database checking
 const RESERVED_USERNAMES = [
   "azya", "maxnklv", "maxnikolaev", "nklv", "zima", "vlkv", "bolt", "admin", "problems"
 ]
 
-// Функция расчета цены по новой системе
+// Recommended usernames for quick search
+const RECOMMENDED_USERNAMES = [
+  { username: "ai", price: 1000, length: 2, description: "Ultra rare 2-letter" },
+  { username: "web", price: 800, length: 3, description: "Popular 3-letter" },
+  { username: "dev", price: 800, length: 3, description: "Tech 3-letter" }
+]
+
+// Function to calculate price based on new system
 const calculatePrice = (length: number): number => {
   if (length === 1) return 1000
-  if (length === 2) return 950 // середина 900-1000
-  if (length === 3) return 800 // середина 700-900
-  if (length === 4) return 550 // середина 400-700
-  if (length === 5) return 550 // середина 400-700
-  if (length === 6) return 275 // середина 150-400
-  if (length === 7) return 275 // середина 150-400
-  if (length === 8) return 125 // середина 100-150
-  if (length === 9) return 125 // середина 100-150
+  if (length === 2) return 950 // average 900-1000
+  if (length === 3) return 800 // average 700-900
+  if (length === 4) return 550 // average 400-700
+  if (length === 5) return 550 // average 400-700
+  if (length === 6) return 275 // average 150-400
+  if (length === 7) return 275 // average 150-400
+  if (length === 8) return 125 // average 100-150
+  if (length === 9) return 125 // average 100-150
   return 100
 }
 
-// Функция получения ценовой категории
+// Function to get price category
 const getPriceCategory = (price: number): string => {
-  if (price >= 700) return "1000-700 звёзд"
-  if (price >= 400) return "400-700 звёзд"
-  if (price >= 100) return "100-400 звёзд"
-  return "До 100 звёзд"
+  if (price >= 700) return "1000-700 stars"
+  if (price >= 400) return "400-700 stars"
+  if (price >= 100) return "100-400 stars"
+  return "Under 100 stars"
 }
 
-// Сортировка и фильтрация
+// Sorting and filtering types
 type SortOption = "expensive-first" | "cheap-first" | "length-down" | "length-up"
 
 export default function MarketplacePage() {
@@ -99,7 +101,6 @@ export default function MarketplacePage() {
   const [selectedUsername, setSelectedUsername] = useState<{username: string, price: number, sellerContact?: string, listingId?: string, currentOwner?: string} | null>(null)
   const [userAliases, setUserAliases] = useState<string[]>([])
   const [allListings, setAllListings] = useState<any[]>([])
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sortOption, setSortOption] = useState<SortOption>("expensive-first")
   const [priceFilter, setPriceFilter] = useState<string>("all")
   const [lengthFilter, setLengthFilter] = useState<string>("all")
@@ -120,13 +121,13 @@ export default function MarketplacePage() {
           .single()
         setUserProfile(profile)
 
-        // Загружаем алиасы пользователя
+        // Load user aliases
         await fetchUserAliases(user.id)
       }
     }
     fetchUser()
     
-    // Загружаем все листинги на маркетплейсе
+    // Load all marketplace listings
     fetchAllListings()
   }, [supabase])
 
@@ -150,11 +151,11 @@ export default function MarketplacePage() {
     }
   }
 
-  // Фильтрованные и отсортированные листинги
+  // Filtered and sorted listings
   const filteredListings = useMemo(() => {
     let filtered = [...allListings]
 
-    // Фильтр по цене
+    // Price filter
     if (priceFilter !== "all") {
       filtered = filtered.filter(listing => {
         const price = listing.price
@@ -166,7 +167,7 @@ export default function MarketplacePage() {
       })
     }
 
-    // Фильтр по длине
+    // Length filter
     if (lengthFilter !== "all") {
       filtered = filtered.filter(listing => {
         const length = listing.username.length
@@ -178,7 +179,7 @@ export default function MarketplacePage() {
       })
     }
 
-    // Сортировка
+    // Sorting
     filtered.sort((a, b) => {
       const aLength = a.username.length
       const bLength = b.username.length
@@ -220,7 +221,7 @@ export default function MarketplacePage() {
     try {
       const searchUsername = username.toLowerCase()
 
-      // Сначала проверяем в списке зарезервированных
+      // First check reserved list
       const isReserved = RESERVED_USERNAMES.includes(searchUsername)
       
       if (isReserved) {
@@ -232,7 +233,7 @@ export default function MarketplacePage() {
         return
       }
 
-      // Проверяем, продается ли username на маркетплейсе
+      // Check if username is for sale on marketplace
       const { data: marketplaceData, error: marketplaceError } = await supabase
         .from("username_marketplace")
         .select("*, profiles(username)")
@@ -255,7 +256,7 @@ export default function MarketplacePage() {
         return
       }
 
-      // Проверяем в таблице алиасов пользователей
+      // Check user aliases table
       const { data: aliasData, error: aliasError } = await supabase
         .from("user_aliases")
         .select("*, profiles(username)")
@@ -273,14 +274,14 @@ export default function MarketplacePage() {
         return
       }
 
-      // Затем проверяем в базе данных профилей
+      // Check profiles database
       const { data: existingProfile, error } = await supabase
         .from("profiles")
         .select("username")
         .eq("username", searchUsername)
         .single()
 
-      // Если есть ошибка и это не "не найдено", значит реальная ошибка
+      // If error and it's not "not found", it's a real error
       if (error && error.code !== 'PGRST116') {
         console.error("Error checking username:", error)
         setResult({
@@ -290,7 +291,7 @@ export default function MarketplacePage() {
         return
       }
 
-      // Если профиль найден - username занят
+      // If profile found - username is taken
       const isAvailable = !existingProfile
 
       setResult({
@@ -349,6 +350,18 @@ export default function MarketplacePage() {
     router.push("/auth/login")
   }
 
+  const handleRecommendedSearch = (recommended: { username: string, price: number, length: number, description: string }) => {
+    setUsername(recommended.username)
+    // Set filters based on recommendation
+    if (recommended.length <= 2) {
+      setPriceFilter("1000-700")
+      setLengthFilter("1-2")
+    } else if (recommended.length === 3) {
+      setPriceFilter("400-700")
+      setLengthFilter("3-4")
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
@@ -356,52 +369,6 @@ export default function MarketplacePage() {
         <div className="container mx-auto px-4 py-4">
           <nav className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <Menu className="h-5 w-5" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-[240px] sm:w-[280px]">
-                  <div className="flex flex-col gap-6 py-6">
-                    <div className="flex items-center gap-2 px-2">
-                      <Lightbulb className="h-6 w-6 text-primary" />
-                      <span className="text-xl font-bold">StartOrigin</span>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <Link 
-                        href="https://telegra.ph/StartOrigin-11-25" 
-                        className="flex items-center gap-2 px-2 py-2 text-sm rounded-lg hover:bg-accent"
-                        onClick={() => setSidebarOpen(false)}
-                      >
-                        About
-                      </Link>
-                      <Link 
-                        href="/marketplace" 
-                        className="flex items-center gap-2 px-2 py-2 text-sm rounded-lg hover:bg-accent bg-accent"
-                        onClick={() => setSidebarOpen(false)}
-                      >
-                        Marketplace
-                      </Link>
-                      <Link 
-                        href="https://telegra.ph/Advertise-and-get-verified-on-StartOrigin-11-25" 
-                        className="flex items-center gap-2 px-2 py-2 text-sm rounded-lg hover:bg-accent"
-                        onClick={() => setSidebarOpen(false)}
-                      >
-                        Advertise
-                      </Link>
-                      <Link 
-                        href="https://telegra.ph/Advertise-and-get-verified-on-StartOrigin-11-25" 
-                        className="flex items-center gap-2 px-2 py-2 text-sm rounded-lg hover:bg-accent"
-                        onClick={() => setSidebarOpen(false)}
-                      >
-                        Get Verified
-                      </Link>
-                    </div>
-                  </div>
-                </SheetContent>
-              </Sheet>
-
               <Link href="/" className="flex items-center gap-2">
                 <Lightbulb className="h-6 w-6 text-primary" />
                 <span className="text-xl font-bold text-foreground">StartOrigin</span>
@@ -487,8 +454,37 @@ export default function MarketplacePage() {
               Username Marketplace
             </h1>
             <p className="text-sm sm:text-base text-muted-foreground">
-              Покупайте эксклюзивные юзернеймы до 1000 звезд
+              Buy exclusive usernames up to 1000 stars
             </p>
+          </div>
+
+          {/* Recommended Usernames */}
+          <div className="space-y-3 sm:space-y-4">
+            <h3 className="text-lg font-semibold text-foreground">Recommended Usernames</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {RECOMMENDED_USERNAMES.map((rec, index) => (
+                <Card key={index} className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20">
+                  <CardContent className="p-4" onClick={() => handleRecommendedSearch(rec)}>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="font-mono text-xl font-bold">
+                          @{rec.username}
+                        </div>
+                        <div className="flex items-center gap-1 text-lg font-bold">
+                          <Star className="h-4 w-4 text-yellow-500" />
+                          {rec.price}
+                        </div>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{rec.description}</p>
+                      <Button size="sm" className="w-full">
+                        <Search className="h-3 w-3 mr-2" />
+                        View similar
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
 
           {/* Search Section */}
@@ -559,7 +555,7 @@ export default function MarketplacePage() {
                           setSelectedUsername({
                             username,
                             price: result.price!,
-                            sellerContact: result.sellerContact
+                            sellerContact: result.sellerContact || "@w1nter_dev"
                           })
                           setIsPurchaseModalOpen(true)
                         }} size="sm" className="mt-1 text-xs">
@@ -646,10 +642,10 @@ export default function MarketplacePage() {
           {/* Price Categories */}
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             {[
-              { range: "1000-700 звёзд", desc: "1-2 символа", color: "bg-gradient-to-r from-yellow-500 to-orange-500" },
-              { range: "400-700 звёзд", desc: "3-5 символов", color: "bg-gradient-to-r from-orange-400 to-pink-500" },
-              { range: "100-400 звёзд", desc: "6-7 символов", color: "bg-gradient-to-r from-pink-400 to-purple-500" },
-              { range: "100-150 звёзд", desc: "8-9 символов", color: "bg-gradient-to-r from-purple-400 to-blue-500" },
+              { range: "1000-700 stars", desc: "1-2 characters", color: "bg-gradient-to-r from-yellow-500 to-orange-500" },
+              { range: "400-700 stars", desc: "3-5 characters", color: "bg-gradient-to-r from-orange-400 to-pink-500" },
+              { range: "100-400 stars", desc: "6-7 characters", color: "bg-gradient-to-r from-pink-400 to-purple-500" },
+              { range: "100-150 stars", desc: "8-9 characters", color: "bg-gradient-to-r from-purple-400 to-blue-500" },
             ].map((category, index) => (
               <Card key={index} className="overflow-hidden border-0">
                 <div className={`h-2 ${category.color}`} />
@@ -738,7 +734,7 @@ export default function MarketplacePage() {
             )}
           </div>
 
-          {/* My Aliases Section (только удаление) */}
+          {/* My Aliases Section (only removal) */}
           {user && userAliases.length > 0 && (
             <div className="space-y-3 sm:space-y-4">
               <h3 className="text-lg font-semibold text-foreground">My Aliases</h3>
@@ -806,7 +802,7 @@ export default function MarketplacePage() {
               Purchase @{selectedUsername?.username}
             </DialogTitle>
             <DialogDescription>
-              Contact the seller to complete your purchase
+              Contact to complete your purchase
             </DialogDescription>
           </DialogHeader>
           
@@ -848,29 +844,29 @@ export default function MarketplacePage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Seller Contact:</Label>
+              <Label>Contact for purchase:</Label>
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
                 <p className="text-sm font-medium text-amber-800">
-                  {selectedUsername?.sellerContact || "Contact: @maxnklv"}
+                  Contact: @w1nter_dev on Telegram
+                </p>
+                <p className="text-xs text-amber-700 mt-1">
+                  Ask about details and availability. All unsold usernames can be purchased from @w1nter_dev.
                 </p>
               </div>
             </div>
             
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">
-                Contact the seller directly to arrange the transfer:
+                Contact the seller to arrange the transfer:
               </p>
               <Button asChild className="w-full gap-2">
                 <a 
-                  href={selectedUsername?.sellerContact?.includes('@') 
-                    ? `https://t.me/${selectedUsername.sellerContact.replace('@', '')}`
-                    : "https://t.me/maxnklv"
-                  } 
+                  href="https://t.me/w1nter_dev" 
                   target="_blank" 
                   rel="noopener noreferrer"
                 >
                   <ExternalLink className="h-4 w-4" />
-                  Contact Seller on Telegram
+                  Contact @w1nter_dev on Telegram
                 </a>
               </Button>
             </div>
@@ -879,6 +875,9 @@ export default function MarketplacePage() {
               <p>StartOrigin is not responsible for second-hand transactions.</p>
               <p className="text-amber-600 font-medium">
                 🚀 Automated transfers coming soon!
+              </p>
+              <p className="text-blue-600 font-medium mt-2">
+                💬 Ask @w1nter_dev for details about any username!
               </p>
             </div>
           </div>
