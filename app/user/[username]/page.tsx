@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { Lightbulb, Plus, ArrowLeft, LogOut, User, Check, MessageCircle, Globe, ExternalLink } from "lucide-react"
+import { GiWhaleTail } from "react-icons/gi"
 import { ProblemCard } from "@/components/problem-card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -45,6 +46,28 @@ function getAllUsernames(mainUsername: string): string[] {
   return [mainUsername, ...(userAliases[mainUsername] || [])]
 }
 
+// Функция для получения значков пользователя
+async function getUserBadges(userId: string): Promise<Array<{badge_type: 'verified' | 'whale' | 'early'}>> {
+  const supabase = createClient()
+  
+  try {
+    const { data, error } = await supabase
+      .from("user_badges")
+      .select("badge_type")
+      .eq("user_id", userId)
+
+    if (error) {
+      console.error("Error fetching user badges:", error)
+      return []
+    }
+
+    return data || []
+  } catch (err) {
+    console.error("Error fetching user badges:", err)
+    return []
+  }
+}
+
 export default function PublicProfilePage({ params }: PublicProfilePageProps) {
   const [showChatModal, setShowChatModal] = useState(false)
   const [profile, setProfile] = useState<any>(null)
@@ -56,6 +79,7 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
   const [userUpvotes, setUserUpvotes] = useState<Set<string>>(new Set())
   const [unreadChats, setUnreadChats] = useState<Set<string>>(new Set())
   const [shouldRedirect, setShouldRedirect] = useState(false)
+  const [authorBadges, setAuthorBadges] = useState<Array<{badge_type: 'verified' | 'whale' | 'early'}>>([])
   const router = useRouter()
 
   const supabase = createClient()
@@ -180,6 +204,12 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
       }
 
       setProfile(profileData)
+
+      // Загружаем значки пользователя
+      if (profileData.id) {
+        const badges = await getUserBadges(profileData.id)
+        setAuthorBadges(badges)
+      }
 
       // Проверяем, является ли этот профиль профилем текущего пользователя
       if (user) {
@@ -368,6 +398,11 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
       .toUpperCase()
       .slice(0, 2)
   }
+
+  // Проверяем наличие значков
+  const hasVerifiedBadge = authorBadges.some(b => b.badge_type === 'verified')
+  const hasWhaleBadge = authorBadges.some(b => b.badge_type === 'whale')
+  const hasEarlyBadge = authorBadges.some(b => b.badge_type === 'early')
 
   // Если нужно редиректить, показываем ничего или лоадер
   if (shouldRedirect) {
@@ -568,7 +603,8 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
                       </div>
                     )}
                   </div>
-                  {isVerifiedUser && (
+                  {/* Галочка верификации на аватаре (синяя) */}
+                  {hasVerifiedBadge && (
                     <div className="absolute -bottom-1 -right-1 bg-blue-500 rounded-full p-1 border-2 border-background">
                       <Check className="h-4 w-4 text-white" />
                     </div>
@@ -581,11 +617,35 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
                       <h2 className="text-2xl font-bold text-foreground break-words">
                         {profile.display_name || profile.username || "Anonymous"}
                       </h2>
-                      {isVerifiedUser && (
-                        <div className="text-blue-500 flex-shrink-0" title="Verified">
-                          <Check className="h-5 w-5" />
-                        </div>
-                      )}
+                      <div className="flex items-center gap-1">
+                        {/* BadgeCheck рядом с именем */}
+                        {hasVerifiedBadge && (
+                          <Check className="h-5 w-5 text-blue-500 flex-shrink-0" title="Verified" />
+                        )}
+                        {/* Значки whale и early */}
+                        {(hasWhaleBadge || hasEarlyBadge) && (
+                          <div className="flex items-center gap-1">
+                            {hasWhaleBadge && (
+                              <Badge 
+                                variant="outline" 
+                                className="bg-purple-100 text-purple-800 hover:bg-purple-100 border-purple-200 px-1.5 py-0 h-5"
+                                title="Whale"
+                              >
+                                <GiWhaleTail className="h-3 w-3" />
+                              </Badge>
+                            )}
+                            {hasEarlyBadge && (
+                              <Badge 
+                                variant="outline" 
+                                className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100 border-yellow-200 px-1.5 py-0 h-5"
+                                title="Early Supporter"
+                              >
+                                <GiWhaleTail className="h-3 w-3" />
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                     
                     <div className="flex flex-wrap items-center justify-center gap-1">
@@ -639,7 +699,7 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
                           }}
                           className="gap-2 min-w-[140px]"
                         >
-                         
+                          <Globe className="h-4 w-4" />
                           Visit Website
                           <ExternalLink className="h-3 w-3" />
                         </Button>
