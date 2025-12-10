@@ -72,7 +72,7 @@ export default async function ProblemsPage() {
   const heroSlides = [
     {
       id: 1,
-      title: "Launching Marketplace (beta)",
+      title: "Marketplace (Beta)",
       description: "Buy collectible usernames",
       buttonText: "Buy some",
      buttonVariant: "outline" as const,
