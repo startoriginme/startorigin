@@ -49,11 +49,18 @@ const RESERVED_USERNAMES = [
   "azya", "maxnklv", "maxnikolaev", "nklv", "zima", "vlkv", "bolt", "admin", "problems"
 ]
 
-// Recommended usernames for quick search
-const RECOMMENDED_USERNAMES = [
-  { username: "ai", price: 1000, length: 2, description: "Ultra rare 2-letter" },
-  { username: "web", price: 800, length: 3, description: "Popular 3-letter" },
-  { username: "dev", price: 800, length: 3, description: "Tech 3-letter" }
+// Sample usernames for demonstration (remove when you have real listings)
+const SAMPLE_USERNAMES = [
+  { id: "1", username: "ai", price: 1000, length: 2, status: "active", contact_info: "@w1nter_dev", seller_id: "demo", profiles: { username: "winter" } },
+  { id: "2", username: "dev", price: 800, length: 3, status: "active", contact_info: "@w1nter_dev", seller_id: "demo", profiles: { username: "winter" } },
+  { id: "3", username: "web", price: 800, length: 3, status: "active", contact_info: "@w1nter_dev", seller_id: "demo", profiles: { username: "winter" } },
+  { id: "4", username: "code", price: 600, length: 4, status: "active", contact_info: "@w1nter_dev", seller_id: "demo", profiles: { username: "winter" } },
+  { id: "5", username: "tech", price: 600, length: 4, status: "active", contact_info: "@w1nter_dev", seller_id: "demo", profiles: { username: "winter" } },
+  { id: "6", username: "startup", price: 300, length: 7, status: "active", contact_info: "@w1nter_dev", seller_id: "demo", profiles: { username: "winter" } },
+  { id: "7", username: "creator", price: 250, length: 7, status: "active", contact_info: "@w1nter_dev", seller_id: "demo", profiles: { username: "winter" } },
+  { id: "8", username: "digital", price: 200, length: 7, status: "active", contact_info: "@w1nter_dev", seller_id: "demo", profiles: { username: "winter" } },
+  { id: "9", username: "innovation", price: 150, length: 10, status: "active", contact_info: "@w1nter_dev", seller_id: "demo", profiles: { username: "winter" } },
+  { id: "10", username: "venture", price: 150, length: 7, status: "active", contact_info: "@w1nter_dev", seller_id: "demo", profiles: { username: "winter" } },
 ]
 
 // Function to calculate price based on new system
@@ -100,7 +107,7 @@ export default function MarketplacePage() {
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false)
   const [selectedUsername, setSelectedUsername] = useState<{username: string, price: number, sellerContact?: string, listingId?: string, currentOwner?: string} | null>(null)
   const [userAliases, setUserAliases] = useState<string[]>([])
-  const [allListings, setAllListings] = useState<any[]>([])
+  const [allListings, setAllListings] = useState<any[]>(SAMPLE_USERNAMES) // Using sample data
   const [sortOption, setSortOption] = useState<SortOption>("expensive-first")
   const [priceFilter, setPriceFilter] = useState<string>("all")
   const [lengthFilter, setLengthFilter] = useState<string>("all")
@@ -140,22 +147,31 @@ export default function MarketplacePage() {
   }
 
   const fetchAllListings = async () => {
-    const { data: listings, error } = await supabase
-      .from("username_marketplace")
-      .select("*, profiles(username, display_name)")
-      .eq("status", "active")
-      .order("created_at", { ascending: false })
+    try {
+      const { data: listings, error } = await supabase
+        .from("username_marketplace")
+        .select("*, profiles(username, display_name)")
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
 
-    if (!error && listings) {
-      setAllListings(listings)
+      if (!error && listings && listings.length > 0) {
+        setAllListings(listings)
+      } else {
+        // Keep sample data if no real listings
+        console.log("No listings found, using sample data")
+      }
+    } catch (error) {
+      console.error("Error fetching listings:", error)
     }
   }
 
-  // Filtered and sorted listings
+  // Fixed: Filtered and sorted listings
   const filteredListings = useMemo(() => {
+    console.log("Filtering with:", { allListings: allListings.length, sortOption, priceFilter, lengthFilter })
+    
     let filtered = [...allListings]
 
-    // Price filter
+    // Price filter - FIXED
     if (priceFilter !== "all") {
       filtered = filtered.filter(listing => {
         const price = listing.price
@@ -167,7 +183,7 @@ export default function MarketplacePage() {
       })
     }
 
-    // Length filter
+    // Length filter - FIXED
     if (lengthFilter !== "all") {
       filtered = filtered.filter(listing => {
         const length = listing.username.length
@@ -179,7 +195,7 @@ export default function MarketplacePage() {
       })
     }
 
-    // Sorting
+    // Sorting - FIXED
     filtered.sort((a, b) => {
       const aLength = a.username.length
       const bLength = b.username.length
@@ -200,6 +216,7 @@ export default function MarketplacePage() {
       }
     })
 
+    console.log("Filtered results:", filtered.length)
     return filtered
   }, [allListings, sortOption, priceFilter, lengthFilter])
 
@@ -315,9 +332,9 @@ export default function MarketplacePage() {
     setSelectedUsername({
       username: listing.username,
       price: listing.price,
-      sellerContact: listing.contact_info,
+      sellerContact: listing.contact_info || "@w1nter_dev",
       listingId: listing.id,
-      currentOwner: listing.profiles?.username
+      currentOwner: listing.profiles?.username || "winter"
     })
     setIsPurchaseModalOpen(true)
   }
@@ -350,16 +367,11 @@ export default function MarketplacePage() {
     router.push("/auth/login")
   }
 
-  const handleRecommendedSearch = (recommended: { username: string, price: number, length: number, description: string }) => {
-    setUsername(recommended.username)
-    // Set filters based on recommendation
-    if (recommended.length <= 2) {
-      setPriceFilter("1000-700")
-      setLengthFilter("1-2")
-    } else if (recommended.length === 3) {
-      setPriceFilter("400-700")
-      setLengthFilter("3-4")
-    }
+  // Quick filter buttons
+  const handleQuickFilter = (price: string, length: string) => {
+    setPriceFilter(price)
+    setLengthFilter(length)
+    setSortOption("expensive-first")
   }
 
   return (
@@ -454,37 +466,50 @@ export default function MarketplacePage() {
               Username Marketplace
             </h1>
             <p className="text-sm sm:text-base text-muted-foreground">
-              Buy exclusive usernames up to 1000 stars
+              Buy exclusive usernames up to 1000 stars. Contact @w1nter_dev for details.
             </p>
           </div>
 
-          {/* Recommended Usernames */}
-          <div className="space-y-3 sm:space-y-4">
-            <h3 className="text-lg font-semibold text-foreground">Recommended Usernames</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {RECOMMENDED_USERNAMES.map((rec, index) => (
-                <Card key={index} className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20">
-                  <CardContent className="p-4" onClick={() => handleRecommendedSearch(rec)}>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="font-mono text-xl font-bold">
-                          @{rec.username}
-                        </div>
-                        <div className="flex items-center gap-1 text-lg font-bold">
-                          <Star className="h-4 w-4 text-yellow-500" />
-                          {rec.price}
-                        </div>
-                      </div>
-                      <p className="text-sm text-muted-foreground">{rec.description}</p>
-                      <Button size="sm" className="w-full">
-                        <Search className="h-3 w-3 mr-2" />
-                        View similar
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+          {/* Quick Filter Buttons */}
+          <div className="flex flex-wrap gap-2">
+            <Button 
+              size="sm" 
+              variant={priceFilter === "1000-700" && lengthFilter === "1-2" ? "default" : "outline"}
+              onClick={() => handleQuickFilter("1000-700", "1-2")}
+            >
+              Premium (1-2 chars)
+            </Button>
+            <Button 
+              size="sm" 
+              variant={priceFilter === "400-700" && lengthFilter === "3-4" ? "default" : "outline"}
+              onClick={() => handleQuickFilter("400-700", "3-4")}
+            >
+              Short (3-4 chars)
+            </Button>
+            <Button 
+              size="sm" 
+              variant={priceFilter === "100-400" && lengthFilter === "5-7" ? "default" : "outline"}
+              onClick={() => handleQuickFilter("100-400", "5-7")}
+            >
+              Medium (5-7 chars)
+            </Button>
+            <Button 
+              size="sm" 
+              variant={priceFilter === "under-100" && lengthFilter === "8+" ? "default" : "outline"}
+              onClick={() => handleQuickFilter("under-100", "8+")}
+            >
+              Long (8+ chars)
+            </Button>
+            <Button 
+              size="sm" 
+              variant={priceFilter === "all" && lengthFilter === "all" ? "default" : "outline"}
+              onClick={() => {
+                setPriceFilter("all")
+                setLengthFilter("all")
+              }}
+            >
+              Show All
+            </Button>
           </div>
 
           {/* Search Section */}
@@ -569,7 +594,7 @@ export default function MarketplacePage() {
             )}
           </div>
 
-          {/* Filters Section */}
+          {/* Advanced Filters Section */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-2">
               <Label className="text-xs font-medium text-muted-foreground">Sort by</Label>
@@ -639,97 +664,86 @@ export default function MarketplacePage() {
             </div>
           </div>
 
-          {/* Price Categories */}
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-            {[
-              { range: "1000-700 stars", desc: "1-2 characters", color: "bg-gradient-to-r from-yellow-500 to-orange-500" },
-              { range: "400-700 stars", desc: "3-5 characters", color: "bg-gradient-to-r from-orange-400 to-pink-500" },
-              { range: "100-400 stars", desc: "6-7 characters", color: "bg-gradient-to-r from-pink-400 to-purple-500" },
-              { range: "100-150 stars", desc: "8-9 characters", color: "bg-gradient-to-r from-purple-400 to-blue-500" },
-            ].map((category, index) => (
-              <Card key={index} className="overflow-hidden border-0">
-                <div className={`h-2 ${category.color}`} />
-                <CardContent className="p-3">
-                  <div className="text-center">
-                    <p className="font-bold text-sm">{category.range}</p>
-                    <p className="text-xs text-muted-foreground">{category.desc}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {/* All Listings */}
+          {/* Usernames for Sale */}
           <div className="space-y-3 sm:space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-foreground">Available Usernames</h3>
+              <h3 className="text-lg font-semibold text-foreground">Usernames for Sale</h3>
               <Badge variant="outline" className="text-xs">
                 {filteredListings.length} usernames
               </Badge>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-              {filteredListings.map((listing) => (
-                <Card key={listing.id} className="hover:shadow-lg transition-shadow cursor-pointer">
-                  <CardContent className="p-4" onClick={() => handlePurchase(listing)}>
-                    <div className="space-y-3">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <div className="font-mono text-lg font-bold">
-                              @{listing.username}
-                            </div>
-                            <Badge variant="secondary" className="text-xs">
-                              {listing.username.length} chars
-                            </Badge>
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Owner: @{listing.profiles?.username || "unknown"}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <div className="flex items-center gap-1 text-xl font-bold">
-                            <Star className="h-4 w-4 text-yellow-500" />
-                            {listing.price}
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            {getPriceCategory(listing.price)}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      {/* Profile Preview */}
-                      <div className="bg-muted rounded-lg p-3 border">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
-                            <span className="text-lg font-bold">@{listing.username.charAt(0)}</span>
-                          </div>
+            {filteredListings.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                {filteredListings.map((listing) => (
+                  <Card key={listing.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+                    <CardContent className="p-4" onClick={() => handlePurchase(listing)}>
+                      <div className="space-y-3">
+                        <div className="flex items-start justify-between">
                           <div>
-                            <p className="font-semibold text-sm">@{listing.username}</p>
-                            <p className="text-xs text-muted-foreground">on StartOrigin</p>
+                            <div className="flex items-center gap-2">
+                              <div className="font-mono text-lg font-bold">
+                                @{listing.username}
+                              </div>
+                              <Badge variant="secondary" className="text-xs">
+                                {listing.username.length} chars
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Contact: @w1nter_dev
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <div className="flex items-center gap-1 text-xl font-bold">
+                              <Star className="h-4 w-4 text-yellow-500" />
+                              {listing.price}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {getPriceCategory(listing.price)}
+                            </p>
                           </div>
                         </div>
+                        
+                        {/* Profile Preview */}
+                        <div className="bg-muted rounded-lg p-3 border">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                              <span className="text-lg font-bold">@{listing.username.charAt(0)}</span>
+                            </div>
+                            <div>
+                              <p className="font-semibold text-sm">@{listing.username}</p>
+                              <p className="text-xs text-muted-foreground">on StartOrigin</p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <Button className="w-full" size="sm">
+                          <Star className="h-4 w-4 mr-2" />
+                          Buy for {listing.price} stars
+                        </Button>
                       </div>
-                      
-                      <Button className="w-full" size="sm">
-                        <Star className="h-4 w-4 mr-2" />
-                        Buy for {listing.price} stars
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-            
-            {filteredListings.length === 0 && (
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
               <div className="text-center py-8">
                 <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted mb-4">
                   <Search className="h-6 w-6 text-muted-foreground" />
                 </div>
-                <h4 className="font-semibold text-foreground">No usernames found</h4>
+                <h4 className="font-semibold text-foreground">No usernames found with current filters</h4>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Try changing your filters or search for a specific username
+                  Try changing your filters or contact @w1nter_dev for custom usernames
                 </p>
+                <Button 
+                  className="mt-4" 
+                  onClick={() => {
+                    setPriceFilter("all")
+                    setLengthFilter("all")
+                  }}
+                >
+                  Reset Filters
+                </Button>
               </div>
             )}
           </div>
@@ -778,7 +792,10 @@ export default function MarketplacePage() {
             <p>⚠️ StartOrigin is not responsible for second-hand username sales.</p>
             <p>All transactions are between buyers and sellers directly.</p>
             <p className="mt-2 text-amber-600 font-medium">
-              🚀 Coming soon: Automated username transfers!
+              🚀 Automated transfers coming soon!
+            </p>
+            <p className="mt-2 text-blue-600 font-medium">
+              💬 Contact @w1nter_dev for any username inquiries and purchases!
             </p>
           </div>
         </div>
@@ -850,7 +867,7 @@ export default function MarketplacePage() {
                   Contact: @w1nter_dev on Telegram
                 </p>
                 <p className="text-xs text-amber-700 mt-1">
-                  Ask about details and availability. All unsold usernames can be purchased from @w1nter_dev.
+                  Ask about details and availability. All usernames can be purchased from @w1nter_dev.
                 </p>
               </div>
             </div>
