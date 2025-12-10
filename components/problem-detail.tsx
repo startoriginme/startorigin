@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { GiWhaleTail } from "react-icons/gi";
-import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical, Share2, Copy, Twitter, MessageCircle, Flag, Shield, Check, } from "lucide-react"
+import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical, Share2, Copy, Twitter, MessageCircle, Flag, Shield, Check, BadgeCheck } from "lucide-react"
 import Link from "next/link"
 import {
   AlertDialog,
@@ -386,7 +386,7 @@ export function ProblemDetail({
             className="bg-blue-100 text-blue-800 hover:bg-blue-100 border-blue-200 px-1.5 py-0.5 h-5"
             title="Verified"
           >
-            <Check className="h-3 w-3 mr-0.5" />
+            <BadgeCheck className="h-3 w-3 mr-0.5" />
           </Badge>
         )}
         {hasWhaleBadge && (
@@ -672,7 +672,7 @@ export function ProblemDetail({
                 {/* Галочка верификации - только если есть verified badge */}
                 {hasVerifiedBadge && (
                   <div className="absolute -bottom-1 -right-1 bg-blue-500 rounded-full p-0.5 border-2 border-background">
-                    <Check className="h-3 w-3 text-white" />
+                    <BadgeCheck className="h-3 w-3 text-white" />
                   </div>
                 )}
               </div>
