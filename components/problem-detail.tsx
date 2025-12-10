@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical, Share2, Copy, Twitter, MessageCircle, Flag, Shield, Check } from "lucide-react"
+import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical, Share2, Copy, Twitter, MessageCircle, Flag, Shield, Check, Whale } from "lucide-react"
 import Link from "next/link"
 import {
   AlertDialog,
@@ -103,6 +103,28 @@ async function getDatabaseAliases(userId: string): Promise<string[]> {
   }
 }
 
+// Функция для получения значков пользователя
+async function getUserBadges(userId: string): Promise<Array<{badge_type: 'verified' | 'whale' | 'early'}>> {
+  const supabase = createClient()
+  
+  try {
+    const { data, error } = await supabase
+      .from("user_badges")
+      .select("badge_type")
+      .eq("user_id", userId)
+
+    if (error) {
+      console.error("Error fetching user badges:", error)
+      return []
+    }
+
+    return data || []
+  } catch (err) {
+    console.error("Error fetching user badges:", err)
+    return []
+  }
+}
+
 // Функция для объединения статических и базы данных алиасов
 async function getAllUsernamesCombined(mainUsername: string, userId?: string): Promise<string[]> {
   const staticAliases = getAllUsernames(mainUsername)
@@ -171,9 +193,6 @@ const parseMentions = (text: string) => {
   return parts.length > 0 ? parts : text;
 };
 
-// Список подтвержденных пользователей
-const verifiedUsers = ["startorigin", "nikolaev", "winter", "gerxog"]
-
 export function ProblemDetail({ 
   problem, 
   userId, 
@@ -186,6 +205,7 @@ export function ProblemDetail({
   const [isDeleting, setIsDeleting] = useState(false)
   const [isShareOpen, setIsShareOpen] = useState(false)
   const [authorAllUsernames, setAuthorAllUsernames] = useState<string[]>([])
+  const [authorBadges, setAuthorBadges] = useState<Array<{badge_type: 'verified' | 'whale' | 'early'}>>([])
   
   const router = useRouter()
   const { toast } = useToast()
@@ -195,7 +215,13 @@ export function ProblemDetail({
   }, [])
 
   useEffect(() => {
-    const fetchAuthorAliases = async () => {
+    const fetchAuthorData = async () => {
+      if (problem.author_id) {
+        // Получаем значки автора
+        const badges = await getUserBadges(problem.author_id)
+        setAuthorBadges(badges)
+      }
+      
       if (problem.profiles?.username && problem.author_id) {
         const usernames = await getAllUsernamesCombined(
           problem.profiles.username, 
@@ -207,14 +233,18 @@ export function ProblemDetail({
       }
     }
     
-    fetchAuthorAliases()
+    fetchAuthorData()
   }, [problem.profiles?.username, problem.author_id])
 
   const isAuthor = userId === problem.author_id
   
   // Получаем основной username автора
   const authorMainUsername = problem.profiles?.username ? getMainUsername(problem.profiles.username) : null
-  const isVerifiedUser = authorMainUsername ? verifiedUsers.includes(authorMainUsername) : false
+
+  // Проверяем наличие значков
+  const hasVerifiedBadge = authorBadges.some(b => b.badge_type === 'verified')
+  const hasWhaleBadge = authorBadges.some(b => b.badge_type === 'whale')
+  const hasEarlyBadge = authorBadges.some(b => b.badge_type === 'early')
 
   const handleUpvote = async () => {
     if (!userId) {
@@ -301,10 +331,8 @@ export function ProblemDetail({
   }
 
   const handleReport = () => {
-    // Google Forms URL для жалоб - ЗАМЕНИ НА СВОЙ URL
     const googleFormUrl = "https://forms.gle/RPUEPZBQEJHZT4GFA"
     
-    // Автозаполнение полей
     const prefillUrl = `${googleFormUrl}?entry.123456789=${encodeURIComponent(problem.title)}&entry.987654321=${encodeURIComponent(window.location.href)}`
     
     window.open(prefillUrl, '_blank', 'noopener,noreferrer')
@@ -345,6 +373,41 @@ export function ProblemDetail({
   const getContactIcon = (contact: string) => {
     if (contact.includes("+") || /^\d+$/.test(contact)) return <Phone className="h-4 w-4" />
     return <Mail className="h-4 w-4" />
+  }
+
+  // Функция для отображения значков
+  const renderBadges = () => {
+    return (
+      <div className="flex items-center gap-1">
+        {hasVerifiedBadge && (
+          <Badge 
+            variant="outline" 
+            className="bg-blue-100 text-blue-800 hover:bg-blue-100 border-blue-200 px-1.5 py-0.5 h-5"
+            title="Verified"
+          >
+            <Check className="h-3 w-3 mr-0.5" />
+          </Badge>
+        )}
+        {hasWhaleBadge && (
+          <Badge 
+            variant="outline" 
+            className="bg-purple-100 text-purple-800 hover:bg-purple-100 border-purple-200 px-1.5 py-0.5 h-5"
+            title="Whale"
+          >
+            <Whale className="h-3 w-3 mr-0.5" />
+          </Badge>
+        )}
+        {hasEarlyBadge && (
+          <Badge 
+            variant="outline" 
+            className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100 border-yellow-200 px-1.5 py-0.5 h-5"
+            title="Early Supporter"
+          >
+            <Whale className="h-3 w-3 mr-0.5" />
+          </Badge>
+        )}
+      </div>
+    )
   }
 
   return (
@@ -588,7 +651,7 @@ export function ProblemDetail({
               href={authorMainUsername ? `/user/${authorMainUsername}` : "#"}
               className={authorMainUsername ? "cursor-pointer" : "cursor-default"}
             >
-              {/* Кастомный аватар с галочкой верификации */}
+              {/* Кастомный аватар */}
               <div className="relative h-16 w-16">
                 <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-border bg-muted">
                   {problem.profiles?.avatar_url ? (
@@ -605,8 +668,8 @@ export function ProblemDetail({
                     </div>
                   )}
                 </div>
-                {/* Галочка верификации */}
-                {isVerifiedUser && (
+                {/* Галочка верификации - только если есть verified badge */}
+                {hasVerifiedBadge && (
                   <div className="absolute -bottom-1 -right-1 bg-blue-500 rounded-full p-0.5 border-2 border-background">
                     <Check className="h-3 w-3 text-white" />
                   </div>
@@ -614,25 +677,21 @@ export function ProblemDetail({
               </div>
             </Link>
             <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
                 {authorMainUsername ? (
                   <Link 
                     href={`/user/${authorMainUsername}`}
-                    className="font-semibold text-foreground hover:text-primary transition-colors break-words flex items-center gap-1"
+                    className="font-semibold text-foreground hover:text-primary transition-colors break-words flex items-center gap-2"
                   >
                     {problem.profiles?.display_name || authorMainUsername}
-                    {isVerifiedUser && (
-                      <Check className="h-4 w-4 text-blue-500" title="Verified" />
-                    )}
                   </Link>
                 ) : (
-                  <h3 className="font-semibold text-foreground break-words flex items-center gap-1">
+                  <h3 className="font-semibold text-foreground break-words">
                     {problem.profiles?.display_name || "Anonymous"}
-                    {isVerifiedUser && (
-                      <Check className="h-4 w-4 text-blue-500" title="Verified" />
-                    )}
                   </h3>
                 )}
+                {/* Отображаем значки */}
+                {(hasVerifiedBadge || hasWhaleBadge || hasEarlyBadge) && renderBadges()}
               </div>
               
               {/* Отображаем все username через запятую */}
@@ -704,4 +763,4 @@ export function ProblemDetail({
       </Card>
     </div>
   )
-}   
+}
