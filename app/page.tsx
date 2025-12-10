@@ -72,11 +72,11 @@ export default async function ProblemsPage() {
   const heroSlides = [
     {
       id: 1,
-      title: "Black Friday!",
-      description: "Invite friends, get collectibles",
-      buttonText: "Learn more",
+      title: "Launching Marketplace (beta)",
+      description: "Buy collectible usernames",
+      buttonText: "Buy some",
      buttonVariant: "outline" as const,
-      link: "https://startorigin.me/problems/d13a2d85-21fa-4ccf-8129-d19ac726cdda",
+      link: "https://startorigin.me/marketplace",
       openInNewTab: false
     },
     {
@@ -103,7 +103,7 @@ export default async function ProblemsPage() {
       description: "Stream on Winter's channel",
       buttonText: "Subscribe",
       buttonVariant: "outline" as const,
-      link: "https://t.me/winter",
+      link: "https://t.me/winter_devs",
       openInNewTab: true
     }
   ]
