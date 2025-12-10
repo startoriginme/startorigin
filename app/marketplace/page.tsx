@@ -47,7 +47,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Label } from @/components/ui/label
+import { Label } from "@/components/ui/label"
 
 // Список занятых username, которые не нужно проверять в базе
 const RESERVED_USERNAMES = [
