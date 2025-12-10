@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { GiWhaleTail } from "react-icons/gi";
-import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical, Share2, Copy, Twitter, MessageCircle, Flag, Shield, Check, BadgeCheck } from "lucide-react"
+import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical, Share2, Copy, Twitter, MessageCircle, Flag, Shield, Check } from "lucide-react"
 import Link from "next/link"
 import {
   AlertDialog,
@@ -376,41 +376,6 @@ export function ProblemDetail({
     return <Mail className="h-4 w-4" />
   }
 
-  // Функция для отображения значков
-  const renderBadges = () => {
-    return (
-      <div className="flex items-center gap-1">
-        {hasVerifiedBadge && (
-          <Badge 
-            variant="outline" 
-            className="bg-blue-100 text-blue-800 hover:bg-blue-100 border-blue-200 px-1.5 py-0.5 h-5"
-            title="Verified"
-          >
-            <BadgeCheck className="h-3 w-3 mr-0.5" />
-          </Badge>
-        )}
-        {hasWhaleBadge && (
-          <Badge 
-            variant="outline" 
-            className="bg-purple-100 text-purple-800 hover:bg-purple-100 border-purple-200 px-1.5 py-0.5 h-5"
-            title="Whale"
-          >
-            <Whale className="h-3 w-3 mr-0.5" />
-          </Badge>
-        )}
-        {hasEarlyBadge && (
-          <Badge 
-            variant="outline" 
-            className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100 border-yellow-200 px-1.5 py-0.5 h-5"
-            title="Early Supporter"
-          >
-            <GiWhaleTail className="h-3 w-3 mr-0.5" />
-          </Badge>
-        )}
-      </div>
-    )
-  }
-
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       {/* Problem Card */}
@@ -652,7 +617,7 @@ export function ProblemDetail({
               href={authorMainUsername ? `/user/${authorMainUsername}` : "#"}
               className={authorMainUsername ? "cursor-pointer" : "cursor-default"}
             >
-              {/* Кастомный аватар */}
+              {/* Кастомный аватар с Check на аватаре */}
               <div className="relative h-16 w-16">
                 <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-border bg-muted">
                   {problem.profiles?.avatar_url ? (
@@ -669,10 +634,10 @@ export function ProblemDetail({
                     </div>
                   )}
                 </div>
-                {/* Галочка верификации - только если есть verified badge */}
+                {/* Check на аватаре - синяя галочка */}
                 {hasVerifiedBadge && (
                   <div className="absolute -bottom-1 -right-1 bg-blue-500 rounded-full p-0.5 border-2 border-background">
-                    <BadgeCheck className="h-3 w-3 text-white" />
+                    <Check className="h-3 w-3 text-white" />
                   </div>
                 )}
               </div>
@@ -685,14 +650,43 @@ export function ProblemDetail({
                     className="font-semibold text-foreground hover:text-primary transition-colors break-words flex items-center gap-2"
                   >
                     {problem.profiles?.display_name || authorMainUsername}
+                    {/* BadgeCheck рядом с именем - без контейнера */}
+                    {hasVerifiedBadge && (
+                      <Check className="h-4 w-4 text-blue-500" title="Verified" />
+                    )}
                   </Link>
                 ) : (
-                  <h3 className="font-semibold text-foreground break-words">
+                  <h3 className="font-semibold text-foreground break-words flex items-center gap-2">
                     {problem.profiles?.display_name || "Anonymous"}
+                    {/* BadgeCheck рядом с именем - без контейнера */}
+                    {hasVerifiedBadge && (
+                      <Check className="h-4 w-4 text-blue-500" title="Verified" />
+                    )}
                   </h3>
                 )}
-                {/* Отображаем значки */}
-                {(hasVerifiedBadge || hasWhaleBadge || hasEarlyBadge) && renderBadges()}
+                {/* Остальные значки в контейнерах */}
+                {(hasWhaleBadge || hasEarlyBadge) && (
+                  <div className="flex items-center gap-1">
+                    {hasWhaleBadge && (
+                      <Badge 
+                        variant="outline" 
+                        className="bg-purple-100 text-purple-800 hover:bg-purple-100 border-purple-200 px-1.5 py-0.5 h-5"
+                        title="Whale"
+                      >
+                        <GiWhaleTail className="h-3 w-3 mr-0.5" />
+                      </Badge>
+                    )}
+                    {hasEarlyBadge && (
+                      <Badge 
+                        variant="outline" 
+                        className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100 border-yellow-200 px-1.5 py-0.5 h-5"
+                        title="Early Supporter"
+                      >
+                        <GiWhaleTail className="h-3 w-3 mr-0.5" />
+                      </Badge>
+                    )}
+                  </div>
+                )}
               </div>
               
               {/* Отображаем все username через запятую */}
