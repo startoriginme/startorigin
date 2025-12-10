@@ -6,7 +6,8 @@ import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical, Share2, Copy, Twitter, MessageCircle, Flag, Shield, Check, Whale } from "lucide-react"
+import { GiWhaleTail } from "react-icons/gi";
+import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical, Share2, Copy, Twitter, MessageCircle, Flag, Shield, Check, } from "lucide-react"
 import Link from "next/link"
 import {
   AlertDialog,
@@ -403,7 +404,7 @@ export function ProblemDetail({
             className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100 border-yellow-200 px-1.5 py-0.5 h-5"
             title="Early Supporter"
           >
-            <Whale className="h-3 w-3 mr-0.5" />
+            <GiWhaleTale className="h-3 w-3 mr-0.5" />
           </Badge>
         )}
       </div>
