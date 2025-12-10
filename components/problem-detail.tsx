@@ -404,7 +404,7 @@ export function ProblemDetail({
             className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100 border-yellow-200 px-1.5 py-0.5 h-5"
             title="Early Supporter"
           >
-            <GiWhaleTale className="h-3 w-3 mr-0.5" />
+            <GiWhaleTail className="h-3 w-3 mr-0.5" />
           </Badge>
         )}
       </div>
