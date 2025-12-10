@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
-import { Lightbulb, Plus, LogOut, User, Search, Check, X, Crown, Star, ExternalLink, Tag, Trash2, Users, Mail, Menu } from "lucide-react"
+import { Lightbulb, Plus, LogOut, User, Search, Check, X, Crown, Star, ExternalLink, Tag, Trash2, Menu, Filter, ChevronDown, ChevronUp, Hash } from "lucide-react"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -23,7 +23,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,11 +39,44 @@ import {
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
 
 // Список занятых username, которые не нужно проверять в базе
 const RESERVED_USERNAMES = [
   "azya", "maxnklv", "maxnikolaev", "nklv", "zima", "vlkv", "bolt", "admin", "problems"
 ]
+
+// Функция расчета цены по новой системе
+const calculatePrice = (length: number): number => {
+  if (length === 1) return 1000
+  if (length === 2) return 950 // середина 900-1000
+  if (length === 3) return 800 // середина 700-900
+  if (length === 4) return 550 // середина 400-700
+  if (length === 5) return 550 // середина 400-700
+  if (length === 6) return 275 // середина 150-400
+  if (length === 7) return 275 // середина 150-400
+  if (length === 8) return 125 // середина 100-150
+  if (length === 9) return 125 // середина 100-150
+  return 100
+}
+
+// Функция получения ценовой категории
+const getPriceCategory = (price: number): string => {
+  if (price >= 700) return "1000-700 звёзд"
+  if (price >= 400) return "400-700 звёзд"
+  if (price >= 100) return "100-400 звёзд"
+  return "До 100 звёзд"
+}
+
+// Сортировка и фильтрация
+type SortOption = "expensive-first" | "cheap-first" | "length-down" | "length-up"
 
 export default function MarketplacePage() {
   const [user, setUser] = useState<any>(null)
@@ -63,25 +95,13 @@ export default function MarketplacePage() {
     isAlias?: boolean
   } | null>(null)
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false)
-  const [isSellModalOpen, setIsSellModalOpen] = useState(false)
-  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false)
   const [selectedUsername, setSelectedUsername] = useState<{username: string, price: number, sellerContact?: string, listingId?: string, currentOwner?: string} | null>(null)
   const [userAliases, setUserAliases] = useState<string[]>([])
-  const [myListings, setMyListings] = useState<any[]>([])
-  const [sellForm, setSellForm] = useState({
-    username: "",
-    price: "",
-    contactInfo: ""
-  })
-  const [transferForm, setTransferForm] = useState({
-    username: "",
-    newOwnerUsername: "",
-    newOwnerId: ""
-  })
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isSearchingUser, setIsSearchingUser] = useState(false)
-  const [removeListingDialog, setRemoveListingDialog] = useState<{open: boolean, listingId: string, username: string}>({open: false, listingId: "", username: ""})
+  const [allListings, setAllListings] = useState<any[]>([])
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sortOption, setSortOption] = useState<SortOption>("expensive-first")
+  const [priceFilter, setPriceFilter] = useState<string>("all")
+  const [lengthFilter, setLengthFilter] = useState<string>("all")
   
   const router = useRouter()
   const supabase = createClient()
@@ -101,12 +121,12 @@ export default function MarketplacePage() {
 
         // Загружаем алиасы пользователя
         await fetchUserAliases(user.id)
-
-        // Загружаем активные listings пользователя
-        await fetchMyListings(user.id)
       }
     }
     fetchUser()
+    
+    // Загружаем все листинги на маркетплейсе
+    fetchAllListings()
   }, [supabase])
 
   const fetchUserAliases = async (userId: string) => {
@@ -117,15 +137,69 @@ export default function MarketplacePage() {
     setUserAliases(aliases?.map(a => a.alias) || [])
   }
 
-  const fetchMyListings = async (userId: string) => {
-    const { data: listings } = await supabase
+  const fetchAllListings = async () => {
+    const { data: listings, error } = await supabase
       .from("username_marketplace")
-      .select("*")
-      .eq("seller_id", userId)
+      .select("*, profiles(username, display_name)")
       .eq("status", "active")
       .order("created_at", { ascending: false })
-    setMyListings(listings || [])
+
+    if (!error && listings) {
+      setAllListings(listings)
+    }
   }
+
+  // Фильтрованные и отсортированные листинги
+  const filteredListings = useMemo(() => {
+    let filtered = [...allListings]
+
+    // Фильтр по цене
+    if (priceFilter !== "all") {
+      filtered = filtered.filter(listing => {
+        const price = listing.price
+        if (priceFilter === "1000-700") return price >= 700
+        if (priceFilter === "400-700") return price >= 400 && price < 700
+        if (priceFilter === "100-400") return price >= 100 && price < 400
+        if (priceFilter === "under-100") return price < 100
+        return true
+      })
+    }
+
+    // Фильтр по длине
+    if (lengthFilter !== "all") {
+      filtered = filtered.filter(listing => {
+        const length = listing.username.length
+        if (lengthFilter === "1-2") return length <= 2
+        if (lengthFilter === "3-4") return length >= 3 && length <= 4
+        if (lengthFilter === "5-7") return length >= 5 && length <= 7
+        if (lengthFilter === "8+") return length >= 8
+        return true
+      })
+    }
+
+    // Сортировка
+    filtered.sort((a, b) => {
+      const aLength = a.username.length
+      const bLength = b.username.length
+      const aPrice = a.price
+      const bPrice = b.price
+
+      switch (sortOption) {
+        case "expensive-first":
+          return bPrice - aPrice
+        case "cheap-first":
+          return aPrice - bPrice
+        case "length-down":
+          return aLength - bLength
+        case "length-up":
+          return bLength - aLength
+        default:
+          return 0
+      }
+    })
+
+    return filtered
+  }, [allListings, sortOption, priceFilter, lengthFilter])
 
   const getInitials = (name: string | null) => {
     if (!name) return "U"
@@ -135,18 +209,6 @@ export default function MarketplacePage() {
       .join("")
       .toUpperCase()
       .slice(0, 2)
-  }
-
-  const calculatePrice = (length: number): number => {
-    if (length === 1) return 2000
-    if (length === 2) return 1750
-    if (length === 3) return 1500
-    if (length === 4) return 1250
-    if (length === 5) return 1000
-    if (length === 6) return 600
-    if (length === 7) return 400
-    if (length === 8) return 200
-    return 100
   }
 
   const checkUsername = async () => {
@@ -247,338 +309,37 @@ export default function MarketplacePage() {
     }
   }
 
-  const handlePurchase = () => {
-    if (result?.forSale) {
-      setSelectedUsername({
-        username,
-        price: result.sellerPrice!,
-        sellerContact: result.sellerContact,
-        listingId: result.listingId,
-        currentOwner: result.currentOwner
-      })
-    } else {
-      setSelectedUsername({
-        username,
-        price: result?.price || calculatePrice(username.length)
-      })
-    }
+  const handlePurchase = (listing: any) => {
+    setSelectedUsername({
+      username: listing.username,
+      price: listing.price,
+      sellerContact: listing.contact_info,
+      listingId: listing.id,
+      currentOwner: listing.profiles?.username
+    })
     setIsPurchaseModalOpen(true)
   }
 
-  const handleSellAlias = (alias: string) => {
-    setSellForm({
-      username: alias,
-      price: calculatePrice(alias.length).toString(),
-      contactInfo: userProfile?.username ? `@${userProfile.username}` : ""
-    })
-    setIsSellModalOpen(true)
-  }
-
-  const handleTransferAlias = (alias: string) => {
-    setTransferForm({
-      username: alias,
-      newOwnerUsername: "",
-      newOwnerId: ""
-    })
-    setIsTransferModalOpen(true)
-  }
-
-  const searchUser = async () => {
-    if (!transferForm.newOwnerUsername.trim()) return
-
-    setIsSearchingUser(true)
-    try {
-      const searchUsername = transferForm.newOwnerUsername.toLowerCase()
-
-      // Сначала ищем в основных профилях
-      let profileData = null
-      let foundVia = ""
-      
-      const { data: mainProfile, error: mainError } = await supabase
-        .from("profiles")
-        .select("id, username, display_name")
-        .eq("username", searchUsername)
-        .single()
-
-      if (!mainError && mainProfile) {
-        profileData = mainProfile
-        foundVia = "main profile"
-      } else {
-        // Если не нашли в основных профилях, ищем в алиасах
-        const { data: aliasData, error: aliasError } = await supabase
-          .from("user_aliases")
-          .select("user_id")
-          .eq("alias", searchUsername)
-          .single()
-
-        if (!aliasError && aliasData) {
-          // Теперь получаем информацию о пользователе по user_id
-          const { data: userData, error: userError } = await supabase
-            .from("profiles")
-            .select("id, username, display_name")
-            .eq("id", aliasData.user_id)
-            .single()
-
-          if (!userError && userData) {
-            profileData = userData
-            foundVia = "alias"
-          }
-        }
-      }
-
-      if (!profileData) {
-        toast.error("User not found", {
-          description: "Please check the username and try again."
-        })
-        setTransferForm(prev => ({ ...prev, newOwnerId: "" }))
-        return
-      }
-
-      setTransferForm(prev => ({
-        ...prev,
-        newOwnerId: profileData.id
-      }))
-
-      toast.success("User found", {
-        description: `Found @${profileData.username} ${foundVia === "alias" ? "(via alias)" : ""}`
-      })
-    } catch (error) {
-      console.error("Error searching user:", error)
-      toast.error("Search failed", {
-        description: "Error searching for user. Please try again."
-      })
-      setTransferForm(prev => ({ ...prev, newOwnerId: "" }))
-    } finally {
-      setIsSearchingUser(false)
-    }
-  }
-
-  const handleSubmitSell = async () => {
-    if (!sellForm.price || !sellForm.contactInfo) {
-      toast.error("Missing information", {
-        description: "Please fill in all fields"
-      })
-      return
-    }
-
-    if (!sellForm.contactInfo.includes('@')) {
-      toast.error("Invalid contact info", {
-        description: "Please provide a valid Telegram username starting with @"
-      })
-      return
-    }
-
-    setIsSubmitting(true)
-
+  const handleRemoveAlias = async (alias: string) => {
     try {
       const { error } = await supabase
-        .from("username_marketplace")
-        .insert({
-          username: sellForm.username.toLowerCase(),
-          price: parseInt(sellForm.price),
-          contact_info: sellForm.contactInfo,
-          seller_id: user.id,
-          status: "active"
-        })
-
-      if (error) {
-        console.error("Supabase error:", error)
-        if (error.code === '23505') {
-          toast.error("Already listed", {
-            description: "This username is already listed for sale"
-          })
-        } else if (error.code === '42501') {
-          toast.error("Permission denied", {
-            description: "Please make sure the marketplace table exists."
-          })
-        } else {
-          throw error
-        }
-        return
-      }
-
-      toast.success("Listed for sale", {
-        description: `@${sellForm.username} is now available on marketplace`
-      })
-      
-      setIsSellModalOpen(false)
-      setSellForm({ username: "", price: "", contactInfo: "" })
-      await fetchMyListings(user.id)
-      
-      if (username === sellForm.username) {
-        setResult({
-          available: true,
-          price: parseInt(sellForm.price),
-          length: sellForm.username.length,
-          forSale: true,
-          sellerContact: sellForm.contactInfo,
-          sellerPrice: parseInt(sellForm.price)
-        })
-      }
-    } catch (error) {
-      console.error("Error listing username:", error)
-      toast.error("Listing failed", {
-        description: "Failed to list username for sale. Please try again."
-      })
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const handleRemoveListing = async (listingId: string, listingUsername: string) => {
-    try {
-      console.log("Removing listing:", { listingId, listingUsername, userId: user.id })
-      
-      const { error } = await supabase
-        .from("username_marketplace")
-        .update({ status: 'cancelled' })
-        .eq('id', listingId)
-        .eq('seller_id', user.id)
-
-      if (error) {
-        console.error("Supabase error:", error)
-        throw error
-      }
-
-      // После удаления листинга, username возвращается в My Aliases
-      // Проверяем, что алиас действительно принадлежит пользователю
-      const { data: existingAlias } = await supabase
-        .from("user_aliases")
-        .select("alias")
-        .eq("alias", listingUsername.toLowerCase())
-        .eq("user_id", user.id)
-        .single()
-
-      if (!existingAlias) {
-        // Если алиас не существует, создаем его
-        const { error: insertError } = await supabase
-          .from("user_aliases")
-          .insert({
-            alias: listingUsername.toLowerCase(),
-            user_id: user.id
-          })
-
-        if (insertError) {
-          console.error("Error adding alias back:", insertError)
-        }
-      }
-
-      toast.success("Listing removed", {
-        description: `@${listingUsername} has been removed from marketplace and returned to your aliases`
-      })
-
-      await fetchMyListings(user.id)
-      await fetchUserAliases(user.id)
-      
-      // Если удаленный listing был в текущем поиске, сбрасываем результат
-      if (username === listingUsername) {
-        setResult(null)
-        setUsername("")
-      }
-      
-      setRemoveListingDialog({open: false, listingId: "", username: ""})
-    } catch (error) {
-      console.error("Error removing listing:", error)
-      toast.error("Remove failed", {
-        description: "Failed to remove listing. Please try again."
-      })
-    }
-  }
-
-  const handleTransfer = async () => {
-    if (!transferForm.newOwnerId) {
-      toast.error("User not selected", {
-        description: "Please search and select a user first"
-      })
-      return
-    }
-
-    setIsSubmitting(true)
-    try {
-      // Сначала проверяем, что новый владелец существует
-      const { data: newOwner, error: ownerError } = await supabase
-        .from("profiles")
-        .select("id, username")
-        .eq("id", transferForm.newOwnerId)
-        .single()
-
-      if (ownerError || !newOwner) {
-        toast.error("User not found", {
-          description: "New owner not found"
-        })
-        return
-      }
-
-      // Проверяем, что пользователь не пытается передать алиас самому себе
-      if (newOwner.id === user.id) {
-        toast.error("Invalid transfer", {
-          description: "You cannot transfer an alias to yourself"
-        })
-        return
-      }
-
-      // Удаляем алиас у текущего пользователя
-      const { error: deleteError } = await supabase
         .from("user_aliases")
         .delete()
-        .eq("alias", transferForm.username.toLowerCase())
+        .eq("alias", alias.toLowerCase())
         .eq("user_id", user.id)
 
-      if (deleteError) {
-        console.error("Error deleting alias from current owner:", deleteError)
-        throw deleteError
-      }
+      if (error) throw error
 
-      // Добавляем алиас новому пользователю
-      const { error: insertError } = await supabase
-        .from("user_aliases")
-        .insert({
-          alias: transferForm.username.toLowerCase(),
-          user_id: transferForm.newOwnerId
-        })
-
-      if (insertError) {
-        console.error("Error adding alias to new owner:", insertError)
-        
-        // Если не удалось добавить новому владельцу, возвращаем алиас старому
-        await supabase
-          .from("user_aliases")
-          .insert({
-            alias: transferForm.username.toLowerCase(),
-            user_id: user.id
-          })
-        
-        throw insertError
-      }
-
-      // Если username был в продаже, удаляем listing
-      const existingListing = myListings.find(l => l.username === transferForm.username)
-      if (existingListing) {
-        await supabase
-          .from("username_marketplace")
-          .update({ status: 'cancelled' })
-          .eq('username', transferForm.username.toLowerCase())
-          .eq('seller_id', user.id)
-      }
-
-      toast.success("Transfer completed", {
-        description: `@${transferForm.username} successfully transferred to @${newOwner.username}`
+      toast.success("Alias removed", {
+        description: `@${alias} has been removed from your aliases`
       })
       
-      setIsTransferModalOpen(false)
-      setTransferForm({ username: "", newOwnerUsername: "", newOwnerId: "" })
-      
-      // Обновляем данные
       await fetchUserAliases(user.id)
-      await fetchMyListings(user.id)
-
     } catch (error) {
-      console.error("Error transferring username:", error)
-      toast.error("Transfer failed", {
-        description: "Failed to transfer username. Please try again."
+      console.error("Error removing alias:", error)
+      toast.error("Remove failed", {
+        description: "Failed to remove alias. Please try again."
       })
-    } finally {
-      setIsSubmitting(false)
     }
   }
 
@@ -594,7 +355,6 @@ export default function MarketplacePage() {
         <div className="container mx-auto px-4 py-4">
           <nav className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              {/* Бургер меню для всех устройств */}
               <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
                 <SheetTrigger asChild>
                   <Button variant="ghost" size="icon">
@@ -622,16 +382,16 @@ export default function MarketplacePage() {
                       >
                         Marketplace
                       </Link>
-                        <Link 
+                      <Link 
                         href="https://telegra.ph/Advertise-and-get-verified-on-StartOrigin-11-25" 
-                        className="flex items-center gap-2 px-2 py-2 text-sm rounded-lg hover:bg-accent bg-accent"
+                        className="flex items-center gap-2 px-2 py-2 text-sm rounded-lg hover:bg-accent"
                         onClick={() => setSidebarOpen(false)}
                       >
                         Advertise
                       </Link>
-                       <Link 
+                      <Link 
                         href="https://telegra.ph/Advertise-and-get-verified-on-StartOrigin-11-25" 
-                        className="flex items-center gap-2 px-2 py-2 text-sm rounded-lg hover:bg-accent bg-accent"
+                        className="flex items-center gap-2 px-2 py-2 text-sm rounded-lg hover:bg-accent"
                         onClick={() => setSidebarOpen(false)}
                       >
                         Get Verified
@@ -718,7 +478,7 @@ export default function MarketplacePage() {
 
       {/* Main Content */}
       <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 flex-1">
-        <div className="max-w-2xl mx-auto space-y-6 sm:space-y-8">
+        <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8">
           {/* Hero Section */}
           <div className="text-center space-y-3 sm:space-y-4">
             <Crown className="h-10 w-10 sm:h-12 sm:w-12 text-yellow-500 mx-auto" />
@@ -726,7 +486,7 @@ export default function MarketplacePage() {
               Username Marketplace
             </h1>
             <p className="text-sm sm:text-base text-muted-foreground">
-              Buy, sell, and transfer exclusive usernames
+              Покупайте эксклюзивные юзернеймы до 1000 звезд
             </p>
           </div>
 
@@ -794,7 +554,14 @@ export default function MarketplacePage() {
                           <Star className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-500" />
                           {result.price}
                         </div>
-                        <Button onClick={handlePurchase} size="sm" className="mt-1 text-xs">
+                        <Button onClick={() => {
+                          setSelectedUsername({
+                            username,
+                            price: result.price!,
+                            sellerContact: result.sellerContact
+                          })
+                          setIsPurchaseModalOpen(true)
+                        }} size="sm" className="mt-1 text-xs">
                           {result.forSale ? "Purchase" : "Contact to Buy"}
                         </Button>
                       </div>
@@ -805,46 +572,172 @@ export default function MarketplacePage() {
             )}
           </div>
 
-          {/* My Listings Section */}
-          {user && myListings.length > 0 && (
-            <div className="space-y-3 sm:space-y-4">
-              <h3 className="text-lg font-semibold text-foreground">My Active Listings</h3>
-              <div className="grid gap-2 sm:gap-3">
-                {myListings.map((listing) => (
-                  <Card key={listing.id} className="border-orange-200">
-                    <CardContent className="p-3 sm:p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                          <Tag className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600 flex-shrink-0" />
-                          <div className="min-w-0 flex-1">
-                            <h4 className="font-semibold text-sm sm:text-base truncate">@{listing.username}</h4>
-                            <p className="text-xs sm:text-sm text-muted-foreground truncate">
-                              {listing.price} stars • {listing.contact_info}
-                            </p>
+          {/* Filters Section */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-muted-foreground">Sort by</Label>
+              <Select value={sortOption} onValueChange={(value: SortOption) => setSortOption(value)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="expensive-first">
+                    <div className="flex items-center gap-2">
+                      <ChevronDown className="h-4 w-4" />
+                      Expensive first
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="cheap-first">
+                    <div className="flex items-center gap-2">
+                      <ChevronUp className="h-4 w-4" />
+                      Cheap first
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="length-down">
+                    <div className="flex items-center gap-2">
+                      <Hash className="h-4 w-4" />
+                      Short usernames first
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="length-up">
+                    <div className="flex items-center gap-2">
+                      <Hash className="h-4 w-4" />
+                      Long usernames first
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-muted-foreground">Price range</Label>
+              <Select value={priceFilter} onValueChange={setPriceFilter}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="All prices" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All prices</SelectItem>
+                  <SelectItem value="1000-700">1000-700 stars</SelectItem>
+                  <SelectItem value="400-700">400-700 stars</SelectItem>
+                  <SelectItem value="100-400">100-400 stars</SelectItem>
+                  <SelectItem value="under-100">Under 100 stars</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-muted-foreground">Username length</Label>
+              <Select value={lengthFilter} onValueChange={setLengthFilter}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="All lengths" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All lengths</SelectItem>
+                  <SelectItem value="1-2">1-2 characters</SelectItem>
+                  <SelectItem value="3-4">3-4 characters</SelectItem>
+                  <SelectItem value="5-7">5-7 characters</SelectItem>
+                  <SelectItem value="8+">8+ characters</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Price Categories */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            {[
+              { range: "1000-700 звёзд", desc: "1-2 символа", color: "bg-gradient-to-r from-yellow-500 to-orange-500" },
+              { range: "400-700 звёзд", desc: "3-5 символов", color: "bg-gradient-to-r from-orange-400 to-pink-500" },
+              { range: "100-400 звёзд", desc: "6-7 символов", color: "bg-gradient-to-r from-pink-400 to-purple-500" },
+              { range: "100-150 звёзд", desc: "8-9 символов", color: "bg-gradient-to-r from-purple-400 to-blue-500" },
+            ].map((category, index) => (
+              <Card key={index} className="overflow-hidden border-0">
+                <div className={`h-2 ${category.color}`} />
+                <CardContent className="p-3">
+                  <div className="text-center">
+                    <p className="font-bold text-sm">{category.range}</p>
+                    <p className="text-xs text-muted-foreground">{category.desc}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* All Listings */}
+          <div className="space-y-3 sm:space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-foreground">Available Usernames</h3>
+              <Badge variant="outline" className="text-xs">
+                {filteredListings.length} usernames
+              </Badge>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              {filteredListings.map((listing) => (
+                <Card key={listing.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+                  <CardContent className="p-4" onClick={() => handlePurchase(listing)}>
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <div className="font-mono text-lg font-bold">
+                              @{listing.username}
+                            </div>
+                            <Badge variant="secondary" className="text-xs">
+                              {listing.username.length} chars
+                            </Badge>
                           </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Owner: @{listing.profiles?.username || "unknown"}
+                          </p>
                         </div>
-                        <div className="flex gap-1 sm:gap-2 flex-shrink-0">
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => setRemoveListingDialog({
-                              open: true, 
-                              listingId: listing.id, 
-                              username: listing.username
-                            })}
-                          >
-                            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                          </Button>
+                        <div className="text-right">
+                          <div className="flex items-center gap-1 text-xl font-bold">
+                            <Star className="h-4 w-4 text-yellow-500" />
+                            {listing.price}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {getPriceCategory(listing.price)}
+                          </p>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                      
+                      {/* Profile Preview */}
+                      <div className="bg-muted rounded-lg p-3 border">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                            <span className="text-lg font-bold">@{listing.username.charAt(0)}</span>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-sm">@{listing.username}</p>
+                            <p className="text-xs text-muted-foreground">on StartOrigin</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <Button className="w-full" size="sm">
+                        <Star className="h-4 w-4 mr-2" />
+                        Buy for {listing.price} stars
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-          )}
+            
+            {filteredListings.length === 0 && (
+              <div className="text-center py-8">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted mb-4">
+                  <Search className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <h4 className="font-semibold text-foreground">No usernames found</h4>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Try changing your filters or search for a specific username
+                </p>
+              </div>
+            )}
+          </div>
 
-          {/* Sell Your Aliases Section */}
+          {/* My Aliases Section (только удаление) */}
           {user && userAliases.length > 0 && (
             <div className="space-y-3 sm:space-y-4">
               <h3 className="text-lg font-semibold text-foreground">My Aliases</h3>
@@ -858,26 +751,21 @@ export default function MarketplacePage() {
                           <div className="min-w-0 flex-1">
                             <h4 className="font-semibold text-sm sm:text-base truncate">@{alias}</h4>
                             <p className="text-xs sm:text-sm text-muted-foreground">
-                              Your alias • Suggested price: {calculatePrice(alias.length)} stars
+                              Your alias • Price: {calculatePrice(alias.length)} stars
                             </p>
                           </div>
                         </div>
                         <div className="flex gap-1 sm:gap-2 flex-shrink-0">
                           <Button 
                             size="sm" 
-                            variant="outline"
-                            onClick={() => handleSellAlias(alias)}
-                            className="text-xs"
+                            variant="destructive"
+                            onClick={() => {
+                              if (confirm(`Are you sure you want to remove @${alias} from your aliases?`)) {
+                                handleRemoveAlias(alias)
+                              }
+                            }}
                           >
-                            Sell
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => handleTransferAlias(alias)}
-                            className="text-xs"
-                          >
-                            Запросить Transfer
+                            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
                         </div>
                       </div>
@@ -888,30 +776,13 @@ export default function MarketplacePage() {
             </div>
           )}
 
-          {/* Pricing Info */}
-          <Card>
-            <CardContent className="p-3 sm:p-4">
-              <h3 className="font-semibold text-foreground mb-2 sm:mb-3 text-sm sm:text-base">Pricing Guide</h3>
-              <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
-                {[
-                  { length: "1-2 letters", price: "2000-1750 stars" },
-                  { length: "3-4 letters", price: "1500-1250 stars" },
-                  { length: "5-6 letters", price: "1000-600 stars" },
-                  { length: "7+ letters", price: "400-100 stars" },
-                ].map((item, index) => (
-                  <div key={index} className="flex justify-between">
-                    <span className="text-muted-foreground">{item.length}</span>
-                    <span className="font-medium">{item.price}</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Disclaimer */}
           <div className="text-center text-xs text-muted-foreground border-t pt-3 sm:pt-4">
-            <p>StartOrigin is not responsible for second-hand username sales.</p>
+            <p>⚠️ StartOrigin is not responsible for second-hand username sales.</p>
             <p>All transactions are between buyers and sellers directly.</p>
+            <p className="mt-2 text-amber-600 font-medium">
+              🚀 Coming soon: Automated username transfers!
+            </p>
           </div>
         </div>
       </main>
@@ -925,20 +796,16 @@ export default function MarketplacePage() {
         </div>
       </footer>
 
-      {/* Модальные окна */}
       {/* Purchase Modal */}
       <Dialog open={isPurchaseModalOpen} onOpenChange={setIsPurchaseModalOpen}>
         <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Crown className="h-5 w-5 text-yellow-500" />
-              {result?.forSale ? "Purchase @" + username : "Contact to Buy @" + username}
+              Purchase @{selectedUsername?.username}
             </DialogTitle>
             <DialogDescription>
-              {result?.forSale 
-                ? "Contact the seller to complete your purchase"
-                : "Contact our team to purchase this username"
-              }
+              Contact the seller to complete your purchase
             </DialogDescription>
           </DialogHeader>
           
@@ -946,219 +813,76 @@ export default function MarketplacePage() {
             <div className="bg-muted p-4 rounded-lg">
               <div className="flex justify-between items-center mb-2">
                 <span className="font-semibold">Username:</span>
-                <span>@{username}</span>
+                <span className="font-mono font-bold">@{selectedUsername?.username}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="font-semibold">Price:</span>
-                <span className="flex items-center gap-1">
+                <span className="flex items-center gap-1 font-bold">
                   <Star className="h-4 w-4 text-yellow-500" />
-                  {result?.price} Telegram Stars
+                  {selectedUsername?.price} Telegram Stars
                 </span>
               </div>
-              {result?.forSale && result.sellerContact && (
-                <div className="flex justify-between items-center mt-2">
-                  <span className="font-semibold">Seller Contact:</span>
-                  <span className="text-sm">{result.sellerContact}</span>
-                </div>
-              )}
-              {result?.currentOwner && (
+              {selectedUsername?.currentOwner && (
                 <div className="flex justify-between items-center mt-2">
                   <span className="font-semibold">Current Owner:</span>
-                  <span className="text-sm">@{result.currentOwner}</span>
+                  <span className="text-sm">@{selectedUsername.currentOwner}</span>
                 </div>
               )}
+            </div>
+
+            {/* Profile Preview */}
+            <div className="space-y-2">
+              <Label>How it will look on profile:</Label>
+              <div className="bg-card border rounded-lg p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
+                    <span className="text-xl font-bold text-white">@{selectedUsername?.username?.charAt(0)}</span>
+                  </div>
+                  <div>
+                    <p className="font-bold text-lg">@{selectedUsername?.username}</p>
+                    <p className="text-sm text-muted-foreground">StartOrigin member</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Seller Contact:</Label>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <p className="text-sm font-medium text-amber-800">
+                  {selectedUsername?.sellerContact || "Contact: @maxnklv"}
+                </p>
+              </div>
             </div>
             
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">
-                {result?.forSale 
-                  ? "Contact the seller directly to arrange the transfer:"
-                  : "Message @maxnklv on Telegram to purchase this username:"
-                }
+                Contact the seller directly to arrange the transfer:
               </p>
               <Button asChild className="w-full gap-2">
                 <a 
-                  href={result?.forSale && result.sellerContact?.includes('@') 
-                    ? `https://t.me/${result.sellerContact.replace('@', '')}`
+                  href={selectedUsername?.sellerContact?.includes('@') 
+                    ? `https://t.me/${selectedUsername.sellerContact.replace('@', '')}`
                     : "https://t.me/maxnklv"
                   } 
                   target="_blank" 
                   rel="noopener noreferrer"
                 >
                   <ExternalLink className="h-4 w-4" />
-                  {result?.forSale 
-                    ? `Contact ${result.sellerContact}`
-                    : "Contact @maxnklv on Telegram"
-                  }
+                  Contact Seller on Telegram
                 </a>
               </Button>
             </div>
 
-            <div className="text-xs text-muted-foreground text-center">
+            <div className="text-xs text-muted-foreground text-center space-y-1">
               <p>StartOrigin is not responsible for second-hand transactions.</p>
+              <p className="text-amber-600 font-medium">
+                🚀 Automated transfers coming soon!
+              </p>
             </div>
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Sell Modal */}
-      <Dialog open={isSellModalOpen} onOpenChange={setIsSellModalOpen}>
-        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Tag className="h-5 w-5 text-blue-600" />
-              Sell @{sellForm.username}
-            </DialogTitle>
-            <DialogDescription>
-              List your alias for sale on the marketplace
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="price">Price (Telegram Stars)</Label>
-              <Input
-                id="price"
-                type="number"
-                placeholder="Enter price in stars"
-                value={sellForm.price}
-                onChange={(e) => setSellForm({...sellForm, price: e.target.value})}
-              />
-              <p className="text-xs text-muted-foreground">
-                Suggested price: {calculatePrice(sellForm.username.length)} stars
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="contact">Telegram Username</Label>
-              <Input
-                id="contact"
-                placeholder="@yourusername"
-                value={sellForm.contactInfo}
-                onChange={(e) => setSellForm({...sellForm, contactInfo: e.target.value})}
-              />
-              <p className="text-xs text-muted-foreground">
-                Buyers will contact you here. Must start with @
-              </p>
-            </div>
-
-            <Button 
-              onClick={handleSubmitSell} 
-              className="w-full" 
-              disabled={!sellForm.price || !sellForm.contactInfo || !sellForm.contactInfo.includes('@') || isSubmitting}
-            >
-              {isSubmitting ? "Listing..." : "List for Sale"}
-            </Button>
-
-            <div className="text-xs text-muted-foreground text-center">
-              <p>By listing, you agree to transfer the alias to the buyer upon payment.</p>
-              <p>StartOrigin is not responsible for transactions.</p>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Transfer Modal */}
-      <Dialog open={isTransferModalOpen} onOpenChange={setIsTransferModalOpen}>
-        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-green-600" />
-              Запросить Transfer @{transferForm.username}
-            </DialogTitle>
-            <DialogDescription>
-              Запросить transfer этого алиаса другому пользователю
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="bg-muted p-4 rounded-lg">
-              <div className="flex justify-between items-center">
-                <span className="font-semibold">Transferring:</span>
-                <span>@{transferForm.username}</span>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="newOwner">New Owner Username</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="newOwner"
-                  placeholder="Enter username (without @)"
-                  value={transferForm.newOwnerUsername}
-                  onChange={(e) => setTransferForm({...transferForm, newOwnerUsername: e.target.value})}
-                />
-                <Button 
-                  onClick={searchUser} 
-                  disabled={isSearchingUser || !transferForm.newOwnerUsername.trim()}
-                  size="sm"
-                >
-                  {isSearchingUser ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                  ) : (
-                    <Search className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Enter the username of the user you want to transfer this alias to
-              </p>
-            </div>
-
-            {transferForm.newOwnerId && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                <p className="text-sm text-green-800">
-                  ✓ User found: @{transferForm.newOwnerUsername}
-                </p>
-              </div>
-            )}
-
-            {!transferForm.newOwnerId && transferForm.newOwnerUsername && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                <p className="text-sm text-yellow-800">
-                  User not found. Please check the username and try again.
-                </p>
-              </div>
-            )}
-
-            <Button 
-              onClick={handleTransfer} 
-              className="w-full" 
-              disabled={!transferForm.newOwnerId || isSubmitting}
-              variant="destructive"
-            >
-              {isSubmitting ? "Запрашивается..." : "Запросить Transfer"}
-            </Button>
-
-            <div className="text-xs text-muted-foreground text-center">
-              <p className="text-red-600 font-medium">Warning: This action cannot be undone!</p>
-              <p>The alias will be permanently transferred to the new owner.</p>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Remove Listing Confirmation Dialog */}
-      <AlertDialog open={removeListingDialog.open} onOpenChange={(open) => setRemoveListingDialog({...removeListingDialog, open})}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove Listing</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to remove @{removeListingDialog.username} from the marketplace?
-              This username will be returned to your aliases.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => handleRemoveListing(removeListingDialog.listingId, removeListingDialog.username)}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Remove Listing
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   )
 }
