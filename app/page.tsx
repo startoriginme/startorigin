@@ -1,9 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { ProblemsFeed } from "@/components/problems-feed"
-import { ProjectsFeed } from "@/components/projects-feed"
-import { PostsFeed } from "@/components/posts-feed"
 import { Button } from "@/components/ui/button"
-import { Lightbulb, Plus, ArrowRight, LogOut, User, Briefcase, FileText, MessageSquare } from "lucide-react"
+import { Lightbulb, Plus, ArrowRight, LogOut, User, ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -15,13 +13,12 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { redirect } from "next/navigation"
 import { HeroCarousel } from "@/components/hero-carousel"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
-export default async function HomePage() {
+export default async function ProblemsPage() {
   const supabase = await createClient()
 
   // Fetch problems with author profiles
-  const { data: problems, error: problemsError } = await supabase
+  const { data: problems, error } = await supabase
     .from("problems")
     .select(`
       *,
@@ -34,44 +31,8 @@ export default async function HomePage() {
     `)
     .order("created_at", { ascending: false })
 
-  if (problemsError) {
-    console.error("Error fetching problems:", problemsError)
-  }
-
-  // Fetch projects with author profiles
-  const { data: projects, error: projectsError } = await supabase
-    .from("projects")
-    .select(`
-      *,
-      profiles:author_id (
-        id,
-        username,
-        display_name,
-        avatar_url
-      )
-    `)
-    .order("created_at", { ascending: false })
-
-  if (projectsError) {
-    console.error("Error fetching projects:", projectsError)
-  }
-
-  // Fetch posts with author profiles
-  const { data: posts, error: postsError } = await supabase
-    .from("posts")
-    .select(`
-      *,
-      profiles:author_id (
-        id,
-        username,
-        display_name,
-        avatar_url
-      )
-    `)
-    .order("created_at", { ascending: false })
-
-  if (postsError) {
-    console.error("Error fetching posts:", postsError)
+  if (error) {
+    console.error("Error fetching problems:", error)
   }
 
   // Check if user is authenticated and get profile
@@ -114,7 +75,7 @@ export default async function HomePage() {
       title: "Marketplace (Beta)",
       description: "Buy collectible usernames",
       buttonText: "Buy some",
-      buttonVariant: "outline" as const,
+     buttonVariant: "outline" as const,
       link: "https://startorigin.me/marketplace",
       openInNewTab: false
     },
@@ -136,7 +97,7 @@ export default async function HomePage() {
       link: "https://chat.startorigin.me/",
       openInNewTab: true
     },
-    {
+      {
       id: 4,
       title: "It's Winter!",
       description: "Stream on Winter's channel",
@@ -197,7 +158,7 @@ export default async function HomePage() {
                   <Link href="/problems/new">
                     <Button className="gap-2">
                       <Plus className="h-4 w-4" />
-                      Create
+                      Share Problem
                     </Button>
                   </Link>
                   
@@ -319,71 +280,14 @@ export default async function HomePage() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 flex-1">
         <div className="mb-8">
-          <Tabs defaultValue="problems" className="w-full">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-              <TabsList className="grid grid-cols-3 w-full sm:w-auto">
-                <TabsTrigger value="problems" className="gap-2">
-                  <Lightbulb className="h-4 w-4" />
-                  <span className="hidden sm:inline">Problems</span>
-                  <span className="sm:hidden">Problems</span>
-                </TabsTrigger>
-                <TabsTrigger value="projects" className="gap-2">
-                  <Briefcase className="h-4 w-4" />
-                  <span className="hidden sm:inline">Projects</span>
-                  <span className="sm:hidden">Projects</span>
-                </TabsTrigger>
-                <TabsTrigger value="posts" className="gap-2">
-                  <FileText className="h-4 w-4" />
-                  <span className="hidden sm:inline">Posts</span>
-                  <span className="sm:hidden">Posts</span>
-                </TabsTrigger>
-              </TabsList>
-
-              <div className="text-right">
-                <Link href="/problems/new">
-                  <Button className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    <span className="hidden sm:inline">Create New</span>
-                    <span className="sm:hidden">New</span>
-                  </Button>
-                </Link>
-              </div>
-            </div>
-
-            <TabsContent value="problems">
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-foreground">Explore Problems</h2>
-                <p className="text-muted-foreground">Discover problems from the community</p>
-              </div>
-              <ProblemsFeed 
-                initialProblems={problems || []} 
-                userId={user?.id}
-              />
-            </TabsContent>
-
-            <TabsContent value="projects">
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-foreground">Explore Projects</h2>
-                <p className="text-muted-foreground">Discover projects and startup ideas from the community</p>
-              </div>
-              <ProjectsFeed 
-                initialProjects={projects || []} 
-                userId={user?.id}
-              />
-            </TabsContent>
-
-            <TabsContent value="posts">
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-foreground">Explore Posts</h2>
-                <p className="text-muted-foreground">Read thoughts and insights from the community</p>
-              </div>
-              <PostsFeed 
-                initialPosts={posts || []} 
-                userId={user?.id}
-              />
-            </TabsContent>
-          </Tabs>
+          <h2 className="text-2xl font-bold text-foreground">Explore Problems</h2>
+          <p className="text-muted-foreground">Discover problems from the community</p>
         </div>
+
+        <ProblemsFeed 
+          initialProblems={problems || []} 
+          userId={user?.id}
+        />
       </main>
 
       {/* Footer */}
@@ -396,4 +300,4 @@ export default async function HomePage() {
       </footer>
     </div>
   )
-}
+} 
