@@ -1,7 +1,7 @@
 "use client"
 
 import { notFound, useRouter } from "next/navigation"
-import { ProjectDetail } from "@/components/project-detail"
+import { ProblemDetail } from "@/components/project-detail"
 import { Button } from "@/components/ui/button"
 import { Lightbulb, Plus, ArrowLeft, LogOut, User } from "lucide-react"
 import Link from "next/link"
