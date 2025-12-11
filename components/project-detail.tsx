@@ -24,9 +24,7 @@ import {
   Briefcase,
   Building,
   Target,
-  Rocket,
-  Eye,
-  MapPin
+  Eye
 } from "lucide-react"
 import Link from "next/link"
 import {
@@ -382,6 +380,25 @@ export function ProjectDetail({
 
               {/* Action Buttons */}
               <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
+                {/* Visit Website Button */}
+                {project.profiles?.website && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="gap-2 bg-transparent text-blue-600 hover:text-blue-700 hover:bg-blue-50 flex-1 sm:flex-none"
+                    onClick={() => {
+                      let url = project.profiles!.website!
+                      if (!url.startsWith('http')) {
+                        url = 'https://' + url
+                      }
+                      window.open(url, '_blank', 'noopener,noreferrer')
+                    }}
+                  >
+                    <Globe className="h-4 w-4" />
+                    <span className="hidden xs:inline">Visit Website</span>
+                  </Button>
+                )}
+
                 {/* Report Button */}
                 {!isAuthor && (
                   <AlertDialog>
@@ -572,24 +589,16 @@ export function ProjectDetail({
             </div>
           </div>
 
-          {/* Looking for Cofounder Section */}
-          {project.looking_for_cofounder && (
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4 mb-6">
+          {/* Project Goals / Vision */}
+          {(project.tags?.includes("vision") || project.tags?.includes("goals") || project.detailed_description?.toLowerCase().includes("vision") || project.detailed_description?.toLowerCase().includes("goal")) && (
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 mb-6">
               <div className="flex items-center gap-2 mb-2">
-                <Users className="h-5 w-5 text-green-600" />
-                <h4 className="font-semibold text-green-800">Looking for Co-founder!</h4>
+                <Target className="h-5 w-5 text-blue-600" />
+                <h4 className="font-semibold text-blue-800">Project Vision & Goals</h4>
               </div>
-              <p className="text-green-700 mb-3">
-                This project is actively seeking a co-founder to join the team. If you're interested in collaborating, reach out to the author.
+              <p className="text-blue-700">
+                This project aims to create innovative solutions and make a meaningful impact in its field.
               </p>
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="border-green-300 text-green-700 hover:bg-green-100"
-              >
-                <MessageCircle className="h-4 w-4 mr-2" />
-                Express Interest
-              </Button>
             </div>
           )}
         </CardContent>
@@ -694,66 +703,8 @@ export function ProjectDetail({
                 <p className="mt-2 text-sm text-muted-foreground break-words">{project.profiles.bio}</p>
               )}
 
-              {project.profiles?.website && (
-                <div className="mt-4 pt-4 border-t">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Globe className="h-4 w-4" />
-                    <a 
-                      href={project.profiles.website.startsWith('http') ? project.profiles.website : `https://${project.profiles.website}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary hover:text-primary/80 underline underline-offset-2"
-                    >
-                      {project.profiles.website}
-                      <ExternalLink className="h-3 w-3 inline ml-1" />
-                    </a>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* CTA Section */}
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-        <CardContent className="pt-6">
-          <div className="text-center space-y-4">
-            <div className="flex justify-center">
-              <div className="p-3 bg-blue-100 rounded-full">
-                <Rocket className="h-8 w-8 text-blue-600" />
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <h3 className="text-xl font-bold text-foreground">
-                Interested in this project?
-              </h3>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                {project.looking_for_cofounder 
-                  ? "Contact the founder to discuss collaboration opportunities or share your feedback."
-                  : "Share your thoughts or feedback about this project with the founder."}
-              </p>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button 
-                className="gap-2"
-                size="lg"
-              >
-                <MessageCircle className="h-4 w-4" />
-                Send Message
-              </Button>
-              
-              <Button 
-                variant="outline"
-                className="gap-2"
-                size="lg"
-                onClick={copyToClipboard}
-              >
-                <Share2 className="h-4 w-4" />
-                Share Project
-              </Button>
+              {/* Contact information will be added here when you provide the form */}
+              {/* Will include fields like email, phone, telegram, etc. */}
             </div>
           </div>
         </CardContent>
