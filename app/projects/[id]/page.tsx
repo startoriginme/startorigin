@@ -15,7 +15,7 @@ import {
 import { redirect } from "next/navigation"
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import { logoutAction } from "@/app/actions/auth" // Импортируем Server Action из отдельного файла
+import { revalidatePath } from "next/cache"
 
 // Создаем публичный клиент Supabase без проверки аутентификации
 async function createPublicSupabase() {
@@ -65,6 +65,21 @@ function getAllUsernames(mainUsername: string, authorId: string): string[] {
   // const databaseAliases = await getDatabaseAliases(authorId)
   
   return staticAliases
+}
+
+// Server Action для выхода
+async function handleLogout() {
+  "use server"
+  
+  const supabase = await createClient()
+  await supabase.auth.signOut()
+  
+  // Ревалидируем кэш
+  revalidatePath("/")
+  revalidatePath("/problems")
+  revalidatePath("/profile")
+  
+  redirect("/auth/login")
 }
 
 export default async function ProjectDetailPage({
@@ -185,8 +200,8 @@ export default async function ProjectDetailPage({
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        {/* Используем импортированную Server Action */}
-                        <form action={logoutAction} className="w-full">
+                        {/* Используем встроенную Server Action */}
+                        <form action={handleLogout} className="w-full">
                           <button type="submit" className="flex items-center gap-2 w-full text-left cursor-pointer">
                             <LogOut className="h-4 w-4" />
                             <span>Sign Out</span>
@@ -243,8 +258,8 @@ export default async function ProjectDetailPage({
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        {/* Используем импортированную Server Action */}
-                        <form action={logoutAction} className="w-full">
+                        {/* Используем встроенную Server Action */}
+                        <form action={handleLogout} className="w-full">
                           <button type="submit" className="flex items-center gap-2 w-full text-left cursor-pointer">
                             <LogOut className="h-4 w-4" />
                             <span>Sign Out</span>
