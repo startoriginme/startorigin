@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
-import { X, Upload, Users } from "lucide-react"
+import { X, Upload, Users, Globe, Mail, Phone, MessageSquare } from "lucide-react"
 import {
   Select,
   SelectContent,
@@ -66,6 +66,10 @@ export function ProjectForm({ userId }: ProjectFormProps) {
   const [lookingForCofounder, setLookingForCofounder] = useState(false)
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const [website, setWebsite] = useState("")
+  const [email, setEmail] = useState("")
+  const [phone, setPhone] = useState("")
+  const [telegram, setTelegram] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
   const router = useRouter()
@@ -105,6 +109,15 @@ export function ProjectForm({ userId }: ProjectFormProps) {
     setTags(tags.filter(tag => tag !== tagToRemove))
   }
 
+  const formatWebsiteUrl = (url: string) => {
+    if (!url) return ""
+    // Убираем протоколы если они есть
+    url = url.replace(/^https?:\/\//, "")
+    // Убираем www. если есть
+    url = url.replace(/^www\./, "")
+    return url
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
@@ -130,8 +143,16 @@ export function ProjectForm({ userId }: ProjectFormProps) {
         logoUrl = publicUrl
       }
 
-      // Create project
-      const { error } = await supabase.from("projects").insert({
+      // Подготавливаем контактные данные
+      const contactData = {
+        website: website.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        telegram: telegram.trim()
+      }
+
+      // Создаем объект проекта
+      const projectData: any = {
         author_id: userId,
         title,
         short_description: shortDescription,
@@ -141,7 +162,16 @@ export function ProjectForm({ userId }: ProjectFormProps) {
         logo_url: logoUrl,
         looking_for_cofounder: lookingForCofounder,
         status: "active"
-      })
+      }
+
+      // Добавляем контактные данные только если они заполнены
+      if (contactData.website) projectData.website = contactData.website
+      if (contactData.email) projectData.email = contactData.email
+      if (contactData.phone) projectData.phone = contactData.phone
+      if (contactData.telegram) projectData.telegram = contactData.telegram
+
+      // Create project
+      const { error } = await supabase.from("projects").insert(projectData)
 
       if (error) throw error
 
@@ -220,6 +250,88 @@ export function ProjectForm({ userId }: ProjectFormProps) {
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        {/* Website Field */}
+        <div>
+          <Label htmlFor="website" className="flex items-center gap-2">
+            <Globe className="h-4 w-4" />
+            Project Website URL
+          </Label>
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Input
+                id="website"
+                value={website}
+                onChange={(e) => setWebsite(formatWebsiteUrl(e.target.value))}
+                placeholder="example.com"
+                type="url"
+              />
+              {website && (
+                <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-muted-foreground">
+                  https://{website}
+                </span>
+              )}
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            Optional. Enter your project website (without https://)
+          </p>
+        </div>
+
+        {/* Contact Information Section */}
+        <div className="space-y-4 pt-4 border-t">
+          <div>
+            <h3 className="text-lg font-semibold text-foreground mb-3">Contact Information (Optional)</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Add your contact details so people can reach out to you directly
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="email" className="flex items-center gap-2">
+                <Mail className="h-4 w-4" />
+                Email
+              </Label>
+              <Input
+                id="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="contact@example.com"
+                type="email"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="phone" className="flex items-center gap-2">
+                <Phone className="h-4 w-4" />
+                Phone Number
+              </Label>
+              <Input
+                id="phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+1 (123) 456-7890"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <Label htmlFor="telegram" className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" />
+                Telegram Username
+              </Label>
+              <Input
+                id="telegram"
+                value={telegram}
+                onChange={(e) => setTelegram(e.target.value)}
+                placeholder="@username"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Include @ symbol for your Telegram username
+              </p>
+            </div>
+          </div>
         </div>
 
         <div>
