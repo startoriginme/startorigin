@@ -15,6 +15,7 @@ import {
 import { redirect } from "next/navigation"
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { logoutAction } from "@/app/actions/auth" // Импортируем Server Action из отдельного файла
 
 // Создаем публичный клиент Supabase без проверки аутентификации
 async function createPublicSupabase() {
@@ -138,14 +139,6 @@ export default async function ProjectDetailPage({
       .slice(0, 2)
   }
 
-  // Server action for logout (только для залогиненных пользователей)
-  async function handleLogout() {
-    "use server"
-    const supabase = await createClient()
-    await supabase.auth.signOut()
-    redirect("/auth/login")
-  }
-
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
@@ -192,7 +185,8 @@ export default async function ProjectDetailPage({
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <form action={handleLogout} className="w-full">
+                        {/* Используем импортированную Server Action */}
+                        <form action={logoutAction} className="w-full">
                           <button type="submit" className="flex items-center gap-2 w-full text-left cursor-pointer">
                             <LogOut className="h-4 w-4" />
                             <span>Sign Out</span>
@@ -249,7 +243,8 @@ export default async function ProjectDetailPage({
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <form action={handleLogout} className="w-full">
+                        {/* Используем импортированную Server Action */}
+                        <form action={logoutAction} className="w-full">
                           <button type="submit" className="flex items-center gap-2 w-full text-left cursor-pointer">
                             <LogOut className="h-4 w-4" />
                             <span>Sign Out</span>
