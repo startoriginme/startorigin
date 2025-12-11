@@ -1,8 +1,10 @@
-import { notFound } from "next/navigation"
+"use client"
+
+import { notFound, redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { ProjectDetail } from "@/components/project-detail"
 import { Button } from "@/components/ui/button"
-import { Lightbulb, Plus, ArrowLeft, LogOut, User, Briefcase } from "lucide-react"
+import { Lightbulb, Plus, ArrowLeft, LogOut, User } from "lucide-react"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -12,9 +14,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { redirect } from "next/navigation"
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { createServerClient } from "@supabase/ssr"
+import { cookies } from "next/headers"
 import { revalidatePath } from "next/cache"
 
 // Создаем публичный клиент Supabase без проверки аутентификации
@@ -50,48 +51,56 @@ async function createPublicSupabase() {
 
 // Функция для получения всех username пользователя (основной + алиасы)
 function getAllUsernames(mainUsername: string, authorId: string): string[] {
-  // Карта статических алиасов
   const userAliases: Record<string, string[]> = {
-    "nikolaev": ["azya", "nklv"],
-    "gerxog": ["admin", "tech"],
-    "startorigin": ["problems"],
-    "winter": ["zima", "vlkv", "bolt"]
+    nikolaev: ["azya", "nklv"],
+    gerxog: ["admin", "tech"],
+    startorigin: ["problems"],
+    winter: ["zima", "vlkv", "bolt"],
   }
-  
+
   const staticAliases = [mainUsername, ...(userAliases[mainUsername] || [])]
-  
-  // В реальном приложении здесь нужно добавить запрос к базе данных
-  // для получения алиасов из таблицы user_aliases по authorId
+
+  // В реальном приложении можно добавить запрос к базе
   // const databaseAliases = await getDatabaseAliases(authorId)
-  
+
   return staticAliases
 }
 
 // Server Action для выхода
 async function handleLogout() {
   "use server"
-  
+
   const supabase = await createClient()
   await supabase.auth.signOut()
-  
+
   // Ревалидируем кэш
   revalidatePath("/")
   revalidatePath("/problems")
   revalidatePath("/profile")
-  
+
   redirect("/auth/login")
 }
 
-export default async function ProjectDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>
-}) {
-  const { id } = await params
-  
-  // Используем публичный клиент для получения данных проекта
-  const publicSupabase = await createPublicSupabase()
+// Функция для получения инициалов
+function getInitials(name: string | null | undefined) {
+  if (!name) return "U"
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2)
+}
 
+interface ProjectDetailPageProps {
+  params: { id: string }
+}
+
+export default async function ProjectDetailPage({ params }: ProjectDetailPageProps) {
+  const { id } = params
+
+  // Получаем проект через публичный клиент
+  const publicSupabase = await createPublicSupabase()
   const { data: project, error } = await publicSupabase
     .from("projects")
     .select(
@@ -113,45 +122,30 @@ export default async function ProjectDetailPage({
     notFound()
   }
 
-  // Получаем все ники автора (основной + алиасы)
-  const allUsernames = project.profiles?.username 
+  // Получаем все ники автора
+  const allUsernames = project?.profiles?.username
     ? getAllUsernames(project.profiles.username, project.author_id)
     : []
 
-  // Для пользовательских данных используем обычный клиент в try-catch
+  // Получаем текущего пользователя
   let user = null
   let userProfile = null
 
   try {
-    // Пытаемся получить данные пользователя, но не падаем при ошибке
     const regularSupabase = await createClient()
-    const {
-      data: { user: authUser },
-    } = await regularSupabase.auth.getUser()
-    user = authUser
+    const { data: { user: authUser } = {} } = await regularSupabase.auth.getUser()
+    user = authUser ?? null
 
     if (user) {
-      // Получаем профиль пользователя
       const { data: profile } = await regularSupabase
         .from("profiles")
         .select("avatar_url, display_name, username")
         .eq("id", user.id)
         .single()
-      userProfile = profile
+      userProfile = profile ?? null
     }
-  } catch (error) {
-    // Игнорируем ошибки аутентификации - страница доступна без логина
+  } catch (e) {
     console.log("User is not authenticated, but page is still accessible")
-  }
-
-  const getInitials = (name: string | null) => {
-    if (!name) return "U"
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2)
   }
 
   return (
@@ -164,8 +158,8 @@ export default async function ProjectDetailPage({
               <Lightbulb className="h-6 w-6 text-primary" />
               <span className="text-xl font-bold text-foreground">StartOrigin</span>
             </Link>
-            
-            {/* Desktop Navigation - hidden on mobile */}
+
+            {/* Desktop */}
             <div className="hidden md:flex items-center gap-4">
               {user ? (
                 <>
@@ -175,22 +169,19 @@ export default async function ProjectDetailPage({
                       Share Problem
                     </Button>
                   </Link>
-                  
-                  {/* Avatar Dropdown */}
+
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
                         <Avatar className="h-8 w-8">
-                          <AvatarImage 
-                            src={userProfile?.avatar_url || ""} 
-                            className="object-cover"
-                          />
+                          <AvatarImage src={userProfile?.avatar_url ?? ""} className="object-cover" />
                           <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
-                            {getInitials(userProfile?.display_name || userProfile?.username)}
+                            {getInitials(userProfile?.display_name ?? userProfile?.username)}
                           </AvatarFallback>
                         </Avatar>
                       </button>
                     </DropdownMenuTrigger>
+
                     <DropdownMenuContent align="end" className="w-56">
                       <DropdownMenuItem asChild>
                         <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
@@ -200,7 +191,6 @@ export default async function ProjectDetailPage({
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        {/* Используем встроенную Server Action */}
                         <form action={handleLogout} className="w-full">
                           <button type="submit" className="flex items-center gap-2 w-full text-left cursor-pointer">
                             <LogOut className="h-4 w-4" />
@@ -223,32 +213,28 @@ export default async function ProjectDetailPage({
               )}
             </div>
 
-            {/* Mobile Navigation - hidden on desktop */}
+            {/* Mobile */}
             <div className="flex items-center gap-2 md:hidden">
               {user ? (
                 <>
-                  {/* Mobile Plus Button */}
                   <Link href="/problems/new">
                     <Button size="icon" className="h-9 w-9">
                       <Plus className="h-4 w-4" />
                     </Button>
                   </Link>
-                  
-                  {/* Mobile Avatar Dropdown */}
+
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
                         <Avatar className="h-8 w-8">
-                          <AvatarImage 
-                            src={userProfile?.avatar_url || ""} 
-                            className="object-cover"
-                          />
+                          <AvatarImage src={userProfile?.avatar_url ?? ""} className="object-cover" />
                           <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
-                            {getInitials(userProfile?.display_name || userProfile?.username)}
+                            {getInitials(userProfile?.display_name ?? userProfile?.username)}
                           </AvatarFallback>
                         </Avatar>
                       </button>
                     </DropdownMenuTrigger>
+
                     <DropdownMenuContent align="end" className="w-56">
                       <DropdownMenuItem asChild>
                         <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
@@ -258,7 +244,6 @@ export default async function ProjectDetailPage({
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        {/* Используем встроенную Server Action */}
                         <form action={handleLogout} className="w-full">
                           <button type="submit" className="flex items-center gap-2 w-full text-left cursor-pointer">
                             <LogOut className="h-4 w-4" />
@@ -288,7 +273,6 @@ export default async function ProjectDetailPage({
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 flex-1">
-        {/* Back Button */}
         <div className="mb-6">
           <Link href="/">
             <Button variant="ghost" className="gap-2">
@@ -299,11 +283,16 @@ export default async function ProjectDetailPage({
           </Link>
         </div>
 
-        <ProjectDetail
-          project={project}
-          userId={user?.id}
-          allUsernames={allUsernames}
-        />
+        {/* Project Detail */}
+        {project ? (
+          <ProjectDetail
+            project={project}
+            userId={user?.id ?? undefined}
+            allUsernames={allUsernames}
+          />
+        ) : (
+          <div>Project not found</div>
+        )}
       </main>
 
       {/* Footer */}
