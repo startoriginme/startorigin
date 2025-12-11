@@ -18,7 +18,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import {
   DropdownMenu,
@@ -159,7 +158,7 @@ const parseMentions = (text: string) => {
   // Регулярное выражение для поиска упоминаний вида @username
   const mentionRegex = /@([a-zA-Z0-9_-]+)/g;
   
-  const parts = [];
+  const parts: (string | JSX.Element)[] = [];
   let lastIndex = 0;
   let match;
 
@@ -205,6 +204,7 @@ export function ProblemDetail({
   const [isUpvoting, setIsUpvoting] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isShareOpen, setIsShareOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [authorAllUsernames, setAuthorAllUsernames] = useState<string[]>([])
   const [authorBadges, setAuthorBadges] = useState<Array<{badge_type: 'verified' | 'whale' | 'early'}>>([])
   
@@ -294,6 +294,7 @@ export function ProblemDetail({
       console.error("Error deleting problem:", error)
     } finally {
       setIsDeleting(false)
+      setIsDeleteDialogOpen(false)
     }
   }
 
@@ -374,6 +375,10 @@ export function ProblemDetail({
   const getContactIcon = (contact: string) => {
     if (contact.includes("+") || /^\d+$/.test(contact)) return <Phone className="h-4 w-4" />
     return <Mail className="h-4 w-4" />
+  }
+
+  if (!isClient) {
+    return null
   }
 
   return (
@@ -461,9 +466,13 @@ export function ProblemDetail({
                           Edit
                         </Button>
                       </Link>
-                      <AlertDialog>
+                      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                         <AlertDialogTrigger asChild>
-                          <Button variant="outline" size="sm" className="gap-2 bg-transparent text-destructive hover:text-destructive hover:bg-destructive/10 w-full sm:w-auto">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="gap-2 bg-transparent text-destructive hover:text-destructive hover:bg-destructive/10 w-full sm:w-auto"
+                          >
                             <Trash2 className="h-4 w-4" />
                             Delete
                           </Button>
@@ -500,7 +509,7 @@ export function ProblemDetail({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-56">
                           <DropdownMenuItem asChild>
-                            <Link href={`/problems/${problem.id}/edit`} className="flex items-center gap-2 cursor-pointer">
+                            <Link href={`/problems/${problem.id}/edit`} className="flex items-center gap-2 cursor-pointer w-full">
                               <Edit className="h-4 w-4" />
                               Edit Problem
                             </Link>
@@ -508,38 +517,13 @@ export function ProblemDetail({
                           <DropdownMenuSeparator />
                           <DropdownMenuItem 
                             className="text-destructive focus:text-destructive cursor-pointer"
-                            onClick={() => document.querySelector('[data-delete-trigger]')?.click()}
+                            onClick={() => setIsDeleteDialogOpen(true)}
                           >
                             <Trash2 className="h-4 w-4" />
                             Delete Problem
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-
-                      {/* Скрытый триггер для диалога удаления */}
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <button data-delete-trigger className="hidden" />
-                        </AlertDialogTrigger>
-                        <AlertDialogContent className="max-w-[95vw] sm:max-w-md">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Problem</AlertDialogTitle>
-                            <AlertDialogDescription className="text-sm">
-                              Are you sure you want to delete this problem? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter className="flex flex-col sm:flex-row gap-2">
-                            <AlertDialogCancel className="mt-0 sm:mt-0">Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={handleDelete}
-                              disabled={isDeleting}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              {isDeleting ? "Deleting..." : "Delete"}
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
                     </div>
                   </div>
                 )}
