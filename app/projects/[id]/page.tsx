@@ -1,7 +1,6 @@
 "use client"
 
-import { notFound, redirect } from "next/navigation"
-import { createClient } from "@/lib/supabase/server"
+import { notFound, useRouter } from "next/navigation"
 import { ProjectDetail } from "@/components/project-detail"
 import { Button } from "@/components/ui/button"
 import { Lightbulb, Plus, ArrowLeft, LogOut, User } from "lucide-react"
@@ -14,40 +13,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
-import { revalidatePath } from "next/cache"
-
-// Создаем публичный клиент Supabase без проверки аутентификации
-async function createPublicSupabase() {
-  const cookieStore = await cookies()
-
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            )
-          } catch {
-            // Игнорируем ошибки установки кук
-          }
-        },
-      },
-    }
-  )
-}
+import { useEffect, useState } from "react"
+import { handleLogout } from "@/app/actions/auth"
+import { createClient } from "@/lib/supabase/client"
 
 // Функция для получения всех username пользователя (основной + алиасы)
 function getAllUsernames(mainUsername: string, authorId: string): string[] {
@@ -60,25 +28,7 @@ function getAllUsernames(mainUsername: string, authorId: string): string[] {
 
   const staticAliases = [mainUsername, ...(userAliases[mainUsername] || [])]
 
-  // В реальном приложении можно добавить запрос к базе
-  // const databaseAliases = await getDatabaseAliases(authorId)
-
   return staticAliases
-}
-
-// Server Action для выхода
-async function handleLogout() {
-  "use server"
-
-  const supabase = await createClient()
-  await supabase.auth.signOut()
-
-  // Ревалидируем кэш
-  revalidatePath("/")
-  revalidatePath("/problems")
-  revalidatePath("/profile")
-
-  redirect("/auth/login")
 }
 
 // Функция для получения инициалов
@@ -96,56 +46,94 @@ interface ProjectDetailPageProps {
   params: { id: string }
 }
 
-export default async function ProjectDetailPage({ params }: ProjectDetailPageProps) {
+interface Project {
+  id: string
+  title: string
+  description: string
+  author_id: string
+  profiles?: {
+    id: string
+    username: string
+    display_name: string
+    avatar_url: string
+    bio: string
+    website: string
+    disable_chat: boolean
+  }
+}
+
+export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   const { id } = params
+  const router = useRouter()
+  const [project, setProject] = useState<Project | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState<any>(null)
+  const [userProfile, setUserProfile] = useState<any>(null)
+  const [allUsernames, setAllUsernames] = useState<string[]>([])
 
-  // Получаем проект через публичный клиент
-  const publicSupabase = await createPublicSupabase()
-  const { data: project, error } = await publicSupabase
-    .from("projects")
-    .select(
-      `*,
-      profiles:author_id (
-        id,
-        username,
-        display_name,
-        avatar_url,
-        bio,
-        website,
-        disable_chat
-      )`
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        // Получаем проект
+        const response = await fetch(`/api/projects/${id}`)
+        if (!response.ok) {
+          throw new Error("Project not found")
+        }
+        const projectData = await response.json()
+        setProject(projectData)
+
+        // Получаем все ники автора
+        if (projectData?.profiles?.username) {
+          const usernames = getAllUsernames(
+            projectData.profiles.username,
+            projectData.author_id
+          )
+          setAllUsernames(usernames)
+        }
+
+        // Получаем текущего пользователя
+        const supabase = createClient()
+        const { data: { user: authUser } = {} } = await supabase.auth.getUser()
+        setUser(authUser ?? null)
+
+        if (authUser) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("avatar_url, display_name, username")
+            .eq("id", authUser.id)
+            .single()
+          setUserProfile(profile ?? null)
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error)
+        router.push("/404")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [id, router])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">Loading...</div>
+      </div>
     )
-    .eq("id", id)
-    .single()
-
-  if (error || !project) {
-    notFound()
   }
 
-  // Получаем все ники автора
-  const allUsernames = project?.profiles?.username
-    ? getAllUsernames(project.profiles.username, project.author_id)
-    : []
-
-  // Получаем текущего пользователя
-  let user = null
-  let userProfile = null
-
-  try {
-    const regularSupabase = await createClient()
-    const { data: { user: authUser } = {} } = await regularSupabase.auth.getUser()
-    user = authUser ?? null
-
-    if (user) {
-      const { data: profile } = await regularSupabase
-        .from("profiles")
-        .select("avatar_url, display_name, username")
-        .eq("id", user.id)
-        .single()
-      userProfile = profile ?? null
-    }
-  } catch (e) {
-    console.log("User is not authenticated, but page is still accessible")
+  if (!project) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Project not found</h2>
+          <Link href="/">
+            <Button>Back to Projects</Button>
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -191,12 +179,15 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <form action={handleLogout} className="w-full">
-                          <button type="submit" className="flex items-center gap-2 w-full text-left cursor-pointer">
-                            <LogOut className="h-4 w-4" />
-                            <span>Sign Out</span>
-                          </button>
-                        </form>
+                        <button
+                          onClick={async () => {
+                            await handleLogout()
+                          }}
+                          className="flex items-center gap-2 w-full text-left cursor-pointer"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          <span>Sign Out</span>
+                        </button>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -244,12 +235,15 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <form action={handleLogout} className="w-full">
-                          <button type="submit" className="flex items-center gap-2 w-full text-left cursor-pointer">
-                            <LogOut className="h-4 w-4" />
-                            <span>Sign Out</span>
-                          </button>
-                        </form>
+                        <button
+                          onClick={async () => {
+                            await handleLogout()
+                          }}
+                          className="flex items-center gap-2 w-full text-left cursor-pointer"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          <span>Sign Out</span>
+                        </button>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -284,15 +278,11 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
         </div>
 
         {/* Project Detail */}
-        {project ? (
-          <ProjectDetail
-            project={project}
-            userId={user?.id ?? undefined}
-            allUsernames={allUsernames}
-          />
-        ) : (
-          <div>Project not found</div>
-        )}
+        <ProjectDetail
+          project={project}
+          userId={user?.id ?? undefined}
+          allUsernames={allUsernames}
+        />
       </main>
 
       {/* Footer */}
