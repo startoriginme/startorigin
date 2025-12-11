@@ -24,7 +24,8 @@ import {
   Briefcase,
   Building,
   Target,
-  Eye
+  Eye,
+  Zap
 } from "lucide-react"
 import Link from "next/link"
 import {
@@ -321,6 +322,16 @@ export function ProjectDetail({
     }
   }
 
+  const handleVisitWebsite = () => {
+    if (!project.profiles?.website) return
+    
+    let url = project.profiles.website
+    if (!url.startsWith('http')) {
+      url = 'https://' + url
+    }
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       {/* Project Card */}
@@ -378,24 +389,19 @@ export function ProjectDetail({
                 </div>
               </div>
 
-              {/* Action Buttons */}
+              {/* Action Buttons - ЯРКАЯ КНОПКА VISIT САМАЯ ПЕРВАЯ */}
               <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
-                {/* Visit Website Button */}
+                {/* ЯРКАЯ ВЫДЕЛЕННАЯ КНОПКА VISIT WEBSITE */}
                 {project.profiles?.website && (
                   <Button 
-                    variant="outline" 
                     size="sm" 
-                    className="gap-2 bg-transparent text-blue-600 hover:text-blue-700 hover:bg-blue-50 flex-1 sm:flex-none"
-                    onClick={() => {
-                      let url = project.profiles!.website!
-                      if (!url.startsWith('http')) {
-                        url = 'https://' + url
-                      }
-                      window.open(url, '_blank', 'noopener,noreferrer')
-                    }}
+                    className="gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 flex-1 sm:flex-none"
+                    onClick={handleVisitWebsite}
                   >
                     <Globe className="h-4 w-4" />
-                    <span className="hidden xs:inline">Visit Website</span>
+                    <Zap className="h-3 w-3" />
+                    <span className="font-semibold">Visit Website</span>
+                    <ExternalLink className="h-3 w-3" />
                   </Button>
                 )}
 
@@ -702,9 +708,6 @@ export function ProjectDetail({
               {project.profiles?.bio && (
                 <p className="mt-2 text-sm text-muted-foreground break-words">{project.profiles.bio}</p>
               )}
-
-              {/* Contact information will be added here when you provide the form */}
-              {/* Will include fields like email, phone, telegram, etc. */}
             </div>
           </div>
         </CardContent>
