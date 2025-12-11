@@ -1,10 +1,8 @@
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { ProblemForm } from "@/components/problem-form"
-import { ProjectForm } from "@/components/project-form"
-import { PostForm } from "@/components/post-form"
 import { Button } from "@/components/ui/button"
-import { Lightbulb, Plus, LogOut, User, ArrowRight, Zap, Briefcase, FileText, MessageSquare } from "lucide-react"
+import { Lightbulb, Plus, LogOut, User, ArrowRight, Zap } from "lucide-react"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -14,7 +12,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default async function NewProblemPage() {
   const supabase = await createClient()
@@ -69,7 +66,7 @@ export default async function NewProblemPage() {
                   <Link href="/problems/new">
                     <Button className="gap-2">
                       <Plus className="h-4 w-4" />
-                      Create
+                      Share Problem
                     </Button>
                   </Link>
                   
@@ -208,58 +205,14 @@ export default async function NewProblemPage() {
       <main className="container mx-auto px-4 py-8 flex-1">
         <div className="mx-auto max-w-3xl">
           <div className="mb-8">
-            <h1 className="mb-2 text-3xl font-bold text-foreground">Create New Publication</h1>
+            <h1 className="mb-2 text-3xl font-bold text-foreground">Share a Problem</h1>
             <p className="text-muted-foreground">
-              Choose what you want to share with the community. Be specific and provide context to help others understand.
+              Describe a challenge you&apos;re facing. Be specific and provide context to help others understand the
+              problem.
             </p>
           </div>
 
-          <Tabs defaultValue="problem" className="w-full">
-            <TabsList className="grid grid-cols-3 mb-8">
-              <TabsTrigger value="problem" className="gap-2">
-                <Lightbulb className="h-4 w-4" />
-                <span className="hidden sm:inline">Problem</span>
-              </TabsTrigger>
-              <TabsTrigger value="project" className="gap-2">
-                <Briefcase className="h-4 w-4" />
-                <span className="hidden sm:inline">Project</span>
-              </TabsTrigger>
-              <TabsTrigger value="post" className="gap-2">
-                <FileText className="h-4 w-4" />
-                <span className="hidden sm:inline">Post</span>
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="problem">
-              <div className="mb-6">
-                <h2 className="text-xl font-semibold text-foreground mb-2">Share a Problem</h2>
-                <p className="text-muted-foreground">
-                  Describe a challenge you&apos;re facing. Be specific and provide context to help others understand the problem.
-                </p>
-              </div>
-              <ProblemForm userId={user.id} />
-            </TabsContent>
-
-            <TabsContent value="project">
-              <div className="mb-6">
-                <h2 className="text-xl font-semibold text-foreground mb-2">Share Your Project</h2>
-                <p className="text-muted-foreground">
-                  Present your project or startup idea. Upload a logo, add descriptions, and find co-founders.
-                </p>
-              </div>
-              <ProjectForm userId={user.id} />
-            </TabsContent>
-
-            <TabsContent value="post">
-              <div className="mb-6">
-                <h2 className="text-xl font-semibold text-foreground mb-2">Write a Post</h2>
-                <p className="text-muted-foreground">
-                  Share your thoughts, insights, or experiences with the community. Add categories and tags for better discoverability.
-                </p>
-              </div>
-              <PostForm userId={user.id} />
-            </TabsContent>
-          </Tabs>
+          <ProblemForm userId={user.id} />
         </div>
       </main>
 
@@ -273,4 +226,4 @@ export default async function NewProblemPage() {
       </footer>
     </div>
   )
-}
+}  
