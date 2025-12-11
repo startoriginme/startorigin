@@ -109,15 +109,6 @@ export function ProjectForm({ userId }: ProjectFormProps) {
     setTags(tags.filter(tag => tag !== tagToRemove))
   }
 
-  const formatWebsiteUrl = (url: string) => {
-    if (!url) return ""
-    // Убираем протоколы если они есть
-    url = url.replace(/^https?:\/\//, "")
-    // Убираем www. если есть
-    url = url.replace(/^www\./, "")
-    return url
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
@@ -143,14 +134,6 @@ export function ProjectForm({ userId }: ProjectFormProps) {
         logoUrl = publicUrl
       }
 
-      // Подготавливаем контактные данные
-      const contactData = {
-        website: website.trim(),
-        email: email.trim(),
-        phone: phone.trim(),
-        telegram: telegram.trim()
-      }
-
       // Создаем объект проекта
       const projectData: any = {
         author_id: userId,
@@ -165,10 +148,10 @@ export function ProjectForm({ userId }: ProjectFormProps) {
       }
 
       // Добавляем контактные данные только если они заполнены
-      if (contactData.website) projectData.website = contactData.website
-      if (contactData.email) projectData.email = contactData.email
-      if (contactData.phone) projectData.phone = contactData.phone
-      if (contactData.telegram) projectData.telegram = contactData.telegram
+      if (website.trim()) projectData.website = website.trim()
+      if (email.trim()) projectData.email = email.trim()
+      if (phone.trim()) projectData.phone = phone.trim()
+      if (telegram.trim()) projectData.telegram = telegram.trim()
 
       // Create project
       const { error } = await supabase.from("projects").insert(projectData)
@@ -252,30 +235,21 @@ export function ProjectForm({ userId }: ProjectFormProps) {
           </Select>
         </div>
 
-        {/* Website Field */}
+        {/* Website Field - ПРОСТОЕ ТЕКСТОВОЕ ПОЛЕ */}
         <div>
           <Label htmlFor="website" className="flex items-center gap-2">
             <Globe className="h-4 w-4" />
             Project Website URL
           </Label>
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <Input
-                id="website"
-                value={website}
-                onChange={(e) => setWebsite(formatWebsiteUrl(e.target.value))}
-                placeholder="example.com"
-                type="url"
-              />
-              {website && (
-                <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-muted-foreground">
-                  https://{website}
-                </span>
-              )}
-            </div>
-          </div>
+          <Input
+            id="website"
+            value={website}
+            onChange={(e) => setWebsite(e.target.value)}
+            placeholder="https://example.com or example.com or any link"
+            type="text"
+          />
           <p className="text-xs text-muted-foreground mt-1">
-            Optional. Enter your project website (without https://)
+            Optional. Enter any URL - it will be saved exactly as you type it
           </p>
         </div>
 
