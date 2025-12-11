@@ -7,26 +7,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { GiWhaleTail } from "react-icons/gi"
-import { 
-  Calendar, 
-  Users, 
-  Edit, 
-  Trash2, 
-  Share2, 
-  Copy, 
-  Twitter, 
-  MessageCircle, 
-  Flag, 
-  Shield, 
-  Check, 
-  ExternalLink, 
-  Globe,
-  Briefcase,
-  Building,
-  Target,
-  Eye,
-  Zap
-} from "lucide-react"
+import { ArrowBigUp, Calendar, Edit, Trash2, Phone, Mail, Users, MoreVertical, Share2, Copy, Twitter, MessageCircle, Flag, Shield, Check, ExternalLink, Globe } from "lucide-react"
 import Link from "next/link"
 import {
   AlertDialog,
@@ -54,29 +35,28 @@ type Profile = {
   display_name: string | null
   avatar_url: string | null
   bio: string | null
-  website: string | null
-  disable_chat: boolean | null
+  is_verified: boolean | null
 }
 
-type Project = {
+type Problem = {
   id: string
   title: string
-  short_description: string
-  detailed_description: string
+  description: string
   category: string | null
   tags: string[] | null
-  logo_url: string | null
-  looking_for_cofounder: boolean | null
+  upvotes: number
   status: string
   created_at: string
   author_id: string
+  contact: string | null
+  looking_for_cofounder: boolean | null
   profiles: Profile | null
 }
 
-type ProjectDetailProps = {
-  project: Project
+type ProblemDetailProps = {
+  problem: Problem
   userId?: string
-  allUsernames: string[]
+  initialHasUpvoted: boolean
 }
 
 // Карта алиасов пользователей
@@ -95,6 +75,11 @@ function getMainUsername(username: string): string {
     }
   }
   return username
+}
+
+// Функция для получения всех username пользователя (основной + алиасы)
+function getAllUsernames(mainUsername: string): string[] {
+  return [mainUsername, ...(userAliases[mainUsername] || [])]
 }
 
 // Функция для получения алиасов из базы данных
@@ -143,7 +128,7 @@ async function getUserBadges(userId: string): Promise<Array<{badge_type: 'verifi
 
 // Функция для объединения статических и базы данных алиасов
 async function getAllUsernamesCombined(mainUsername: string, userId?: string): Promise<string[]> {
-  const staticAliases = [mainUsername, ...(userAliases[mainUsername] || [])]
+  const staticAliases = getAllUsernames(mainUsername)
   
   if (!userId) {
     return staticAliases
@@ -167,15 +152,60 @@ async function getAllUsernamesCombined(mainUsername: string, userId?: string): P
   }
 }
 
-export function ProjectDetail({ 
-  project, 
+// Функция для преобразования текста с упоминаниями в ссылки
+const parseMentions = (text: string) => {
+  if (!text) return text;
+  
+  // Регулярное выражение для поиска упоминаний вида @username
+  const mentionRegex = /@([a-zA-Z0-9_-]+)/g;
+  
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = mentionRegex.exec(text)) !== null) {
+    // Добавляем текст до упоминания
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+
+    // Добавляем ссылку для упоминания
+    const username = match[1];
+    const mainUsername = getMainUsername(username)
+    parts.push(
+      <Link
+        key={match.index}
+        href={`/user/${mainUsername}`}
+        className="text-primary hover:text-primary/80 font-medium underline underline-offset-2 transition-colors"
+        onClick={(e) => e.stopPropagation()}
+      >
+        @{username}
+      </Link>
+    );
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Добавляем оставшийся текст
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : text;
+};
+
+export function ProblemDetail({ 
+  problem, 
   userId, 
-  allUsernames
-}: ProjectDetailProps) {
+  initialHasUpvoted
+}: ProblemDetailProps) {
   const [isClient, setIsClient] = useState(false)
+  const [upvotes, setUpvotes] = useState(problem.upvotes)
+  const [hasUpvoted, setHasUpvoted] = useState(initialHasUpvoted)
+  const [isUpvoting, setIsUpvoting] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isShareOpen, setIsShareOpen] = useState(false)
-  const [authorAllUsernames, setAuthorAllUsernames] = useState<string[]>(allUsernames)
+  const [authorAllUsernames, setAuthorAllUsernames] = useState<string[]>([])
   const [authorBadges, setAuthorBadges] = useState<Array<{badge_type: 'verified' | 'whale' | 'early'}>>([])
   
   const router = useRouter()
@@ -187,62 +217,93 @@ export function ProjectDetail({
 
   useEffect(() => {
     const fetchAuthorData = async () => {
-      if (project.author_id) {
+      if (problem.author_id) {
         // Получаем значки автора
-        const badges = await getUserBadges(project.author_id)
+        const badges = await getUserBadges(problem.author_id)
         setAuthorBadges(badges)
       }
       
-      if (project.profiles?.username && project.author_id) {
+      if (problem.profiles?.username && problem.author_id) {
         const usernames = await getAllUsernamesCombined(
-          project.profiles.username, 
-          project.author_id
+          problem.profiles.username, 
+          problem.author_id
         )
         setAuthorAllUsernames(usernames)
-      } else if (project.profiles?.username) {
-        const staticAliases = [project.profiles.username, ...(userAliases[project.profiles.username] || [])]
-        setAuthorAllUsernames(staticAliases)
+      } else if (problem.profiles?.username) {
+        setAuthorAllUsernames(getAllUsernames(problem.profiles.username))
       }
     }
     
     fetchAuthorData()
-  }, [project.profiles?.username, project.author_id])
+  }, [problem.profiles?.username, problem.author_id])
 
-  const isAuthor = userId === project.author_id
-
+  const isAuthor = userId === problem.author_id
+  
   // Получаем основной username автора
-  const authorMainUsername = project.profiles?.username ? getMainUsername(project.profiles.username) : null
+  const authorMainUsername = problem.profiles?.username ? getMainUsername(problem.profiles.username) : null
 
   // Проверяем наличие значков
   const hasVerifiedBadge = authorBadges.some(b => b.badge_type === 'verified')
   const hasWhaleBadge = authorBadges.some(b => b.badge_type === 'whale')
   const hasEarlyBadge = authorBadges.some(b => b.badge_type === 'early')
 
+  const handleUpvote = async () => {
+    if (!userId) {
+      router.push("/auth/login")
+      return
+    }
+
+    setIsUpvoting(true)
+    const supabase = createClient()
+
+    try {
+      if (hasUpvoted) {
+        const { error } = await supabase.from("upvotes").delete().eq("problem_id", problem.id).eq("user_id", userId)
+
+        if (!error) {
+          setUpvotes((prev) => prev - 1)
+          setHasUpvoted(false)
+        }
+      } else {
+        const { error } = await supabase.from("upvotes").insert({ problem_id: problem.id, user_id: userId })
+
+        if (!error) {
+          setUpvotes((prev) => prev + 1)
+          setHasUpvoted(true)
+        }
+      }
+    } catch (error) {
+      console.error("Error toggling upvote:", error)
+    } finally {
+      setIsUpvoting(false)
+    }
+  }
+
   const handleDelete = async () => {
     setIsDeleting(true)
     const supabase = createClient()
 
     try {
-      const { error } = await supabase.from("projects").delete().eq("id", project.id).eq("author_id", userId!)
+      const { error } = await supabase.from("problems").delete().eq("id", problem.id).eq("author_id", userId!)
 
       if (!error) {
-        router.push("/")
+        router.push("/problems")
         router.refresh()
       }
     } catch (error) {
-      console.error("Error deleting project:", error)
+      console.error("Error deleting problem:", error)
     } finally {
       setIsDeleting(false)
     }
   }
 
   const copyToClipboard = async () => {
-    const url = `${window.location.origin}/projects/${project.id}`
+    const url = `${window.location.origin}/problems/${problem.id}`
     try {
       await navigator.clipboard.writeText(url)
       toast({
         title: "Link copied!",
-        description: "Project link has been copied to clipboard",
+        description: "Problem link has been copied to clipboard",
       })
       setIsShareOpen(false)
     } catch (err) {
@@ -255,16 +316,16 @@ export function ProjectDetail({
   }
 
   const shareOnTwitter = () => {
-    const text = `Check out this project "${project.title}" by ${project.profiles?.username || "someone"} on StartOrigin.me - a platform for sharing startup projects and finding co-founders.`
-    const url = `${window.location.origin}/projects/${project.id}`
+    const text = `Take a look on ${problem.profiles?.username || "someone"}'s problem on StartOrigin.me - it's a platform, where you can publish problems you face and find co-founders to solve it.`
+    const url = `${window.location.origin}/problems/${problem.id}`
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`
     window.open(twitterUrl, '_blank', 'width=550,height=420')
     setIsShareOpen(false)
   }
 
   const shareOnTelegram = () => {
-    const text = `Check out this project "${project.title}" by ${project.profiles?.username || "someone"} on StartOrigin.me - a platform for sharing startup projects and finding co-founders.`
-    const url = `${window.location.origin}/projects/${project.id}`
+    const text = `Take a look on ${problem.profiles?.username || "someone"}'s problem on StartOrigin.me - it's a platform, where you can publish problems you face and find co-founders to solve it.`
+    const url = `${window.location.origin}/problems/${problem.id}`
     const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`
     window.open(telegramUrl, '_blank', 'width=550,height=420')
     setIsShareOpen(false)
@@ -273,7 +334,7 @@ export function ProjectDetail({
   const handleReport = () => {
     const googleFormUrl = "https://forms.gle/RPUEPZBQEJHZT4GFA"
     
-    const prefillUrl = `${googleFormUrl}?entry.123456789=${encodeURIComponent(project.title)}&entry.987654321=${encodeURIComponent(window.location.href)}`
+    const prefillUrl = `${googleFormUrl}?entry.123456789=${encodeURIComponent(problem.title)}&entry.987654321=${encodeURIComponent(window.location.href)}`
     
     window.open(prefillUrl, '_blank', 'noopener,noreferrer')
     
@@ -302,110 +363,59 @@ export function ProjectDetail({
   }
 
   const getCategoryLabel = (category: string) => {
-    if (!category) return "Other"
     return category.charAt(0).toUpperCase() + category.slice(1).replace(/_/g, " ")
   }
 
   const getStatusLabel = (status: string) => {
-    if (status === "active") return "Active"
-    if (status === "completed") return "Completed"
-    if (status === "paused") return "Paused"
+    if (status === "in_progress") return "In Progress"
     return status.charAt(0).toUpperCase() + status.slice(1)
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "active": return "default"
-      case "completed": return "secondary"
-      case "paused": return "outline"
-      default: return "outline"
-    }
-  }
-
-  const handleVisitWebsite = () => {
-    if (!project.profiles?.website) return
-    
-    let url = project.profiles.website
-    if (!url.startsWith('http')) {
-      url = 'https://' + url
-    }
-    window.open(url, '_blank', 'noopener,noreferrer')
+  const getContactIcon = (contact: string) => {
+    if (contact.includes("+") || /^\d+$/.test(contact)) return <Phone className="h-4 w-4" />
+    return <Mail className="h-4 w-4" />
   }
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      {/* Project Card */}
+      {/* Problem Card */}
       <Card>
         <CardHeader className="pb-4">
           <div className="flex flex-col gap-4">
-            {/* Project Header */}
+            {/* Заголовок и кнопки действий */}
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-              <div className="flex items-start gap-4">
-                {/* Project Logo */}
-                <div className="flex-shrink-0">
-                  {project.logo_url ? (
-                    <img
-                      src={project.logo_url}
-                      alt={`${project.title} logo`}
-                      className="w-20 h-20 rounded-lg object-cover border"
-                    />
-                  ) : (
-                    <div className="w-20 h-20 rounded-lg bg-muted border flex items-center justify-center">
-                      <Briefcase className="h-10 w-10 text-muted-foreground" />
-                    </div>
-                  )}
-                </div>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-3 break-words">
+                  {problem.title}
+                </h1>
                 
-                <div className="flex-1 min-w-0">
-                  <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-3 break-words">
-                    {project.title}
-                  </h1>
-                  
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {project.category && (
-                      <Badge variant="secondary">
-                        <Building className="h-3 w-3 mr-1" />
-                        {getCategoryLabel(project.category)}
-                      </Badge>
-                    )}
-                    {project.tags?.map((tag) => (
-                      <Badge key={tag} variant="outline" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
-                    <Badge
-                      variant={getStatusColor(project.status)}
-                      className="text-xs"
-                    >
-                      {getStatusLabel(project.status)}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {problem.category && <Badge variant="secondary">{getCategoryLabel(problem.category)}</Badge>}
+                  {problem.tags?.map((tag) => (
+                    <Badge key={tag} variant="outline" className="text-xs">
+                      {tag}
                     </Badge>
-                    {project.looking_for_cofounder && (
-                      <Badge variant="default" className="gap-1 bg-green-600 hover:bg-green-700 text-xs">
-                        <Users className="h-3 w-3" />
-                        Looking for Cofounder
-                      </Badge>
-                    )}
-                  </div>
+                  ))}
+                  <Badge
+                    variant={
+                      problem.status === "open" ? "default" : problem.status === "solved" ? "secondary" : "outline"
+                    }
+                    className="text-xs"
+                  >
+                    {getStatusLabel(problem.status)}
+                  </Badge>
+                  {problem.looking_for_cofounder && (
+                    <Badge variant="default" className="gap-1 bg-green-600 hover:bg-green-700 text-xs">
+                      <Users className="h-3 w-3" />
+                      Looking for Cofounder
+                    </Badge>
+                  )}
                 </div>
               </div>
 
-              {/* Action Buttons - ЯРКАЯ КНОПКА VISIT САМАЯ ПЕРВАЯ */}
+              {/* Кнопки действий */}
               <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
-                {/* ЯРКАЯ ВЫДЕЛЕННАЯ КНОПКА VISIT WEBSITE */}
-                {project.profiles?.website && (
-                  <Button 
-                    size="sm" 
-                    className="gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 flex-1 sm:flex-none"
-                    onClick={handleVisitWebsite}
-                  >
-                    <Globe className="h-4 w-4" />
-                    <Zap className="h-3 w-3" />
-                    <span className="font-semibold">Visit Website</span>
-                    <ExternalLink className="h-3 w-3" />
-                  </Button>
-                )}
-
-                {/* Report Button */}
+                {/* Кнопка пожаловаться - скрыта для автора */}
                 {!isAuthor && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
@@ -420,9 +430,9 @@ export function ProjectDetail({
                     </AlertDialogTrigger>
                     <AlertDialogContent className="max-w-[95vw] sm:max-w-md">
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Report Project</AlertDialogTitle>
+                        <AlertDialogTitle>Report Problem</AlertDialogTitle>
                         <AlertDialogDescription className="text-sm">
-                          If you believe this project violates our community guidelines or contains inappropriate content, 
+                          If you believe this problem violates our community guidelines or contains inappropriate content, 
                           you can report it using Google Forms.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
@@ -440,12 +450,12 @@ export function ProjectDetail({
                   </AlertDialog>
                 )}
 
-                {/* Author Buttons */}
+                {/* Кнопки автора */}
                 {isAuthor && (
                   <div className="flex gap-2 w-full sm:w-auto">
-                    {/* Desktop Buttons */}
+                    {/* Основные кнопки для десктопа */}
                     <div className="hidden sm:flex gap-2 flex-1 sm:flex-none">
-                      <Link href={`/projects/${project.id}/edit`} className="flex-1 sm:flex-none">
+                      <Link href={`/problems/${problem.id}/edit`} className="flex-1 sm:flex-none">
                         <Button variant="outline" size="sm" className="gap-2 bg-transparent w-full sm:w-auto">
                           <Edit className="h-4 w-4" />
                           Edit
@@ -460,9 +470,9 @@ export function ProjectDetail({
                         </AlertDialogTrigger>
                         <AlertDialogContent className="max-w-[95vw] sm:max-w-md">
                           <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Project</AlertDialogTitle>
+                            <AlertDialogTitle>Delete Problem</AlertDialogTitle>
                             <AlertDialogDescription className="text-sm">
-                              Are you sure you want to delete this project? This action cannot be undone.
+                              Are you sure you want to delete this problem? This action cannot be undone.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter className="flex flex-col sm:flex-row gap-2">
@@ -479,20 +489,20 @@ export function ProjectDetail({
                       </AlertDialog>
                     </div>
 
-                    {/* Mobile Dropdown */}
+                    {/* Dropdown меню для мобильных */}
                     <div className="sm:hidden flex-1">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="outline" size="sm" className="gap-2 bg-transparent w-full">
-                            <Edit className="h-4 w-4" />
+                            <MoreVertical className="h-4 w-4" />
                             <span>Actions</span>
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-56">
                           <DropdownMenuItem asChild>
-                            <Link href={`/projects/${project.id}/edit`} className="flex items-center gap-2 cursor-pointer">
+                            <Link href={`/problems/${problem.id}/edit`} className="flex items-center gap-2 cursor-pointer">
                               <Edit className="h-4 w-4" />
-                              Edit Project
+                              Edit Problem
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
@@ -501,21 +511,21 @@ export function ProjectDetail({
                             onClick={() => document.querySelector('[data-delete-trigger]')?.click()}
                           >
                             <Trash2 className="h-4 w-4" />
-                            Delete Project
+                            Delete Problem
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
 
-                      {/* Hidden delete trigger */}
+                      {/* Скрытый триггер для диалога удаления */}
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <button data-delete-trigger className="hidden" />
                         </AlertDialogTrigger>
                         <AlertDialogContent className="max-w-[95vw] sm:max-w-md">
                           <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Project</AlertDialogTitle>
+                            <AlertDialogTitle>Delete Problem</AlertDialogTitle>
                             <AlertDialogDescription className="text-sm">
-                              Are you sure you want to delete this project? This action cannot be undone.
+                              Are you sure you want to delete this problem? This action cannot be undone.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter className="flex flex-col sm:flex-row gap-2">
@@ -536,16 +546,27 @@ export function ProjectDetail({
               </div>
             </div>
 
-            {/* Project Meta */}
+            {/* Upvote и мета-информация */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t">
               <div className="flex items-center gap-4">
+                <Button
+                  variant={hasUpvoted ? "default" : "outline"}
+                  size="sm"
+                  className="flex-col gap-1 h-auto py-2 px-3 min-w-[60px]"
+                  onClick={handleUpvote}
+                  disabled={isUpvoting}
+                >
+                  <ArrowBigUp className="h-5 w-5" />
+                  <span className="text-sm font-semibold">{upvotes}</span>
+                </Button>
+
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <Calendar className="h-4 w-4" />
-                    <span>{formatDate(project.created_at)}</span>
+                    <span>{formatDate(problem.created_at)}</span>
                   </div>
                   
-                  {/* Share Button */}
+                  {/* Кнопка поделиться */}
                   <div className="relative">
                     <DropdownMenu open={isShareOpen} onOpenChange={setIsShareOpen}>
                       <DropdownMenuTrigger asChild>
@@ -577,43 +598,18 @@ export function ProjectDetail({
         </CardHeader>
 
         <CardContent>
-          {/* Short Description */}
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold text-foreground mb-2">About the Project</h3>
-            <p className="text-foreground leading-relaxed break-words">
-              {project.short_description}
-            </p>
-          </div>
-
-          {/* Detailed Description */}
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold text-foreground mb-2">Detailed Description</h3>
-            <div className="prose prose-slate max-w-none prose-sm sm:prose-base">
-              <div className="whitespace-pre-wrap text-foreground leading-relaxed break-words">
-                {project.detailed_description}
-              </div>
+          <div className="prose prose-slate max-w-none prose-sm sm:prose-base">
+            <div className="whitespace-pre-wrap text-foreground leading-relaxed break-words">
+              {parseMentions(problem.description)}
             </div>
           </div>
-
-          {/* Project Goals / Vision */}
-          {(project.tags?.includes("vision") || project.tags?.includes("goals") || project.detailed_description?.toLowerCase().includes("vision") || project.detailed_description?.toLowerCase().includes("goal")) && (
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <div className="flex items-center gap-2 mb-2">
-                <Target className="h-5 w-5 text-blue-600" />
-                <h4 className="font-semibold text-blue-800">Project Vision & Goals</h4>
-              </div>
-              <p className="text-blue-700">
-                This project aims to create innovative solutions and make a meaningful impact in its field.
-              </p>
-            </div>
-          )}
         </CardContent>
       </Card>
 
       {/* Author Card */}
       <Card>
         <CardHeader>
-          <h2 className="text-lg font-semibold">About the Founder</h2>
+          <h2 className="text-lg font-semibold">About the Author</h2>
         </CardHeader>
         <CardContent>
           <div className="flex items-start gap-4">
@@ -624,16 +620,16 @@ export function ProjectDetail({
               {/* Кастомный аватар с Check на аватаре */}
               <div className="relative h-16 w-16">
                 <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-border bg-muted">
-                  {project.profiles?.avatar_url ? (
+                  {problem.profiles?.avatar_url ? (
                     <img
-                      src={project.profiles.avatar_url}
+                      src={problem.profiles.avatar_url}
                       alt="Profile avatar"
                       className="w-full h-full object-cover"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-muted">
                       <span className="text-lg font-semibold text-muted-foreground">
-                        {getInitials(project.profiles?.display_name || project.profiles?.username)}
+                        {getInitials(problem.profiles?.display_name || problem.profiles?.username)}
                       </span>
                     </div>
                   )}
@@ -653,7 +649,7 @@ export function ProjectDetail({
                     href={`/user/${authorMainUsername}`}
                     className="font-semibold text-foreground hover:text-primary transition-colors break-words flex items-center gap-2"
                   >
-                    {project.profiles?.display_name || authorMainUsername}
+                    {problem.profiles?.display_name || authorMainUsername}
                     {/* BadgeCheck рядом с именем - без контейнера */}
                     {hasVerifiedBadge && (
                       <Check className="h-4 w-4 text-blue-500" title="Verified" />
@@ -661,7 +657,7 @@ export function ProjectDetail({
                   </Link>
                 ) : (
                   <h3 className="font-semibold text-foreground break-words flex items-center gap-2">
-                    {project.profiles?.display_name || "Anonymous"}
+                    {problem.profiles?.display_name || "Anonymous"}
                     {/* BadgeCheck рядом с именем - без контейнера */}
                     {hasVerifiedBadge && (
                       <Check className="h-4 w-4 text-blue-500" title="Verified" />
@@ -705,8 +701,37 @@ export function ProjectDetail({
                 </div>
               )}
               
-              {project.profiles?.bio && (
-                <p className="mt-2 text-sm text-muted-foreground break-words">{project.profiles.bio}</p>
+              {problem.profiles?.bio && (
+                <p className="mt-2 text-sm text-muted-foreground break-words">{problem.profiles.bio}</p>
+              )}
+
+              {problem.contact && (
+                <div className="mt-4 pt-4 border-t">
+                  <h4 className="text-sm font-semibold text-foreground mb-2">Contact Information</h4>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    {getContactIcon(problem.contact)}
+                    <span className="font-mono break-all">{problem.contact}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Отображаем website если есть */}
+              {problem.profiles?.website && (
+                <div className="mt-4 pt-4 border-t">
+                  <h4 className="text-sm font-semibold text-foreground mb-2">Website</h4>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Globe className="h-4 w-4" />
+                    <a 
+                      href={problem.profiles.website.startsWith('http') ? problem.profiles.website : `https://${problem.profiles.website}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:text-primary/80 underline underline-offset-2 break-all"
+                    >
+                      {problem.profiles.website}
+                      <ExternalLink className="h-3 w-3 inline ml-1" />
+                    </a>
+                  </div>
+                </div>
               )}
             </div>
           </div>
@@ -725,7 +750,7 @@ export function ProjectDetail({
             
             <div className="space-y-2">
               <h3 className="text-xl font-bold text-foreground">
-                Do you want to moderate projects with us?
+                Do you want to moderate problems with us?
               </h3>
               <p className="text-muted-foreground max-w-2xl mx-auto">
                 Help us maintain a high-quality community by reviewing and moderating content. 
