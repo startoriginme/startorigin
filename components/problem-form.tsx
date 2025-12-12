@@ -46,6 +46,17 @@ const CATEGORIES = [
   "other",
 ]
 
+// Все доступные статусы
+const STATUS_OPTIONS = [
+  { value: "open", label: "Open", description: "Problem is open for solutions" },
+  { value: "in_progress", label: "In Progress", description: "Problem is being worked on" },
+  { value: "solved", label: "Solved", description: "Problem has been solved" },
+  { value: "closed", label: "Closed", description: "Problem is closed" },
+  { value: "post", label: "Post", description: "General post or discussion" },
+  { value: "announcement", label: "Announcement", description: "Important announcement" },
+  { value: "project", label: "Project", description: "Project seeking collaborators" },
+]
+
 export function ProblemForm({ userId, initialData }: ProblemFormProps) {
   const [title, setTitle] = useState(initialData?.title || "")
   const [description, setDescription] = useState(initialData?.description || "")
@@ -105,7 +116,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
         router.push(`/problems/${initialData.id}`)
         router.refresh()
       } else {
-        // Create new problem
+        // Create new problem - ВАЖНО: добавляем статус для новых записей!
         const { data, error } = await supabase
           .from("problems")
           .insert({
@@ -113,6 +124,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
             description,
             category: category || null,
             tags: tags.length > 0 ? tags : null,
+            status, // Добавляем статус для новых записей
             contact: contact || null,
             looking_for_cofounder: lookingForCofounder,
             author_id: userId,
@@ -135,6 +147,11 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
 
   const getCategoryLabel = (category: string) => {
     return category.charAt(0).toUpperCase() + category.slice(1)
+  }
+
+  const getStatusDescription = (statusValue: string) => {
+    const statusOption = STATUS_OPTIONS.find(option => option.value === statusValue)
+    return statusOption?.description || ""
   }
 
   return (
@@ -168,6 +185,34 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               disabled={isLoading} // 🔒 Блокируем поля при загрузке
             />
             <p className="text-xs text-muted-foreground">{description.length}/2000 characters</p>
+          </div>
+
+          {/* Статус - теперь показываем и для новых записей */}
+          <div className="space-y-2">
+            <Label htmlFor="status">Status</Label>
+            <Select value={status} onValueChange={setStatus} disabled={isLoading}>
+              <SelectTrigger id="status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {STATUS_OPTIONS.map((statusOption) => (
+                  <SelectItem 
+                    key={statusOption.value} 
+                    value={statusOption.value}
+                  >
+                    <div className="flex flex-col">
+                      <span>{statusOption.label}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {statusOption.description}
+                      </span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {getStatusDescription(status)}
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -254,23 +299,6 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               I'm looking for a cofounder to solve this problem
             </Label>
           </div>
-
-          {initialData && (
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select value={status} onValueChange={setStatus} disabled={isLoading}>
-                <SelectTrigger id="status">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="open">Open</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="solved">Solved</SelectItem>
-                  <SelectItem value="closed">Closed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
 
           {error && (
             <div className="rounded-md bg-destructive/10 p-3">
