@@ -46,7 +46,6 @@ const CATEGORIES = [
   "other",
 ]
 
-// Все доступные статусы
 const STATUS_OPTIONS = [
   { value: "open", label: "Open", description: "Problem is open for solutions" },
   { value: "in_progress", label: "In Progress", description: "Problem is being worked on" },
@@ -69,6 +68,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const supabase = createClient()
 
   const handleAddTag = () => {
     if (tagInput.trim() && !tags.includes(tagInput.trim()) && tags.length < 5) {
@@ -84,74 +84,89 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // 🔒 ЗАЩИТА ОТ МНОЖЕСТВЕННЫХ НАЖАТИЙ
     if (isLoading) return
     
     setIsLoading(true)
     setError(null)
 
-    const supabase = createClient()
+    // Валидация
+    if (!title.trim() || !description.trim()) {
+      setError("Title and description are required")
+      setIsLoading(false)
+      return
+    }
 
     try {
+      const problemData = {
+        title: title.trim(),
+        description: description.trim(),
+        category: category.trim() || null,
+        tags: tags.length > 0 ? tags : null,
+        status: status || "open",
+        contact: contact.trim() || null,
+        looking_for_cofounder: lookingForCofounder,
+        author_id: userId,
+        updated_at: new Date().toISOString(),
+      }
+
       if (initialData) {
         // Update existing problem
-        const { error } = await supabase
+        const { error: updateError } = await supabase
           .from("problems")
-          .update({
-            title,
-            description,
-            category: category || null,
-            tags: tags.length > 0 ? tags : null,
-            status,
-            contact: contact || null,
-            looking_for_cofounder: lookingForCofounder,
-            updated_at: new Date().toISOString(),
-          })
+          .update(problemData)
           .eq("id", initialData.id)
           .eq("author_id", userId)
 
-        if (error) throw error
+        if (updateError) {
+          console.error("Update error:", updateError)
+          throw new Error(`Failed to update: ${updateError.message}`)
+        }
         
-        // 🚀 ОПТИМИСТИЧНЫЙ РЕДИРЕКТ
         router.push(`/problems/${initialData.id}`)
         router.refresh()
       } else {
-        // Create new problem - ВАЖНО: добавляем статус для новых записей!
-        const { data, error } = await supabase
+        // Create new problem
+        const { data, error: insertError } = await supabase
           .from("problems")
-          .insert({
-            title,
-            description,
-            category: category || null,
-            tags: tags.length > 0 ? tags : null,
-            status, // Добавляем статус для новых записей
-            contact: contact || null,
-            looking_for_cofounder: lookingForCofounder,
-            author_id: userId,
-          })
-          .select()
+          .insert(problemData)
+          .select("id")
           .single()
 
-        if (error) throw error
+        if (insertError) {
+          console.error("Insert error:", insertError)
+          throw new Error(`Failed to create: ${insertError.message}`)
+        }
         
-        // 🚀 ОПТИМИСТИЧНЫЙ РЕДИРЕКТ - сразу переходим
-        router.push(`/problems/${data.id}`)
-        router.refresh()
+        if (data?.id) {
+          router.push(`/problems/${data.id}`)
+          router.refresh()
+        } else {
+          throw new Error("No ID returned after creation")
+        }
       }
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred")
-      setIsLoading(false) // ❌ При ошибке снова разрешаем нажатия
+      console.error("Form submission error:", error)
+      
+      // Более информативные сообщения об ошибках
+      if (error instanceof Error) {
+        if (error.message.includes("Failed to fetch")) {
+          setError("Network error. Please check your connection.")
+        } else if (error.message.includes("permission denied")) {
+          setError("Permission denied. Please ensure you're logged in.")
+        } else if (error.message.includes("status")) {
+          setError("Database error. The 'status' field might not exist.")
+        } else {
+          setError(error.message)
+        }
+      } else {
+        setError("An unexpected error occurred")
+      }
+      setIsLoading(false)
     }
-    // ⚠️ Убрал finally - при успехе isLoading останется true, но это ок т.к. мы уходим со страницы
   }
 
   const getCategoryLabel = (category: string) => {
     return category.charAt(0).toUpperCase() + category.slice(1)
-  }
-
-  const getStatusDescription = (statusValue: string) => {
-    const statusOption = STATUS_OPTIONS.find(option => option.value === statusValue)
-    return statusOption?.description || ""
   }
 
   return (
@@ -167,7 +182,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               onChange={(e) => setTitle(e.target.value)}
               required
               maxLength={200}
-              disabled={isLoading} // 🔒 Блокируем поля при загрузке
+              disabled={isLoading}
             />
             <p className="text-xs text-muted-foreground">{title.length}/200 characters</p>
           </div>
@@ -182,17 +197,22 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               required
               rows={8}
               maxLength={2000}
-              disabled={isLoading} // 🔒 Блокируем поля при загрузке
+              disabled={isLoading}
             />
             <p className="text-xs text-muted-foreground">{description.length}/2000 characters</p>
           </div>
 
-          {/* Статус - теперь показываем и для новых записей */}
+          {/* Status field - теперь всегда виден */}
           <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
-            <Select value={status} onValueChange={setStatus} disabled={isLoading}>
+            <Label htmlFor="status">Status *</Label>
+            <Select 
+              value={status} 
+              onValueChange={setStatus} 
+              disabled={isLoading}
+              required
+            >
               <SelectTrigger id="status">
-                <SelectValue />
+                <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
                 {STATUS_OPTIONS.map((statusOption) => (
@@ -210,9 +230,6 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">
-              {getStatusDescription(status)}
-            </p>
           </div>
 
           <div className="space-y-2">
@@ -223,7 +240,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               value={contact}
               onChange={(e) => setContact(e.target.value)}
               maxLength={100}
-              disabled={isLoading} // 🔒 Блокируем поля при загрузке
+              disabled={isLoading}
             />
             <p className="text-xs text-muted-foreground">How can people reach you? (Optional)</p>
           </div>
@@ -258,7 +275,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
                     handleAddTag()
                   }
                 }}
-                disabled={isLoading} // 🔒 Блокируем поля при загрузке
+                disabled={isLoading}
               />
               <Button
                 type="button"
@@ -278,7 +295,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
                       type="button" 
                       onClick={() => handleRemoveTag(tag)} 
                       className="ml-1 hover:text-destructive"
-                      disabled={isLoading} // 🔒 Блокируем кнопки при загрузке
+                      disabled={isLoading}
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -293,7 +310,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               id="cofounder"
               checked={lookingForCofounder}
               onCheckedChange={(checked) => setLookingForCofounder(checked as boolean)}
-              disabled={isLoading} // 🔒 Блокируем чекбокс при загрузке
+              disabled={isLoading}
             />
             <Label htmlFor="cofounder" className="text-sm font-normal cursor-pointer">
               I'm looking for a cofounder to solve this problem
@@ -302,7 +319,10 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
 
           {error && (
             <div className="rounded-md bg-destructive/10 p-3">
-              <p className="text-sm text-destructive">{error}</p>
+              <p className="text-sm text-destructive font-medium">Error: {error}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Please check if the database has the required columns and RLS policies.
+              </p>
             </div>
           )}
 
@@ -317,7 +337,12 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
                 initialData ? "Update Problem" : "Publish Problem"
               )}
             </Button>
-            <Button type="button" variant="outline" onClick={() => router.back()} disabled={isLoading}>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => router.back()} 
+              disabled={isLoading}
+            >
               Cancel
             </Button>
           </div>
