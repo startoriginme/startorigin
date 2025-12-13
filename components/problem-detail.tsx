@@ -28,6 +28,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/components/ui/use-toast"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 
 type Profile = {
   id: string
@@ -152,81 +154,6 @@ async function getAllUsernamesCombined(mainUsername: string, userId?: string): P
   }
 }
 
-// Функция для преобразования текста с упоминаниями в ссылки
-const parseText = (text: string) => {
-  if (!text) return text;
-  
-  // Регулярные выражения
-  const mentionRegex = /@([a-zA-Z0-9_-]+)/g;
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
-  
-  const parts = [];
-  let lastIndex = 0;
-  let match;
-  
-  // Сначала обрабатываем упоминания и ссылки вместе
-  const combinedRegex = /(@[a-zA-Z0-9_-]+|https?:\/\/[^\s]+)/g;
-  
-  while ((match = combinedRegex.exec(text)) !== null) {
-    // Добавляем текст до совпадения
-    if (match.index > lastIndex) {
-      parts.push(text.slice(lastIndex, match.index));
-    }
-
-    const matchedText = match[0];
-    
-    // Проверяем, это упоминание или ссылка
-    if (matchedText.startsWith('@')) {
-      // Это упоминание
-      const username = matchedText.substring(1);
-      const mainUsername = getMainUsername(username);
-      parts.push(
-        <Link
-          key={match.index}
-          href={`/user/${mainUsername}`}
-          className="text-primary hover:text-primary/80 font-medium underline underline-offset-2 transition-colors"
-          onClick={(e) => e.stopPropagation()}
-        >
-          @{username}
-        </Link>
-      );
-    } else {
-      // Это ссылка
-      let url = matchedText;
-      // Убираем возможные запятые, точки и другие знаки препинания в конце ссылки
-      url = url.replace(/[.,;:!?)]*$/, '');
-      
-      // Определяем отображаемый текст (можно сократить длинные URL)
-      let displayText = url;
-      if (url.length > 50) {
-        displayText = url.substring(0, 47) + '...';
-      }
-      
-      parts.push(
-        <a
-          key={match.index}
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-600 hover:text-blue-800 font-medium underline underline-offset-2 break-all"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {displayText}
-        </a>
-      );
-    }
-
-    lastIndex = match.index + matchedText.length;
-  }
-
-  // Добавляем оставшийся текст
-  if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex));
-  }
-
-  return parts.length > 0 ? parts : text;
-};
-
 // Функция для определения цвета бейджа статуса
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -240,6 +167,118 @@ const getStatusColor = (status: string) => {
       // Для open, post, announcement, project - цвет как у open (синий)
       return 'bg-blue-100 text-blue-800 hover:bg-blue-100 border-blue-200'
   }
+}
+
+// Кастомный компонент для обработки ссылок и упоминаний в Markdown
+const CustomMarkdown = ({ children }: { children: string }) => {
+  // Функция для обработки упоминаний в тексте
+  const processMentions = (text: string) => {
+    if (!text) return text
+    
+    const parts = []
+    const mentionRegex = /@([a-zA-Z0-9_-]+)/g
+    let lastIndex = 0
+    let match
+
+    while ((match = mentionRegex.exec(text)) !== null) {
+      // Добавляем текст до упоминания
+      if (match.index > lastIndex) {
+        parts.push(text.slice(lastIndex, match.index))
+      }
+
+      // Добавляем ссылку для упоминания
+      const username = match[1]
+      const mainUsername = getMainUsername(username)
+      parts.push(
+        <Link
+          key={match.index}
+          href={`/user/${mainUsername}`}
+          className="text-primary hover:text-primary/80 font-medium underline underline-offset-2 transition-colors"
+          onClick={(e) => e.stopPropagation()}
+        >
+          @{username}
+        </Link>
+      )
+
+      lastIndex = match.index + match[0].length
+    }
+
+    // Добавляем оставшийся текст
+    if (lastIndex < text.length) {
+      parts.push(text.slice(lastIndex))
+    }
+
+    return parts.length > 0 ? parts : text
+  }
+
+  // Обрабатываем текст перед передачей в ReactMarkdown
+  const processedText = processMentions(children)
+
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        // Кастомные стили для различных элементов Markdown
+        h1: ({ node, ...props }) => <h1 className="text-2xl font-bold mt-6 mb-3" {...props} />,
+        h2: ({ node, ...props }) => <h2 className="text-xl font-bold mt-5 mb-2" {...props} />,
+        h3: ({ node, ...props }) => <h3 className="text-lg font-bold mt-4 mb-2" {...props} />,
+        h4: ({ node, ...props }) => <h4 className="text-base font-bold mt-3 mb-2" {...props} />,
+        p: ({ node, ...props }) => <p className="my-3 leading-relaxed" {...props} />,
+        strong: ({ node, ...props }) => <strong className="font-bold" {...props} />,
+        em: ({ node, ...props }) => <em className="italic" {...props} />,
+        blockquote: ({ node, ...props }) => (
+          <blockquote className="border-l-4 border-gray-300 pl-4 italic my-4 text-gray-700" {...props} />
+        ),
+        ul: ({ node, ...props }) => <ul className="list-disc pl-5 my-3 space-y-1" {...props} />,
+        ol: ({ node, ...props }) => <ol className="list-decimal pl-5 my-3 space-y-1" {...props} />,
+        li: ({ node, ...props }) => <li className="my-1" {...props} />,
+        code: ({ node, inline, ...props }) => 
+          inline ? (
+            <code className="bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded text-sm font-mono" {...props} />
+          ) : (
+            <code className="block bg-gray-100 text-gray-800 p-3 rounded my-3 text-sm font-mono overflow-x-auto" {...props} />
+          ),
+        pre: ({ node, ...props }) => <pre className="my-3" {...props} />,
+        a: ({ node, href, children, ...props }) => {
+          // Проверяем, является ли ссылка упоминанием (начинается с /user/)
+          if (href?.startsWith('/user/')) {
+            return (
+              <Link
+                href={href}
+                className="text-primary hover:text-primary/80 font-medium underline underline-offset-2 transition-colors"
+                {...props}
+              >
+                {children}
+              </Link>
+            )
+          }
+          
+          // Для обычных ссылок
+          return (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 font-medium underline underline-offset-2"
+              {...props}
+            >
+              {children}
+            </a>
+          )
+        },
+        // Обработка текста в других элементах
+        text: ({ node, children, ...props }) => {
+          if (typeof children === 'string') {
+            const processed = processMentions(children)
+            return <span {...props}>{processed}</span>
+          }
+          return <span {...props}>{children}</span>
+        }
+      }}
+    >
+      {children}
+    </ReactMarkdown>
+  )
 }
 
 export function ProblemDetail({ 
@@ -644,9 +683,9 @@ export function ProblemDetail({
         </CardHeader>
 
         <CardContent>
-          <div className="prose prose-slate max-w-none prose-sm sm:prose-base">
-            <div className="whitespace-pre-wrap text-foreground leading-relaxed break-words">
-              {parseText(problem.description)}
+          <div className="prose prose-slate max-w-none prose-sm sm:prose-base dark:prose-invert">
+            <div className="break-words">
+              <CustomMarkdown>{problem.description}</CustomMarkdown>
             </div>
           </div>
         </CardContent>
