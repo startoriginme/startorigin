@@ -28,8 +28,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/components/ui/use-toast"
-import ReactMarkdown from "react-markdown"
-import remarkGfm from "remark-gfm"
 
 type Profile = {
   id: string
@@ -169,115 +167,81 @@ const getStatusColor = (status: string) => {
   }
 }
 
-// Кастомный компонент для обработки ссылок и упоминаний в Markdown
-const CustomMarkdown = ({ children }: { children: string }) => {
-  // Функция для обработки упоминаний в тексте
-  const processMentions = (text: string) => {
-    if (!text) return text
+// Упрощенная функция для преобразования Markdown в HTML
+const parseMarkdown = (text: string) => {
+  if (!text) return text
+  
+  // Обработка жирного текста: **текст** или __текст__
+  let result = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+  result = result.replace(/__(.*?)__/g, '<strong>$1</strong>')
+  
+  // Обработка курсива: *текст* или _текст_
+  result = result.replace(/\*(.*?)\*/g, '<em>$1</em>')
+  result = result.replace(/_(.*?)_/g, '<em>$1</em>')
+  
+  // Обработка заголовков
+  result = result.replace(/^### (.*$)/gm, '<h3>$1</h3>')
+  result = result.replace(/^## (.*$)/gm, '<h2>$1</h2>')
+  result = result.replace(/^# (.*$)/gm, '<h1>$1</h1>')
+  
+  // Обработка списков
+  result = result.replace(/^- (.*$)/gm, '<li>$1</li>')
+  result = result.replace(/^\* (.*$)/gm, '<li>$1</li>')
+  result = result.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
+  
+  // Обработка блоков кода
+  result = result.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+  
+  // Обработка строчного кода
+  result = result.replace(/`([^`]+)`/g, '<code>$1</code>')
+  
+  // Обработка цитат
+  result = result.replace(/^> (.*$)/gm, '<blockquote>$1</blockquote>')
+  
+  // Обработка ссылок: [текст](url)
+  result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, text, url) => {
+    // Проверяем, является ли ссылка упоминанием
+    if (url.startsWith('/user/')) {
+      return `<a href="${url}" class="text-primary hover:text-primary/80 font-medium underline underline-offset-2 transition-colors">${text}</a>`
+    }
+    return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 font-medium underline underline-offset-2">${text}</a>`
+  })
+  
+  // Обработка упоминаний: @username
+  result = result.replace(/@([a-zA-Z0-9_-]+)/g, (match, username) => {
+    const mainUsername = getMainUsername(username)
+    return `<a href="/user/${mainUsername}" class="text-primary hover:text-primary/80 font-medium underline underline-offset-2 transition-colors">@${username}</a>`
+  })
+  
+  // Обработка простых URL (без Markdown ссылок)
+  result = result.replace(/(https?:\/\/[^\s]+)/g, (match, url) => {
+    // Если URL уже внутри ссылки, не обрабатываем
+    if (result.includes(`href="${url}"`)) return match
     
-    const parts = []
-    const mentionRegex = /@([a-zA-Z0-9_-]+)/g
-    let lastIndex = 0
-    let match
-
-    while ((match = mentionRegex.exec(text)) !== null) {
-      // Добавляем текст до упоминания
-      if (match.index > lastIndex) {
-        parts.push(text.slice(lastIndex, match.index))
-      }
-
-      // Добавляем ссылку для упоминания
-      const username = match[1]
-      const mainUsername = getMainUsername(username)
-      parts.push(
-        <Link
-          key={match.index}
-          href={`/user/${mainUsername}`}
-          className="text-primary hover:text-primary/80 font-medium underline underline-offset-2 transition-colors"
-          onClick={(e) => e.stopPropagation()}
-        >
-          @{username}
-        </Link>
-      )
-
-      lastIndex = match.index + match[0].length
-    }
-
-    // Добавляем оставшийся текст
-    if (lastIndex < text.length) {
-      parts.push(text.slice(lastIndex))
-    }
-
-    return parts.length > 0 ? parts : text
+    const cleanUrl = url.replace(/[.,;:!?)]*$/, '')
+    const displayText = cleanUrl.length > 50 ? cleanUrl.substring(0, 47) + '...' : cleanUrl
+    return `<a href="${cleanUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 font-medium underline underline-offset-2 break-all">${displayText}</a>`
+  })
+  
+  // Заменяем переносы строк на <br> и параграфы
+  result = result.replace(/\n\n/g, '</p><p>')
+  result = result.replace(/\n/g, '<br>')
+  
+  // Оборачиваем в параграф, если не обернуто
+  if (!result.startsWith('<')) {
+    result = `<p>${result}</p>`
   }
+  
+  return result
+}
 
-  // Обрабатываем текст перед передачей в ReactMarkdown
-  const processedText = processMentions(children)
-
+// Компонент для безопасного рендеринга HTML
+const SafeHTML = ({ html, className = "" }: { html: string, className?: string }) => {
   return (
-    <ReactMarkdown
-      remarkPlugins={[remarkGfm]}
-      components={{
-        // Кастомные стили для различных элементов Markdown
-        h1: ({ node, ...props }) => <h1 className="text-2xl font-bold mt-6 mb-3" {...props} />,
-        h2: ({ node, ...props }) => <h2 className="text-xl font-bold mt-5 mb-2" {...props} />,
-        h3: ({ node, ...props }) => <h3 className="text-lg font-bold mt-4 mb-2" {...props} />,
-        h4: ({ node, ...props }) => <h4 className="text-base font-bold mt-3 mb-2" {...props} />,
-        p: ({ node, ...props }) => <p className="my-3 leading-relaxed" {...props} />,
-        strong: ({ node, ...props }) => <strong className="font-bold" {...props} />,
-        em: ({ node, ...props }) => <em className="italic" {...props} />,
-        blockquote: ({ node, ...props }) => (
-          <blockquote className="border-l-4 border-gray-300 pl-4 italic my-4 text-gray-700" {...props} />
-        ),
-        ul: ({ node, ...props }) => <ul className="list-disc pl-5 my-3 space-y-1" {...props} />,
-        ol: ({ node, ...props }) => <ol className="list-decimal pl-5 my-3 space-y-1" {...props} />,
-        li: ({ node, ...props }) => <li className="my-1" {...props} />,
-        code: ({ node, inline, ...props }) => 
-          inline ? (
-            <code className="bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded text-sm font-mono" {...props} />
-          ) : (
-            <code className="block bg-gray-100 text-gray-800 p-3 rounded my-3 text-sm font-mono overflow-x-auto" {...props} />
-          ),
-        pre: ({ node, ...props }) => <pre className="my-3" {...props} />,
-        a: ({ node, href, children, ...props }) => {
-          // Проверяем, является ли ссылка упоминанием (начинается с /user/)
-          if (href?.startsWith('/user/')) {
-            return (
-              <Link
-                href={href}
-                className="text-primary hover:text-primary/80 font-medium underline underline-offset-2 transition-colors"
-                {...props}
-              >
-                {children}
-              </Link>
-            )
-          }
-          
-          // Для обычных ссылок
-          return (
-            <a
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:text-blue-800 font-medium underline underline-offset-2"
-              {...props}
-            >
-              {children}
-            </a>
-          )
-        },
-        // Обработка текста в других элементах
-        text: ({ node, children, ...props }) => {
-          if (typeof children === 'string') {
-            const processed = processMentions(children)
-            return <span {...props}>{processed}</span>
-          }
-          return <span {...props}>{children}</span>
-        }
-      }}
-    >
-      {children}
-    </ReactMarkdown>
+    <div 
+      className={className}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
   )
 }
 
@@ -462,6 +426,9 @@ export function ProblemDetail({
     if (contact.includes("+") || /^\d+$/.test(contact)) return <Phone className="h-4 w-4" />
     return <Mail className="h-4 w-4" />
   }
+
+  // Преобразуем Markdown в HTML
+  const htmlContent = parseMarkdown(problem.description || "")
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -685,7 +652,85 @@ export function ProblemDetail({
         <CardContent>
           <div className="prose prose-slate max-w-none prose-sm sm:prose-base dark:prose-invert">
             <div className="break-words">
-              <CustomMarkdown>{problem.description}</CustomMarkdown>
+              <SafeHTML 
+                html={htmlContent}
+                className="markdown-content"
+              />
+              <style jsx>{`
+                .markdown-content {
+                  line-height: 1.6;
+                }
+                .markdown-content h1 {
+                  font-size: 1.875rem;
+                  font-weight: bold;
+                  margin-top: 1.5rem;
+                  margin-bottom: 0.75rem;
+                }
+                .markdown-content h2 {
+                  font-size: 1.5rem;
+                  font-weight: bold;
+                  margin-top: 1.25rem;
+                  margin-bottom: 0.5rem;
+                }
+                .markdown-content h3 {
+                  font-size: 1.25rem;
+                  font-weight: bold;
+                  margin-top: 1rem;
+                  margin-bottom: 0.5rem;
+                }
+                .markdown-content p {
+                  margin: 0.75rem 0;
+                }
+                .markdown-content strong {
+                  font-weight: bold;
+                }
+                .markdown-content em {
+                  font-style: italic;
+                }
+                .markdown-content ul {
+                  list-style-type: disc;
+                  padding-left: 1.25rem;
+                  margin: 0.75rem 0;
+                }
+                .markdown-content ol {
+                  list-style-type: decimal;
+                  padding-left: 1.25rem;
+                  margin: 0.75rem 0;
+                }
+                .markdown-content li {
+                  margin: 0.25rem 0;
+                }
+                .markdown-content blockquote {
+                  border-left: 4px solid #d1d5db;
+                  padding-left: 1rem;
+                  font-style: italic;
+                  color: #4b5563;
+                  margin: 1rem 0;
+                }
+                .markdown-content pre {
+                  background-color: #f3f4f6;
+                  padding: 1rem;
+                  border-radius: 0.375rem;
+                  overflow-x: auto;
+                  margin: 1rem 0;
+                }
+                .markdown-content code {
+                  background-color: #f3f4f6;
+                  padding: 0.125rem 0.375rem;
+                  border-radius: 0.25rem;
+                  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+                  font-size: 0.875rem;
+                }
+                .markdown-content a {
+                  text-decoration: underline;
+                  text-underline-offset: 2px;
+                }
+                .markdown-content br {
+                  display: block;
+                  content: "";
+                  margin: 0.5rem 0;
+                }
+              `}</style>
             </div>
           </div>
         </CardContent>
