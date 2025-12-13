@@ -13,7 +13,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { X, Loader2 } from "lucide-react"
+import { X, Loader2, Bold, Italic, List, Link as LinkIcon, Heading, Quote, Code, Type } from "lucide-react"
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@/components/ui/toggle-group"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 
 type ProblemFormProps = {
   userId: string
@@ -67,6 +85,10 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
   const [lookingForCofounder, setLookingForCofounder] = useState(initialData?.looking_for_cofounder || false)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false)
+  const [linkUrl, setLinkUrl] = useState("")
+  const [linkText, setLinkText] = useState("")
+  
   const router = useRouter()
   const supabase = createClient()
 
@@ -79,6 +101,74 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
 
   const handleRemoveTag = (tagToRemove: string) => {
     setTags(tags.filter((tag) => tag !== tagToRemove))
+  }
+
+  // Функции форматирования текста
+  const insertTextAtCursor = (before: string, after: string = "", defaultText: string = "") => {
+    const textarea = document.getElementById("description") as HTMLTextAreaElement
+    if (!textarea) return
+
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const selectedText = description.substring(start, end)
+    const textToInsert = selectedText || defaultText
+    
+    const newText = description.substring(0, start) + before + textToInsert + after + description.substring(end)
+    setDescription(newText)
+    
+    // Фокус обратно на textarea
+    setTimeout(() => {
+      textarea.focus()
+      const newCursorPos = start + before.length + textToInsert.length + after.length
+      textarea.setSelectionRange(newCursorPos, newCursorPos)
+    }, 10)
+  }
+
+  const formatBold = () => {
+    insertTextAtCursor("**", "**", "bold text")
+  }
+
+  const formatItalic = () => {
+    insertTextAtCursor("*", "*", "italic text")
+  }
+
+  const formatHeading = () => {
+    insertTextAtCursor("## ", "", "Heading")
+  }
+
+  const formatList = () => {
+    insertTextAtCursor("- ", "", "List item")
+  }
+
+  const formatQuote = () => {
+    insertTextAtCursor("> ", "", "Quote")
+  }
+
+  const formatCode = () => {
+    insertTextAtCursor("```\n", "\n```", "code")
+  }
+
+  const formatInlineCode = () => {
+    insertTextAtCursor("`", "`", "code")
+  }
+
+  const insertLink = () => {
+    if (!linkUrl.trim()) {
+      setLinkDialogOpen(true)
+      return
+    }
+    
+    if (!linkText.trim()) {
+      setLinkText(linkUrl)
+    }
+    
+    const markdownLink = `[${linkText.trim()}](${linkUrl.trim()})`
+    insertTextAtCursor("", "", markdownLink)
+    
+    // Сбросить значения
+    setLinkUrl("")
+    setLinkText("")
+    setLinkDialogOpen(false)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -188,18 +278,175 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description *</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="description">Description *</Label>
+              <div className="text-xs text-muted-foreground">
+                Supports Markdown formatting
+              </div>
+            </div>
+            
+            {/* Панель инструментов форматирования */}
+            <TooltipProvider>
+              <div className="flex items-center gap-1 p-2 border rounded-t-lg bg-muted/50">
+                <ToggleGroup type="multiple" className="flex-wrap gap-1">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <ToggleGroupItem value="bold" onClick={formatBold} disabled={isLoading}>
+                        <Bold className="h-4 w-4" />
+                      </ToggleGroupItem>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Bold (Ctrl+B)</p>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <ToggleGroupItem value="italic" onClick={formatItalic} disabled={isLoading}>
+                        <Italic className="h-4 w-4" />
+                      </ToggleGroupItem>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Italic (Ctrl+I)</p>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <ToggleGroupItem value="heading" onClick={formatHeading} disabled={isLoading}>
+                        <Heading className="h-4 w-4" />
+                      </ToggleGroupItem>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Heading</p>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <ToggleGroupItem value="list" onClick={formatList} disabled={isLoading}>
+                        <List className="h-4 w-4" />
+                      </ToggleGroupItem>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Bullet List</p>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <ToggleGroupItem value="quote" onClick={formatQuote} disabled={isLoading}>
+                        <Quote className="h-4 w-4" />
+                      </ToggleGroupItem>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Quote</p>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <ToggleGroupItem value="code" onClick={formatCode} disabled={isLoading}>
+                        <Code className="h-4 w-4" />
+                      </ToggleGroupItem>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Code Block</p>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <ToggleGroupItem value="inline-code" onClick={formatInlineCode} disabled={isLoading}>
+                        <Type className="h-4 w-4" />
+                      </ToggleGroupItem>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Inline Code</p>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
+                        <DialogTrigger asChild>
+                          <ToggleGroupItem value="link" disabled={isLoading}>
+                            <LinkIcon className="h-4 w-4" />
+                          </ToggleGroupItem>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[425px]">
+                          <DialogHeader>
+                            <DialogTitle>Insert Link</DialogTitle>
+                            <DialogDescription>
+                              Add a hyperlink to your description
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="link-url">URL *</Label>
+                              <Input
+                                id="link-url"
+                                placeholder="https://example.com"
+                                value={linkUrl}
+                                onChange={(e) => setLinkUrl(e.target.value)}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="link-text">Text (optional)</Label>
+                              <Input
+                                id="link-text"
+                                placeholder="Link text"
+                                value={linkText}
+                                onChange={(e) => setLinkText(e.target.value)}
+                              />
+                            </div>
+                          </div>
+                          <div className="flex justify-end gap-2">
+                            <Button variant="outline" onClick={() => setLinkDialogOpen(false)}>
+                              Cancel
+                            </Button>
+                            <Button onClick={insertLink} disabled={!linkUrl.trim()}>
+                              Insert Link
+                            </Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Insert Link (Ctrl+K)</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </ToggleGroup>
+              </div>
+            </TooltipProvider>
+            
             <Textarea
               id="description"
-              placeholder="Describe the problem in detail..."
+              placeholder="Describe the problem in detail... You can use Markdown for formatting."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               required
               rows={8}
               maxLength={2000}
               disabled={isLoading}
+              className="rounded-t-none focus:ring-2 focus:ring-primary"
             />
-            <p className="text-xs text-muted-foreground">{description.length}/2000 characters</p>
+            <div className="flex justify-between items-center">
+              <p className="text-xs text-muted-foreground">{description.length}/2000 characters</p>
+              <div className="text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1">
+                  <Bold className="h-3 w-3" /> **bold**
+                </span>
+                <span className="mx-2">•</span>
+                <span className="inline-flex items-center gap-1">
+                  <Italic className="h-3 w-3" /> *italic*
+                </span>
+                <span className="mx-2">•</span>
+                <span className="inline-flex items-center gap-1">
+                  <LinkIcon className="h-3 w-3" /> [text](url)
+                </span>
+              </div>
+            </div>
           </div>
 
           {/* Status field - теперь всегда виден */}
