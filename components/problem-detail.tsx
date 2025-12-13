@@ -153,37 +153,70 @@ async function getAllUsernamesCombined(mainUsername: string, userId?: string): P
 }
 
 // Функция для преобразования текста с упоминаниями в ссылки
-const parseMentions = (text: string) => {
+const parseText = (text: string) => {
   if (!text) return text;
   
-  // Регулярное выражение для поиска упоминаний вида @username
+  // Регулярные выражения
   const mentionRegex = /@([a-zA-Z0-9_-]+)/g;
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
   
   const parts = [];
   let lastIndex = 0;
   let match;
-
-  while ((match = mentionRegex.exec(text)) !== null) {
-    // Добавляем текст до упоминания
+  
+  // Сначала обрабатываем упоминания и ссылки вместе
+  const combinedRegex = /(@[a-zA-Z0-9_-]+|https?:\/\/[^\s]+)/g;
+  
+  while ((match = combinedRegex.exec(text)) !== null) {
+    // Добавляем текст до совпадения
     if (match.index > lastIndex) {
       parts.push(text.slice(lastIndex, match.index));
     }
 
-    // Добавляем ссылку для упоминания
-    const username = match[1];
-    const mainUsername = getMainUsername(username)
-    parts.push(
-      <Link
-        key={match.index}
-        href={`/user/${mainUsername}`}
-        className="text-primary hover:text-primary/80 font-medium underline underline-offset-2 transition-colors"
-        onClick={(e) => e.stopPropagation()}
-      >
-        @{username}
-      </Link>
-    );
+    const matchedText = match[0];
+    
+    // Проверяем, это упоминание или ссылка
+    if (matchedText.startsWith('@')) {
+      // Это упоминание
+      const username = matchedText.substring(1);
+      const mainUsername = getMainUsername(username);
+      parts.push(
+        <Link
+          key={match.index}
+          href={`/user/${mainUsername}`}
+          className="text-primary hover:text-primary/80 font-medium underline underline-offset-2 transition-colors"
+          onClick={(e) => e.stopPropagation()}
+        >
+          @{username}
+        </Link>
+      );
+    } else {
+      // Это ссылка
+      let url = matchedText;
+      // Убираем возможные запятые, точки и другие знаки препинания в конце ссылки
+      url = url.replace(/[.,;:!?)]*$/, '');
+      
+      // Определяем отображаемый текст (можно сократить длинные URL)
+      let displayText = url;
+      if (url.length > 50) {
+        displayText = url.substring(0, 47) + '...';
+      }
+      
+      parts.push(
+        <a
+          key={match.index}
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:text-blue-800 font-medium underline underline-offset-2 break-all"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {displayText}
+        </a>
+      );
+    }
 
-    lastIndex = match.index + match[0].length;
+    lastIndex = match.index + matchedText.length;
   }
 
   // Добавляем оставшийся текст
@@ -193,6 +226,21 @@ const parseMentions = (text: string) => {
 
   return parts.length > 0 ? parts : text;
 };
+
+// Функция для определения цвета бейджа статуса
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'in_progress':
+      return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100 border-yellow-200'
+    case 'solved':
+      return 'bg-green-100 text-green-800 hover:bg-green-100 border-green-200'
+    case 'closed':
+      return 'bg-gray-100 text-gray-800 hover:bg-gray-100 border-gray-200'
+    default:
+      // Для open, post, announcement, project - цвет как у open (синий)
+      return 'bg-blue-100 text-blue-800 hover:bg-blue-100 border-blue-200'
+  }
+}
 
 export function ProblemDetail({ 
   problem, 
@@ -397,10 +445,8 @@ export function ProblemDetail({
                     </Badge>
                   ))}
                   <Badge
-                    variant={
-                      problem.status === "open" ? "default" : problem.status === "solved" ? "secondary" : "outline"
-                    }
-                    className="text-xs"
+                    variant="outline"
+                    className={`text-xs ${getStatusColor(problem.status)}`}
                   >
                     {getStatusLabel(problem.status)}
                   </Badge>
@@ -600,7 +646,7 @@ export function ProblemDetail({
         <CardContent>
           <div className="prose prose-slate max-w-none prose-sm sm:prose-base">
             <div className="whitespace-pre-wrap text-foreground leading-relaxed break-words">
-              {parseMentions(problem.description)}
+              {parseText(problem.description)}
             </div>
           </div>
         </CardContent>
