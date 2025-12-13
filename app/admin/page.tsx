@@ -40,7 +40,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-const ADMIN_PASSWORD = "MaxNikolaevAdminStartOriginOfficialModeration"
+const ADMIN_PASSWORD = "RealAdminStartOriginModeration"
 
 type Problem = {
   id: string
