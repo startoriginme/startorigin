@@ -36,25 +36,6 @@ export default async function HomePage() {
     console.error("Error fetching problems:", error)
   }
 
-  // Get trending problems (most upvoted problems from last 7 days)
-  const oneWeekAgo = new Date()
-  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
-  
-  const { data: trendingProblems } = await supabase
-    .from("problems")
-    .select(`
-      *,
-      profiles:author_id (
-        id,
-        username,
-        display_name,
-        avatar_url
-      )
-    `)
-    .gte("created_at", oneWeekAgo.toISOString())
-    .order("upvotes", { ascending: false })
-    .limit(3) // Top 3 trending problems
-
   // Check if user is authenticated and get profile
   const {
     data: { user },
@@ -322,7 +303,6 @@ export default async function HomePage() {
         <ProblemsFeed 
           initialProblems={problems || []} 
           userId={user?.id}
-          trendingProblems={trendingProblems || []}
         />
 
         {/* Solutions Section */}
