@@ -17,7 +17,7 @@ import { HeroCarousel } from "@/components/hero-carousel"
 export default async function HomePage() {
   const supabase = await createClient()
 
-  // Fetch initial problems (8 for initial load - 4 rows of 2 cards)
+  // Fetch limited problems (4 for initial load)
   const { data: problems, error } = await supabase
     .from("problems")
     .select(`
@@ -30,7 +30,7 @@ export default async function HomePage() {
       )
     `)
     .order("created_at", { ascending: false })
-    .limit(8) // Ограничиваем начальную загрузку 8 проблемами (для 2 колонок)
+    .limit(4) // Ограничиваем начальную загрузку 4 проблемами
 
   if (error) {
     console.error("Error fetching problems:", error)
@@ -376,4 +376,4 @@ export default async function HomePage() {
       </footer>
     </div>
   )
-}
+} теперь тут еще
