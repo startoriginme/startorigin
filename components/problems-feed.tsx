@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Search, Crown, Award, Medal, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
+import { Badge } from "@/components/ui/badge"
 
 type Problem = {
   id: string
@@ -74,7 +75,7 @@ export function ProblemsFeed({ initialProblems, userId, trendingProblems = [] }:
     setIsLoadingMore(true)
     try {
       const nextPage = page + 1
-      const offset = nextPage * 4 // Пропускаем уже загруженные
+      const offset = nextPage * 8 // Пропускаем уже загруженные (теперь загружаем по 8 для 2х колонок)
       
       // Создаем базовый запрос
       let query = supabase
@@ -108,7 +109,7 @@ export function ProblemsFeed({ initialProblems, userId, trendingProblems = [] }:
 
       // Добавляем пагинацию
       const { data: newProblems, error } = await query
-        .range(offset, offset + 3) // Загружаем следующую партию из 4 проблем
+        .range(offset, offset + 7) // Загружаем следующую партию из 8 проблем (4 ряда по 2)
 
       if (error) {
         console.error("Error loading more problems:", error)
@@ -119,8 +120,8 @@ export function ProblemsFeed({ initialProblems, userId, trendingProblems = [] }:
         setProblems(prev => [...prev, ...newProblems])
         setPage(nextPage)
         
-        // Если загрузили меньше 4 проблем, значит это последняя страница
-        if (newProblems.length < 4) {
+        // Если загрузили меньше 8 проблем, значит это последняя страница
+        if (newProblems.length < 8) {
           setHasMore(false)
         }
       } else {
@@ -171,8 +172,8 @@ export function ProblemsFeed({ initialProblems, userId, trendingProblems = [] }:
           query = query.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`)
         }
 
-        // Берем первые 4 проблемы для новой фильтрации
-        const { data: filteredProblems, error, count } = await query.limit(4)
+        // Берем первые 8 проблем для новой фильтрации (для 2х колонок)
+        const { data: filteredProblems, error, count } = await query.limit(8)
 
         if (error) {
           console.error("Error fetching filtered problems:", error)
@@ -181,10 +182,10 @@ export function ProblemsFeed({ initialProblems, userId, trendingProblems = [] }:
 
         setProblems(filteredProblems || [])
         
-        // Если загрузили меньше 4 проблем, значит это все что есть
-        if (!filteredProblems || filteredProblems.length < 4) {
+        // Если загрузили меньше 8 проблем, значит это все что есть
+        if (!filteredProblems || filteredProblems.length < 8) {
           setHasMore(false)
-        } else if (count && count <= 4) {
+        } else if (count && count <= 8) {
           setHasMore(false)
         } else {
           setHasMore(true)
@@ -332,7 +333,7 @@ export function ProblemsFeed({ initialProblems, userId, trendingProblems = [] }:
         </div>
       )}
 
-      {/* Problems List */}
+      {/* Problems List - 2 колонки */}
       {!isLoading && (
         <div className="space-y-4">
           {allProblems.length === 0 ? (
@@ -341,26 +342,62 @@ export function ProblemsFeed({ initialProblems, userId, trendingProblems = [] }:
             </div>
           ) : (
             <>
-              {allProblems.map((problem) => (
-                <div key={problem.id} className="relative">
-                  {/* Значки медалей для топ-3 */}
-                  {(problem as any).rank > 0 && (
-                    <>
-                      <div className="absolute -top-2 -left-2 z-10">
-                        {getRankIcon((problem as any).rank)}
+              {/* Баннер Trending Problems (если есть трендовые) */}
+              {filteredTrendingProblems.length > 0 && (
+                <div className="mb-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Crown className="h-5 w-5 text-yellow-500" />
+                    <h3 className="text-lg font-semibold text-foreground">Trending Problems</h3>
+                    <Badge variant="outline" className="ml-2">Hot 🔥</Badge>
+                  </div>
+                  
+                  {/* Трендовые проблемы в 2 колонки */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filteredTrendingProblems.map((problem) => (
+                      <div key={problem.id} className="relative">
+                        {/* Значки медалей для топ-3 */}
+                        {(problem as any).rank > 0 && (
+                          <>
+                            <div className="absolute -top-2 -left-2 z-10">
+                              {getRankIcon((problem as any).rank)}
+                            </div>
+                            <div className="absolute -top-2 -right-2 z-10">
+                              {getRankBadge((problem as any).rank)}
+                            </div>
+                          </>
+                        )}
+                        
+                        <ProblemCard 
+                          problem={problem} 
+                          userId={userId}
+                        />
                       </div>
-                      <div className="absolute -top-2 -right-2 z-10">
-                        {getRankBadge((problem as any).rank)}
-                      </div>
-                    </>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Regular Problems */}
+              {filteredRegularProblems.length > 0 && (
+                <div>
+                  {/* Заголовок для обычных проблем */}
+                  {filteredTrendingProblems.length > 0 && (
+                    <h3 className="text-lg font-semibold text-foreground mb-3">All Problems</h3>
                   )}
                   
-                  <ProblemCard 
-                    problem={problem} 
-                    userId={userId}
-                  />
+                  {/* Обычные проблемы в 2 колонки */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filteredRegularProblems.map((problem) => (
+                      <div key={problem.id}>
+                        <ProblemCard 
+                          problem={problem} 
+                          userId={userId}
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))}
+              )}
             </>
           )}
         </div>
