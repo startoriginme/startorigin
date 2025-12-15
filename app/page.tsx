@@ -1,7 +1,9 @@
-import { createClient } from "@/lib/supabase/server"
+"use client"
+
+import { useState, useEffect } from "react"
 import { ProblemsFeed } from "@/components/problems-feed"
 import { Button } from "@/components/ui/button"
-import { Lightbulb, Plus, ArrowRight, LogOut, User, ChevronLeft, ChevronRight, ExternalLink, MessageCircle } from "lucide-react"
+import { Lightbulb, Plus, ArrowRight, LogOut, User, ChevronLeft, ChevronRight, ExternalLink, MessageCircle, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -11,45 +13,37 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { redirect } from "next/navigation"
 import { HeroCarousel } from "@/components/hero-carousel"
+import { ProblemWithProfile } from "@/types"
+import { createClient } from "@/lib/supabase/client"
 
-export default async function ProblemsPage() {
-  const supabase = await createClient()
+// Тип для решения
+interface Solution {
+  id: number
+  title: string
+  description: string
+  problemText?: string
+  problemLink?: string
+  buttonText: string
+  link: string
+  openInNewTab: boolean
+  icon: React.ComponentType<{ className?: string }>
+}
 
-  // Fetch limited problems (4 for initial load)
-  const { data: problems, error } = await supabase
-    .from("problems")
-    .select(`
-      *,
-      profiles:author_id (
-        id,
-        username,
-        display_name,
-        avatar_url
-      )
-    `)
-    .order("created_at", { ascending: false })
-    .limit(4) // Ограничиваем начальную загрузку 4 проблемами
-
-  if (error) {
-    console.error("Error fetching problems:", error)
-  }
-
-  // Check if user is authenticated and get profile
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  let userProfile = null
-  if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("avatar_url, display_name, username")
-      .eq("id", user.id)
-      .single()
-    userProfile = profile
-  }
+export default function ProblemsPage({
+  initialProblems,
+  userProfile,
+  user
+}: {
+  initialProblems: ProblemWithProfile[]
+  userProfile: any
+  user: any
+}) {
+  const [problems, setProblems] = useState<ProblemWithProfile[]>(initialProblems)
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
+  const supabase = createClient()
 
   const getInitials = (name: string | null) => {
     if (!name) return "U"
@@ -61,12 +55,50 @@ export default async function ProblemsPage() {
       .slice(0, 2)
   }
 
-  // Server action for logout
-  async function handleLogout() {
-    "use server"
-    const supabase = await createClient()
-    await supabase.auth.signOut()
-    redirect("/auth/login")
+  // Функция для загрузки следующих проблем
+  const loadMoreProblems = async () => {
+    if (isLoading || !hasMore) return
+
+    setIsLoading(true)
+    try {
+      const nextPage = page + 1
+      const offset = nextPage * 4 // Пропускаем уже загруженные
+      
+      const { data: newProblems, error } = await supabase
+        .from("problems")
+        .select(`
+          *,
+          profiles:author_id (
+            id,
+            username,
+            display_name,
+            avatar_url
+          )
+        `)
+        .order("created_at", { ascending: false })
+        .range(offset, offset + 3) // Загружаем следующую партию из 4 проблем
+
+      if (error) {
+        console.error("Error loading more problems:", error)
+        return
+      }
+
+      if (newProblems && newProblems.length > 0) {
+        setProblems(prev => [...prev, ...newProblems])
+        setPage(nextPage)
+        
+        // Если загрузили меньше 4 проблем, значит это последняя страница
+        if (newProblems.length < 4) {
+          setHasMore(false)
+        }
+      } else {
+        setHasMore(false)
+      }
+    } catch (error) {
+      console.error("Error in loadMoreProblems:", error)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   // Hero slides data
@@ -76,7 +108,7 @@ export default async function ProblemsPage() {
       title: "Marketplace (Beta)",
       description: "Buy collectible usernames",
       buttonText: "Buy some",
-     buttonVariant: "outline" as const,
+      buttonVariant: "outline" as const,
       link: "https://startorigin.me/marketplace",
       openInNewTab: false
     },
@@ -110,7 +142,7 @@ export default async function ProblemsPage() {
   ]
 
   // Solutions data
-  const solutions = [
+  const solutions: Solution[] = [
     {
       id: 1,
       title: "Add your solution",
@@ -132,6 +164,12 @@ export default async function ProblemsPage() {
       icon: ExternalLink
     }
   ]
+
+  // Server action для logout
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    window.location.href = "/auth/login"
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -206,12 +244,13 @@ export default async function ProblemsPage() {
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <form action={handleLogout} className="w-full">
-                          <button type="submit" className="flex items-center gap-2 w-full text-left cursor-pointer">
-                            <LogOut className="h-4 w-4" />
-                            <span>Sign Out</span>
-                          </button>
-                        </form>
+                        <button 
+                          onClick={handleLogout} 
+                          className="flex items-center gap-2 w-full text-left cursor-pointer"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          <span>Sign Out</span>
+                        </button>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -260,12 +299,13 @@ export default async function ProblemsPage() {
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <form action={handleLogout} className="w-full">
-                          <button type="submit" className="flex items-center gap-2 w-full text-left cursor-pointer">
-                            <LogOut className="h-4 w-4" />
-                            <span>Sign Out</span>
-                          </button>
-                        </form>
+                        <button 
+                          onClick={handleLogout} 
+                          className="flex items-center gap-2 w-full text-left cursor-pointer"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          <span>Sign Out</span>
+                        </button>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -300,21 +340,33 @@ export default async function ProblemsPage() {
         </div>
 
         <ProblemsFeed 
-          initialProblems={problems || []} 
+          problems={problems}
           userId={user?.id}
         />
 
         {/* Load More Button */}
-        <div className="flex justify-center mt-8 mb-12">
-          <Button 
-            variant="outline" 
-            className="gap-2"
-            // Здесь можно добавить обработчик загрузки следующих проблем
-          >
-            Load More
-            <ArrowRight className="h-4 w-4" />
-          </Button>
-        </div>
+        {hasMore && (
+          <div className="flex justify-center mt-8 mb-12">
+            <Button 
+              variant="outline" 
+              className="gap-2 min-w-[140px]"
+              onClick={loadMoreProblems}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading...
+                </>
+              ) : (
+                <>
+                  Load More
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
+            </Button>
+          </div>
+        )}
 
         {/* Solutions Section */}
         <section className="mt-12 mb-8">
@@ -342,9 +394,9 @@ export default async function ProblemsPage() {
 
                 <p className="text-muted-foreground mb-4">
                   {solution.description}
-                  {solution.problemText && (
+                  {solution.problemText && solution.problemLink && (
                     <Link 
-                      href={solution.problemLink || "#"} 
+                      href={solution.problemLink} 
                       target="_blank"
                       className="text-primary hover:underline ml-1"
                     >
