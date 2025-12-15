@@ -320,4 +320,4 @@ export function ProblemCard({ problem, userId }: ProblemCardProps) {
       </CardFooter>
     </Card>
   )
-}  это карточка. можешь сделать ее поменьше? чтобы таких вмещалось 2 в ряд
+}  
