@@ -376,4 +376,4 @@ export default async function HomePage() {
       </footer>
     </div>
   )
-} теперь тут еще
+} 
