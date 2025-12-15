@@ -17,7 +17,7 @@ import { HeroCarousel } from "@/components/hero-carousel"
 export default async function HomePage() {
   const supabase = await createClient()
 
-  // Fetch limited problems (4 for initial load)
+  // Fetch initial problems (8 for initial load - 4 rows of 2 cards)
   const { data: problems, error } = await supabase
     .from("problems")
     .select(`
@@ -30,11 +30,30 @@ export default async function HomePage() {
       )
     `)
     .order("created_at", { ascending: false })
-    .limit(4) // Ограничиваем начальную загрузку 4 проблемами
+    .limit(8) // Ограничиваем начальную загрузку 8 проблемами (для 2 колонок)
 
   if (error) {
     console.error("Error fetching problems:", error)
   }
+
+  // Get trending problems (most upvoted problems from last 7 days)
+  const oneWeekAgo = new Date()
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+  
+  const { data: trendingProblems } = await supabase
+    .from("problems")
+    .select(`
+      *,
+      profiles:author_id (
+        id,
+        username,
+        display_name,
+        avatar_url
+      )
+    `)
+    .gte("created_at", oneWeekAgo.toISOString())
+    .order("upvotes", { ascending: false })
+    .limit(3) // Top 3 trending problems
 
   // Check if user is authenticated and get profile
   const {
@@ -303,6 +322,7 @@ export default async function HomePage() {
         <ProblemsFeed 
           initialProblems={problems || []} 
           userId={user?.id}
+          trendingProblems={trendingProblems || []}
         />
 
         {/* Solutions Section */}
