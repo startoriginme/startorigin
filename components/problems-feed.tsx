@@ -396,4 +396,4 @@ export function ProblemsFeed({ initialProblems, userId, trendingProblems = [] }:
     </div>
   )
 }
-  сделай чтобы тут было 2 карты в ряд
+ 
