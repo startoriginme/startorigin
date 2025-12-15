@@ -152,10 +152,10 @@ export function ProblemCard({ problem, userId }: ProblemCardProps) {
 
     if (diffInDays === 0) return "Today"
     if (diffInDays === 1) return "Yesterday"
-    if (diffInDays < 7) return `${diffInDays}d`
-    if (diffInDays < 30) return `${Math.floor(diffInDays / 7)}w`
+    if (diffInDays < 7) return `${diffInDays} days ago`
+    if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`
 
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    return date.toLocaleDateString()
   }
 
   const getInitials = (name: string | null) => {
@@ -174,98 +174,78 @@ export function ProblemCard({ problem, userId }: ProblemCardProps) {
 
   const getStatusLabel = (status: string) => {
     if (status === "in_progress") return "In Progress"
-    if (status === "open") return "Open"
-    if (status === "solved") return "Solved"
     return status.charAt(0).toUpperCase() + status.slice(1)
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'open':
-        return 'bg-blue-500 hover:bg-blue-600 text-white'
-      case 'solved':
-        return 'bg-green-500 hover:bg-green-600 text-white'
-      case 'in_progress':
-        return 'bg-yellow-500 hover:bg-yellow-600 text-white'
-      default:
-        return 'bg-gray-500 hover:bg-gray-600 text-white'
-    }
-  }
-
   return (
-    <Card className="transition-shadow hover:shadow-md h-full flex flex-col">
-      <CardHeader className="pb-3 pt-4 px-4">
-        <div className="flex justify-between items-start gap-3">
-          {/* Заголовок и описание */}
-          <div className="min-w-0 flex-1">
+    <Card className="transition-shadow hover:shadow-md">
+      <CardHeader className="pb-3">
+        {/* Используем CSS Grid для жесткого контроля */}
+        <div className="grid grid-cols-[1fr_auto] gap-4 items-start">
+          {/* Левая колонка - контент */}
+          <div className="min-w-0">
             <Link href={`/problems/${problem.id}`}>
-              <h3 className="mb-2 text-lg font-semibold text-foreground hover:text-primary transition-colors line-clamp-2 break-words">
+              <h3 className="mb-2 text-xl font-semibold text-foreground hover:text-primary transition-colors line-clamp-2 break-words">
                 {problem.title}
               </h3>
             </Link>
-            <p className="text-sm text-muted-foreground line-clamp-2 break-words mb-3">
+            <p className="text-muted-foreground line-clamp-3 break-words">
               {problem.description}
             </p>
           </div>
           
-          {/* Upvote кнопка - компактная */}
-          <div className="flex-shrink-0">
+          {/* Правая колонка - upvote (фиксированная ширина) */}
+          <div className="w-12 flex justify-end">
             <Button
               variant={isUpvoted ? "default" : "outline"}
               size="sm"
-              className="flex-col gap-1 h-auto py-1.5 px-2 min-w-[50px]"
+              className="flex-col gap-1 h-auto py-2 px-3 w-12"
               onClick={handleUpvote}
               disabled={isLoading}
             >
-              <ArrowBigUp className="h-4 w-4" />
+              <ArrowBigUp className="h-5 w-5" />
               <span className="text-xs font-semibold">{upvotes}</span>
             </Button>
           </div>
         </div>
-        
-        {/* Категория и теги */}
-        <div className="flex flex-wrap gap-1.5 mt-2">
+      </CardHeader>
+
+      <CardContent className="pb-3">
+        <div className="flex flex-wrap gap-2">
           {problem.category && (
-            <Badge variant="secondary" className="text-xs px-2 py-0.5">
-              {getCategoryLabel(problem.category)}
-            </Badge>
+            <Badge variant="secondary">{getCategoryLabel(problem.category)}</Badge>
           )}
-          {problem.tags?.slice(0, 2).map((tag) => (
-            <Badge key={tag} variant="outline" className="text-xs px-2 py-0.5">
+          {problem.tags?.slice(0, 3).map((tag) => (
+            <Badge key={tag} variant="outline">
               {tag}
             </Badge>
           ))}
-          {problem.tags && problem.tags.length > 2 && (
-            <Badge variant="outline" className="text-xs px-2 py-0.5">
-              +{problem.tags.length - 2}
-            </Badge>
-          )}
-        </div>
-      </CardHeader>
-
-      <CardContent className="pb-3 px-4 pt-0">
-        <div className="flex flex-wrap gap-1.5">
-          {/* Статус */}
-          <Badge className={`text-xs px-2 py-0.5 ${getStatusColor(problem.status)} border-0`}>
+          <Badge
+            variant={
+              problem.status === "open"
+                ? "default"
+                : problem.status === "solved"
+                  ? "secondary"
+                  : "outline"
+            }
+          >
             {getStatusLabel(problem.status)}
           </Badge>
-          
-          {/* Поиск кофаундера */}
           {problem.looking_for_cofounder && (
-            <Badge variant="default" className="gap-1 bg-green-600 hover:bg-green-700 text-xs px-2 py-0.5">
+            <Badge variant="default" className="gap-1 bg-green-600 hover:bg-green-700">
               <Users className="h-3 w-3" />
-              Co-founder
+              Looking for Cofounder
             </Badge>
           )}
         </div>
       </CardContent>
 
-      <CardFooter className="flex items-center justify-between border-t pt-3 px-4 pb-4 mt-auto">
-        {/* Автор и дата - компактно */}
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          {/* Аватар */}
-          <div className="relative h-6 w-6 flex-shrink-0">
-            <div className="h-6 w-6 rounded-full overflow-hidden border border-border bg-muted">
+      <CardFooter className="flex items-center justify-between border-t pt-4">
+        {/* Автор и дата */}
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          {/* Кастомный аватар с галочкой верификации */}
+          <div className="relative h-8 w-8 flex-shrink-0">
+            <div className="h-8 w-8 rounded-full overflow-hidden border border-border bg-muted">
               {problem.profiles?.avatar_url ? (
                 <img
                   src={problem.profiles.avatar_url}
@@ -280,49 +260,64 @@ export function ProblemCard({ problem, userId }: ProblemCardProps) {
                 </div>
               )}
             </div>
-            {/* Галочка верификации */}
+            {/* Галочка верификации на аватаре (синяя) */}
             {hasVerifiedBadge && (
               <div className="absolute -bottom-0.5 -right-0.5 bg-blue-500 rounded-full p-0.5 border border-background">
-                <Check className="h-1.5 w-1.5 text-white" />
+                <Check className="h-2 w-2 text-white" />
               </div>
             )}
           </div>
-          
-          {/* Инфо об авторе */}
-          <div className="text-xs min-w-0 flex-1">
-            <div className="flex items-center gap-1 truncate">
-              <p className="font-medium text-foreground truncate">
-                {problem.profiles?.display_name || problem.profiles?.username || "Anonymous"}
-              </p>
-              {/* Значки рядом с именем */}
-              <div className="flex items-center gap-0.5 flex-shrink-0">
+          <div className="text-sm min-w-0 flex-1">
+            <div className="flex items-center gap-1 flex-wrap">
+              <div className="flex items-center gap-1 truncate">
+                <p className="font-medium text-foreground truncate">
+                  {problem.profiles?.display_name || problem.profiles?.username || "Anonymous"}
+                </p>
+                {/* BadgeCheck рядом с именем */}
                 {hasVerifiedBadge && (
-                  <Check className="h-2.5 w-2.5 text-blue-500" title="Verified" />
-                )}
-                {hasWhaleBadge && (
-                  <GiWhaleTail className="h-2.5 w-2.5 text-purple-500" title="Whale" />
-                )}
-                {hasEarlyBadge && (
-                  <GiWhaleTail className="h-2.5 w-2.5 text-yellow-500" title="Early Supporter" />
+                  <Check className="h-3 w-3 text-blue-500 flex-shrink-0" title="Verified" />
                 )}
               </div>
+              {/* Значки whale и early */}
+              {(hasWhaleBadge || hasEarlyBadge) && (
+                <div className="flex items-center gap-1">
+                  {hasWhaleBadge && (
+                    <Badge 
+                      variant="outline" 
+                      className="bg-purple-100 text-purple-800 hover:bg-purple-100 border-purple-200 px-1.5 py-0 h-4"
+                      title="Whale"
+                    >
+                      <GiWhaleTail className="h-3 w-3" />
+                    </Badge>
+                  )}
+                  {hasEarlyBadge && (
+                    <Badge 
+                      variant="outline" 
+                      className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100 border-yellow-200 px-1.5 py-0 h-4"
+                      title="Early Supporter"
+                    >
+                      <GiWhaleTail className="h-3 w-3" />
+                    </Badge>
+                  )}
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-1 text-muted-foreground">
-              <Calendar className="h-2.5 w-2.5 flex-shrink-0" />
+              <Calendar className="h-3 w-3 flex-shrink-0" />
               <span className="truncate">{formatDate(problem.created_at)}</span>
             </div>
           </div>
         </div>
         
-        {/* Кнопка View Details - маленькая */}
-        <div className="flex-shrink-0 ml-2">
+        {/* Кнопка View Details */}
+        <div className="flex-shrink-0 ml-4">
           <Link href={`/problems/${problem.id}`}>
-            <Button variant="ghost" size="sm" className="h-8 px-2 text-xs">
-              View
+            <Button variant="ghost" size="sm" className="whitespace-nowrap">
+              View Details
             </Button>
           </Link>
         </div>
       </CardFooter>
     </Card>
   )
-}
+}  это карточка. можешь сделать ее поменьше? чтобы таких вмещалось 2 в ряд
