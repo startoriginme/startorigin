@@ -260,11 +260,7 @@ export default async function HomePage() {
                 </Button>
               </Link>
 
-              {/* Мобильная версия Pro */}
-              <Button size="icon" variant="ghost" className="h-9 w-9 opacity-50 cursor-not-allowed blur-[1px] hover:opacity-50">
-                <Gem className="h-4 w-4" />
-              </Button>
-
+          
               {user ? (
                 <>
                   <Link href="/problems/new">
