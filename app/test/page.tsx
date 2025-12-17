@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Lightbulb, Plus, LogOut, User, ArrowLeft, Share2, Download, LogIn } from "lucide-react"
+import { Lightbulb, Plus, LogOut, User, ArrowLeft, Share2, Download, LogIn, ShoppingBasket, MessageSquareMore } from "lucide-react"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -48,7 +48,6 @@ export default async function StartupAssessmentPage() {
     await supabase.auth.signOut()
     redirect("/auth/login")
   }
-
 
    return (
     <div className="min-h-screen bg-background flex flex-col">
