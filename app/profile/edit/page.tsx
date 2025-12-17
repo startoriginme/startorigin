@@ -10,7 +10,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import Link from "next/link"
-import { Lightbulb, ArrowLeft, Loader2, Upload, X, Image as ImageIcon, Plus, LogOut, User, Globe, MessageCircle } from "lucide-react"
+import { Lightbulb, Plus, LogOut, User, ArrowLeft, Share2, Download, LogIn, ShoppingBasket, MessageSquareMore } from "lucide-react"
+ from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
