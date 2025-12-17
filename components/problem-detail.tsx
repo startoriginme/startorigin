@@ -848,3 +848,5 @@ export function ProblemDetail({
           </div>
         </CardContent>
       </Card>
+      }
+      
