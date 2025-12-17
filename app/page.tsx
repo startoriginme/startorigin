@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { ProblemsFeed } from "@/components/problems-feed"
 import { Button } from "@/components/ui/button"
-import { Lightbulb, Plus, ArrowRight, LogOut, User, ChevronLeft, ChevronRight, ExternalLink, MessageCircle } from "lucide-react"
+import { Lightbulb, Plus, ArrowRight, LogOut, User, ChevronLeft, ChevronRight, ExternalLink, MessageCircle, ShoppingBasket, MessageSquareMore, Gem } from "lucide-react"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { redirect } from "next/navigation"
 import { HeroCarousel } from "@/components/hero-carousel"
+import ChatModal from "@/components/chat-modal"
+import { ChatModalTrigger } from "@/components/chat-modal-trigger"
 
 export default async function HomePage() {
   const supabase = await createClient()
@@ -168,14 +170,30 @@ export default async function HomePage() {
 
         <div className="container mx-auto px-4 py-4 relative z-10">
           <nav className="flex items-center justify-between">
-            {/* Заменено: вместо лампочки и обычного текста - текст капсом с Montserrat Black */}
             <Link href="/" className="flex items-center gap-2 relative hover:opacity-90 transition-opacity">
               <span className="text-2xl font-black uppercase tracking-tighter font-montserrat text-foreground">
                 STARTORIGIN
               </span>
             </Link>
             
-            <div className="hidden md:flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-3">
+              {/* Кнопка Marketplace */}
+              <Link href="https://startorigin.me/marketplace" target="_blank">
+                <Button variant="outline" className="gap-2">
+                  <ShoppingBasket className="h-4 w-4" />
+                  Marketplace
+                </Button>
+              </Link>
+
+              {/* Кнопка Chat с модальным окном */}
+              <ChatModalTrigger />
+
+              {/* Кнопка Pro (размытая) */}
+              <Button variant="ghost" className="gap-2 opacity-50 cursor-not-allowed blur-[1px] hover:opacity-50">
+                <Gem className="h-4 w-4" />
+                Pro
+              </Button>
+
               {user ? (
                 <>
                   <Link href="/problems/new">
@@ -231,6 +249,21 @@ export default async function HomePage() {
             </div>
 
             <div className="flex items-center gap-2 md:hidden">
+              {/* Мобильная версия кнопок */}
+              <Link href="https://startorigin.me/marketplace" target="_blank">
+                <Button size="icon" variant="outline" className="h-9 w-9">
+                  <ShoppingBasket className="h-4 w-4" />
+                </Button>
+              </Link>
+
+              {/* Мобильная версия Chat */}
+              <ChatModalTrigger mobile />
+
+              {/* Мобильная версия Pro */}
+              <Button size="icon" variant="ghost" className="h-9 w-9 opacity-50 cursor-not-allowed blur-[1px] hover:opacity-50">
+                <Gem className="h-4 w-4" />
+              </Button>
+
               {user ? (
                 <>
                   <Link href="/problems/new">
@@ -376,6 +409,9 @@ export default async function HomePage() {
           </div>
         </div>
       </footer>
+
+      {/* Chat Modal компонент */}
+      <ChatModal />
     </div>
   )
 }
