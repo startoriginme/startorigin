@@ -94,7 +94,7 @@ export function HeroCarousel({ slides }: HeroCarouselProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 rounded-full hover:bg-gray-100"
+            className="h-8 w-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
             onClick={prevSlide}
           >
             <ChevronLeft className="h-4 w-4" />
@@ -102,7 +102,7 @@ export function HeroCarousel({ slides }: HeroCarouselProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 rounded-full hover:bg-gray-100"
+            className="h-8 w-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
             onClick={nextSlide}
           >
             <ChevronRight className="h-4 w-4" />
