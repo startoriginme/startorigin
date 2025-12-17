@@ -1,10 +1,17 @@
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
+import { Inter, Montserrat } from "next/font/google"
 import "./globals.css"
 import { NavigationLoading } from "@/components/ui/navigation-loading"
 import { Suspense } from "react"
 
 const inter = Inter({ subsets: ["latin"] })
+
+// Добавляем Montserrat шрифт
+const montserrat = Montserrat({
+  subsets: ["latin", "cyrillic"],
+  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
+  variable: "--font-montserrat",
+})
 
 export const metadata: Metadata = {
   title: "StartOrigin",
@@ -23,8 +30,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
+    <html lang="en" className={`${montserrat.variable} ${inter.className}`}>
+      <body>
         <Suspense fallback={null}>
           <NavigationLoading />
         </Suspense>
