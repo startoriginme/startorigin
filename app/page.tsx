@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { ProblemsFeed } from "@/components/problems-feed"
 import { Button } from "@/components/ui/button"
-import { Lightbulb, Plus, ArrowRight, LogOut, User, ChevronLeft, ChevronRight, ExternalLink, MessageCircle, ShoppingBasket, MessageSquareMore, Gem } from "lucide-react"
+import { Lightbulb, Plus, ArrowRight, LogOut, User, ChevronLeft, ChevronRight, ExternalLink, MessageCircle, ShoppingBasket, MessageSquareMore, LogIn } from "lucide-react"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -234,14 +234,12 @@ export default async function HomePage() {
                   </DropdownMenu>
                 </>
               ) : (
-                <>
-                  <Link href="/auth/login">
-                    <Button variant="outline">Sign In</Button>
-                  </Link>
-                  <Link href="/auth/sign-up">
-                    <Button>Get Started</Button>
-                  </Link>
-                </>
+                // Только одна кнопка Login с иконкой на десктопе
+                <Link href="/auth/login">
+                  <Button size="icon" variant="outline" className="h-10 w-10">
+                    <LogIn className="h-5 w-5" />
+                  </Button>
+                </Link>
               )}
             </div>
 
@@ -260,7 +258,6 @@ export default async function HomePage() {
                 </Button>
               </Link>
 
-          
               {user ? (
                 <>
                   <Link href="/problems/new">
@@ -303,16 +300,12 @@ export default async function HomePage() {
                   </DropdownMenu>
                 </>
               ) : (
-                <>
-                  <Link href="/auth/login">
-                    <Button variant="outline" size="sm">
-                      Sign In
-                    </Button>
-                  </Link>
-                  <Link href="/auth/sign-up">
-                    <Button size="sm">Get Started</Button>
-                  </Link>
-                </>
+                // Только одна кнопка Login с иконкой на мобиле
+                <Link href="/auth/login">
+                  <Button size="icon" variant="outline" className="h-9 w-9">
+                    <LogIn className="h-4 w-4" />
+                  </Button>
+                </Link>
               )}
             </div>
           </nav>
