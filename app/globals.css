@@ -147,13 +147,10 @@
   * {
     @apply border-border outline-ring/50;
   }
-  
-  /* Важное: добавляем padding-top чтобы контент не скрывался под фиксированным хедером */
   body {
     @apply bg-background text-foreground;
     font-family: 'Montserrat', sans-serif;
     position: relative;
-    padding-top: 72px; /* Высота хедера (56px) + доп отступ */
   }
   
   /* Все заголовки Montserrat Black */
@@ -185,75 +182,6 @@
   
   h6 {
     @apply text-base md:text-lg;
-  }
-  
-  /* Фиксируем хедер! Ничего в компонентах менять не нужно */
-  header {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    z-index: 100 !important;
-  }
-  
-  /* Индикатор загрузки сверху */
-  #nprogress {
-    pointer-events: none;
-  }
-  
-  #nprogress .bar {
-    background: linear-gradient(to right, var(--christmas-red), var(--christmas-green), var(--christmas-gold));
-    position: fixed;
-    z-index: 99999;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 3px;
-  }
-  
-  #nprogress .peg {
-    display: block;
-    position: absolute;
-    right: 0px;
-    width: 100px;
-    height: 100%;
-    box-shadow: 0 0 10px var(--christmas-red), 0 0 5px var(--christmas-red);
-    opacity: 1;
-    transform: rotate(3deg) translate(0px, -4px);
-  }
-  
-  /* Простой индикатор загрузки если не используешь nprogress */
-  .loading-bar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(to right, 
-      var(--christmas-red) 0%, 
-      var(--christmas-green) 50%, 
-      var(--christmas-gold) 100%);
-    z-index: 99999;
-    transform-origin: 0%;
-    animation: loading 1.5s ease-in-out infinite;
-  }
-  
-  @keyframes loading {
-    0% {
-      transform: scaleX(0);
-      transform-origin: left;
-    }
-    50% {
-      transform: scaleX(1);
-      transform-origin: left;
-    }
-    51% {
-      transform-origin: right;
-    }
-    100% {
-      transform: scaleX(0);
-      transform-origin: right;
-    }
   }
   
   /* Subtle snow overlay */
@@ -347,12 +275,6 @@
     color: var(--mint-foreground) !important;
     border-color: var(--mint) !important;
   }
-  
-  /* Фикс для выпадающего меню */
-  [data-radix-popper-content-wrapper] {
-    position: fixed !important;
-    z-index: 1000 !important;
-  }
 }
 
 @layer utilities {
@@ -430,12 +352,6 @@
   .font-black {
     font-weight: 900;
   }
-  
-  /* Утилита для фикса дропдауна */
-  .dropdown-fixed {
-    position: fixed !important;
-    z-index: 1000 !important;
-  }
 }
 
 /* Add subtle snowflakes */
@@ -490,4 +406,4 @@
   body::before {
     opacity: 0.03;
   }
-}
+}  
