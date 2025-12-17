@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { ProblemsFeed } from "@/components/problems-feed"
 import { Button } from "@/components/ui/button"
-import { Lightbulb, Plus, ArrowRight, LogOut, User, ChevronLeft, ChevronRight } from "lucide-react"
+import { Lightbulb, Plus, ArrowRight, LogOut, User, ChevronLeft, ChevronRight, LogIn } from "lucide-react"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -108,18 +108,15 @@ export default async function ProblemsPage() {
     }
   ]
 
-  return (
+    return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="border-b border-border bg-card relative">
-        {/* Гирлянда на всю ширину хедера */}
         <div className="absolute top-0 left-0 right-0 h-4 overflow-hidden z-0">
           <div className="flex justify-center">
             <div className="relative h-4 flex">
-              {/* Провод гирлянды */}
               <div className="absolute top-1.5 left-0 right-0 h-0.5 bg-gray-400/30"></div>
               
-              {/* Лампочки */}
               {[...Array(15)].map((_, i) => (
                 <div 
                   key={i}
@@ -146,13 +143,29 @@ export default async function ProblemsPage() {
 
         <div className="container mx-auto px-4 py-4 relative z-10">
           <nav className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2 relative">
-              <Lightbulb className="h-6 w-6 text-primary relative z-10" />
-              <span className="text-xl font-bold text-foreground relative z-10">StartOrigin</span>
+            <Link href="/" className="flex items-center gap-2 relative hover:opacity-90 transition-opacity">
+              <span className="text-2xl font-black uppercase tracking-tighter font-montserrat text-foreground">
+                STARTORIGIN
+              </span>
             </Link>
             
-            {/* Desktop Navigation - hidden on mobile */}
-            <div className="hidden md:flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-3">
+              {/* Кнопка Marketplace */}
+              <Link href="https://startorigin.me/marketplace" target="_blank">
+                <Button variant="outline" className="gap-2">
+                  <ShoppingBasket className="h-4 w-4" />
+                  Marketplace
+                </Button>
+              </Link>
+
+              {/* Кнопка Chat - просто ссылка */}
+              <Link href="https://startorigin.me/user/chat">
+                <Button variant="outline" className="gap-2">
+                  <MessageSquareMore className="h-4 w-4" />
+                  Chat
+                </Button>
+              </Link>
+
               {user ? (
                 <>
                   <Link href="/problems/new">
@@ -162,7 +175,6 @@ export default async function ProblemsPage() {
                     </Button>
                   </Link>
                   
-                  {/* Avatar Dropdown */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
@@ -197,29 +209,38 @@ export default async function ProblemsPage() {
                   </DropdownMenu>
                 </>
               ) : (
-                <>
-                  <Link href="/auth/login">
-                    <Button variant="outline">Sign In</Button>
-                  </Link>
-                  <Link href="/auth/sign-up">
-                    <Button>Get Started</Button>
-                  </Link>
-                </>
+                // Только одна кнопка Login с иконкой на десктопе
+                <Link href="/auth/login">
+                  <Button size="icon" variant="outline" className="h-10 w-10">
+                    <LogIn className="h-5 w-5" />
+                  </Button>
+                </Link>
               )}
             </div>
 
-            {/* Mobile Navigation - hidden on desktop */}
             <div className="flex items-center gap-2 md:hidden">
+              {/* Мобильная версия кнопок */}
+              <Link href="https://startorigin.me/marketplace" target="_blank">
+                <Button size="icon" variant="outline" className="h-9 w-9">
+                  <ShoppingBasket className="h-4 w-4" />
+                </Button>
+              </Link>
+
+              {/* Мобильная версия Chat - просто ссылка */}
+              <Link href="https://startorigin.me/user/chat">
+                <Button size="icon" variant="outline" className="h-9 w-9">
+                  <MessageSquareMore className="h-4 w-4" />
+                </Button>
+              </Link>
+
               {user ? (
                 <>
-                  {/* Mobile Plus Button */}
                   <Link href="/problems/new">
                     <Button size="icon" className="h-9 w-9">
                       <Plus className="h-4 w-4" />
                     </Button>
                   </Link>
                   
-                  {/* Mobile Avatar Dropdown */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
@@ -254,22 +275,17 @@ export default async function ProblemsPage() {
                   </DropdownMenu>
                 </>
               ) : (
-                <>
-                  <Link href="/auth/login">
-                    <Button variant="outline" size="sm">
-                      Sign In
-                    </Button>
-                  </Link>
-                  <Link href="/auth/sign-up">
-                    <Button size="sm">Get Started</Button>
-                  </Link>
-                </>
+                // Только одна кнопка Login с иконкой на мобиле
+                <Link href="/auth/login">
+                  <Button size="icon" variant="outline" className="h-9 w-9">
+                    <LogIn className="h-4 w-4" />
+                  </Button>
+                </Link>
               )}
             </div>
           </nav>
         </div>
       </header>
-
       {/* Minimal Hero Carousel - 232px height */}
       <section className="border-b border-border bg-white">
         <div className="container mx-auto px-4 h-[232px] flex items-center justify-center">
