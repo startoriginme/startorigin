@@ -10,8 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import Link from "next/link"
-import { Lightbulb, Plus, LogOut, User, ArrowLeft, Share2, Download, LogIn, ShoppingBasket, MessageSquareMore } from "lucide-react"
- from "lucide-react"
+import { Lightbulb, Plus, LogOut, User, ArrowLeft, Share2, Download, LogIn, ShoppingBasket, MessageSquareMore, Upload, ImageIcon, Globe, MessageCircle, X, Loader2 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -470,7 +469,10 @@ export default function EditProfilePage() {
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <form action={handleLogout} className="w-full">
+                        <form onSubmit={async (e) => {
+                          e.preventDefault()
+                          await handleLogout()
+                        }} className="w-full">
                           <button type="submit" className="flex items-center gap-2 w-full text-left cursor-pointer">
                             <LogOut className="h-4 w-4" />
                             <span>Sign Out</span>
@@ -536,7 +538,10 @@ export default function EditProfilePage() {
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <form action={handleLogout} className="w-full">
+                        <form onSubmit={async (e) => {
+                          e.preventDefault()
+                          await handleLogout()
+                        }} className="w-full">
                           <button type="submit" className="flex items-center gap-2 w-full text-left cursor-pointer">
                             <LogOut className="h-4 w-4" />
                             <span>Sign Out</span>
