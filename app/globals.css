@@ -5,50 +5,6 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(0.98 0.01 220);
-  --foreground: oklch(0.2 0.05 220);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(0.99 0.01 220);
-  --popover-foreground: oklch(0.2 0.05 220);
-  --primary: oklch(0.7 0.2 20);
-  --primary-foreground: oklch(0.98 0.01 220);
-  --secondary: oklch(0.95 0.05 120);
-  --secondary-foreground: oklch(0.2 0.05 120);
-  --muted: oklch(0.96 0.02 220);
-  --muted-foreground: oklch(0.5 0.05 220);
-  --accent: oklch(0.9 0.15 160);
-  --accent-foreground: oklch(0.2 0.05 160);
-  --destructive: oklch(0.7 0.25 360);
-  --destructive-foreground: oklch(0.98 0.01 220);
-  --border: oklch(0.88 0.05 220);
-  --input: oklch(0.95 0.02 220);
-  --ring: oklch(0.7 0.2 20);
-  --chart-1: oklch(0.7 0.2 20);
-  --chart-2: oklch(0.6 0.18 120);
-  --chart-3: oklch(0.65 0.17 240);
-  --chart-4: oklch(0.75 0.19 60);
-  --chart-5: oklch(0.8 0.16 300);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.7 0.2 20);
-  --sidebar-primary-foreground: oklch(0.98 0.01 220);
-  --sidebar-accent: oklch(0.95 0.05 120);
-  --sidebar-accent-foreground: oklch(0.2 0.05 120);
-  --sidebar-border: oklch(0.88 0.05 220);
-  --sidebar-ring: oklch(0.7 0.2 20);
-  
-  /* Christmas colors - more subtle */
-  --christmas-red: oklch(0.7 0.18 360);
-  --christmas-green: oklch(0.65 0.15 140);
-  --christmas-gold: oklch(0.75 0.16 90);
-  --snow: oklch(0.99 0 0);
-  --mint: oklch(0.85 0.1 180);
-  --mint-foreground: oklch(0.2 0.05 180);
-}
-
-.dark {
   --background: oklch(0.12 0.03 220);
   --foreground: oklch(0.95 0.02 220);
   --card: oklch(0.15 0.03 220);
@@ -73,6 +29,7 @@
   --chart-3: oklch(0.7 0.19 240);
   --chart-4: oklch(0.8 0.21 60);
   --chart-5: oklch(0.85 0.18 300);
+  --radius: 0.625rem;
   --sidebar: oklch(0.15 0.03 220);
   --sidebar-foreground: oklch(0.95 0.02 220);
   --sidebar-primary: oklch(0.75 0.22 20);
@@ -89,6 +46,49 @@
   --snow: oklch(0.95 0.01 220);
   --mint: oklch(0.7 0.15 180);
   --mint-foreground: oklch(0.95 0.02 180);
+}
+
+.light {
+  --background: oklch(0.98 0.01 220);
+  --foreground: oklch(0.2 0.05 220);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(0.99 0.01 220);
+  --popover-foreground: oklch(0.2 0.05 220);
+  --primary: oklch(0.7 0.2 20);
+  --primary-foreground: oklch(0.98 0.01 220);
+  --secondary: oklch(0.95 0.05 120);
+  --secondary-foreground: oklch(0.2 0.05 120);
+  --muted: oklch(0.96 0.02 220);
+  --muted-foreground: oklch(0.5 0.05 220);
+  --accent: oklch(0.9 0.15 160);
+  --accent-foreground: oklch(0.2 0.05 160);
+  --destructive: oklch(0.7 0.25 360);
+  --destructive-foreground: oklch(0.98 0.01 220);
+  --border: oklch(0.88 0.05 220);
+  --input: oklch(0.95 0.02 220);
+  --ring: oklch(0.7 0.2 20);
+  --chart-1: oklch(0.7 0.2 20);
+  --chart-2: oklch(0.6 0.18 120);
+  --chart-3: oklch(0.65 0.17 240);
+  --chart-4: oklch(0.75 0.19 60);
+  --chart-5: oklch(0.8 0.16 300);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.7 0.2 20);
+  --sidebar-primary-foreground: oklch(0.98 0.01 220);
+  --sidebar-accent: oklch(0.95 0.05 120);
+  --sidebar-accent-foreground: oklch(0.2 0.05 120);
+  --sidebar-border: oklch(0.88 0.05 220);
+  --sidebar-ring: oklch(0.7 0.2 20);
+  
+  /* Christmas colors - more subtle */
+  --christmas-red: oklch(0.7 0.18 360);
+  --christmas-green: oklch(0.65 0.15 140);
+  --christmas-gold: oklch(0.75 0.16 90);
+  --snow: oklch(0.99 0 0);
+  --mint: oklch(0.85 0.1 180);
+  --mint-foreground: oklch(0.2 0.05 180);
 }
 
 @theme inline {
