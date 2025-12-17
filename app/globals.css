@@ -2,10 +2,10 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
-@custom-variant dark (&:is(.dark *));
+/* Убрал @custom-variant так как он вызывает ошибку в Tailwind 4 */
 
 :root {
-  /* Темная тема с синеватым оттенком */
+  /* Темная тема с синеватым оттенком - ПО УМОЛЧАНИЮ */
   --background: oklch(0.12 0.03 240); /* Темный синий фон */
   --foreground: oklch(0.95 0.02 240); /* Светлый текст */
   --card: oklch(0.18 0.04 240); /* Темные карточки */
@@ -49,7 +49,7 @@
   --mint-foreground: oklch(0.95 0.02 180);
 }
 
-/* Светлая тема - теперь как дополнительная опция */
+/* Оставляем светлую тему, но она будет использоваться только если добавить класс .light к html */
 .light {
   --background: oklch(0.98 0.01 220);
   --foreground: oklch(0.2 0.05 220);
@@ -94,6 +94,9 @@
 }
 
 @theme inline {
+  /* Добавляем color-scheme для темной темы по умолчанию */
+  --color-scheme: dark;
+  
   --font-sans: 'Montserrat', sans-serif;
   --font-mono: 'Geist Mono', 'Geist Mono Fallback';
   --font-heading: 'Montserrat', sans-serif;
@@ -149,10 +152,18 @@
   * {
     @apply border-border outline-ring/50;
   }
+  
+  /* Устанавливаем темную тему по умолчанию для всего документа */
+  :root {
+    color-scheme: dark;
+  }
+  
   body {
     @apply bg-background text-foreground;
     font-family: 'Montserrat', sans-serif;
     position: relative;
+    background-color: var(--background);
+    color: var(--foreground);
   }
   
   /* Все заголовки Montserrat Black */
@@ -476,7 +487,7 @@
   }
 }
 
-/* Убедимся что html использует темную тему по умолчанию */
-html {
+/* Убираем проблемную строку с @apply dark */
+/* html {
   @apply dark;
-}
+} */
