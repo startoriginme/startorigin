@@ -312,7 +312,8 @@ export default async function HomePage() {
         </div>
       </header>
 
-      <section className="border-b border-border bg-white">
+      {/* Hero секция с темным синим фоном */}
+      <section className="border-b border-border bg-background"> {/* Изменил bg-white на bg-background */}
         <div className="container mx-auto px-4 h-[232px] flex items-center justify-center">
           <HeroCarousel slides={heroSlides} />
         </div>
