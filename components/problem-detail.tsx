@@ -844,9 +844,13 @@ export function ProblemDetail({
                   </div>
                 </div>
               )}
-            </div>
+                      </div>
           </div>
         </CardContent>
       </Card>
-      }
+    </div>
+  )
+}
+
+export default ProblemDetail
       
