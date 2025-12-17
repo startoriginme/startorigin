@@ -3,6 +3,7 @@ import { ProblemsFeed } from "@/components/problems-feed"
 import { Button } from "@/components/ui/button"
 import { Lightbulb, Plus, ArrowRight, LogOut, User, ChevronLeft, ChevronRight, ExternalLink, MessageCircle } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image" // Добавьте этот импорт
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -168,9 +169,18 @@ export default async function HomePage() {
 
         <div className="container mx-auto px-4 py-4 relative z-10">
           <nav className="flex items-center justify-between">
+            {/* Заменено: вместо лампочки и текста - изображение Discord-иконки */}
             <Link href="/" className="flex items-center gap-2 relative">
-              <Lightbulb className="h-6 w-6 text-primary relative z-10" />
-              <span className="text-xl font-bold text-foreground relative z-10">StartOrigin</span>
+              <div className="relative h-8 w-8">
+                <Image
+                  src="https://cdn.discordapp.com/icons/1448659723695165442/703beda9ab12ebff8e9a6940e253d3fa.webp?size=64"
+                  alt="StartOrigin Logo"
+                  fill
+                  className="rounded-full object-cover"
+                  sizes="32px"
+                  priority
+                />
+              </div>
             </Link>
             
             <div className="hidden md:flex items-center gap-4">
@@ -376,4 +386,4 @@ export default async function HomePage() {
       </footer>
     </div>
   )
-} 
+}
