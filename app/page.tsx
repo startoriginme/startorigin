@@ -13,8 +13,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { redirect } from "next/navigation"
 import { HeroCarousel } from "@/components/hero-carousel"
-import ChatModal from "@/components/chat-modal"
-import { ChatModalTrigger } from "@/components/chat-modal-trigger"
 
 export default async function HomePage() {
   const supabase = await createClient()
@@ -185,8 +183,13 @@ export default async function HomePage() {
                 </Button>
               </Link>
 
-              {/* Кнопка Chat с модальным окном */}
-              <ChatModalTrigger />
+              {/* Кнопка Chat - просто ссылка */}
+              <Link href="https://startorigin.me/user/chat">
+                <Button variant="outline" className="gap-2">
+                  <MessageSquareMore className="h-4 w-4" />
+                  Chat
+                </Button>
+              </Link>
 
               {/* Кнопка Pro (размытая) */}
               <Button variant="ghost" className="gap-2 opacity-50 cursor-not-allowed blur-[1px] hover:opacity-50">
@@ -256,8 +259,12 @@ export default async function HomePage() {
                 </Button>
               </Link>
 
-              {/* Мобильная версия Chat */}
-              <ChatModalTrigger mobile />
+              {/* Мобильная версия Chat - просто ссылка */}
+              <Link href="https://startorigin.me/user/chat">
+                <Button size="icon" variant="outline" className="h-9 w-9">
+                  <MessageSquareMore className="h-4 w-4" />
+                </Button>
+              </Link>
 
               {/* Мобильная версия Pro */}
               <Button size="icon" variant="ghost" className="h-9 w-9 opacity-50 cursor-not-allowed blur-[1px] hover:opacity-50">
@@ -409,9 +416,6 @@ export default async function HomePage() {
           </div>
         </div>
       </footer>
-
-      {/* Chat Modal компонент */}
-      <ChatModal />
     </div>
   )
 }
