@@ -2,7 +2,7 @@ import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { ProblemForm } from "@/components/problem-form"
 import { Button } from "@/components/ui/button"
-import { Lightbulb, Plus, LogOut, User, ArrowRight, Zap } from "lucide-react"
+import { Lightbulb, Plus, LogOut, User, ArrowRight, Zap, ShoppingBasket, MessageSquareMore, LogIn } from "lucide-react"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -119,11 +119,11 @@ export default async function NewProblemPage() {
                       <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
                         <Avatar className="h-8 w-8">
                           <AvatarImage 
-                            src={userProfile?.avatar_url || ""} 
+                            src={profile?.avatar_url || ""} 
                             className="object-cover"
                           />
                           <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
-                            {getInitials(userProfile?.display_name || userProfile?.username)}
+                            {getInitials(profile?.display_name || profile?.username)}
                           </AvatarFallback>
                         </Avatar>
                       </button>
@@ -185,11 +185,11 @@ export default async function NewProblemPage() {
                       <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
                         <Avatar className="h-8 w-8">
                           <AvatarImage 
-                            src={userProfile?.avatar_url || ""} 
+                            src={profile?.avatar_url || ""} 
                             className="object-cover"
                           />
                           <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
-                            {getInitials(userProfile?.display_name || userProfile?.username)}
+                            {getInitials(profile?.display_name || profile?.username)}
                           </AvatarFallback>
                         </Avatar>
                       </button>
@@ -273,4 +273,4 @@ export default async function NewProblemPage() {
       </footer>
     </div>
   )
-}  
+}
