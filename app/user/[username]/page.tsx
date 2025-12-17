@@ -3,11 +3,11 @@
 import { createClient } from "@/lib/supabase/client"
 import { ChatModal } from "@/components/chat-modal"
 import { useState, useEffect } from "react"
-import { notFound, useRouter } from "next/navigation"
+import { notFound, useRouter, useParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { Lightbulb, Plus, ArrowLeft, LogOut, User, Check, MessageCircle, Globe, ExternalLink, LogIn } from "lucide-react"
+import { Lightbulb, Plus, ArrowLeft, LogOut, User, Check, MessageCircle, Globe, ExternalLink, LogIn, ShoppingBasket, MessageSquareMore } from "lucide-react"
 import { GiWhaleTail } from "react-icons/gi"
 import { ProblemCard } from "@/components/problem-card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -19,10 +19,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
-
-interface PublicProfilePageProps {
-  params: Promise<{ username: string }>
-}
 
 // Карта алиасов пользователей
 const userAliases: Record<string, string[]> = {
@@ -68,7 +64,7 @@ async function getUserBadges(userId: string): Promise<Array<{badge_type: 'verifi
   }
 }
 
-export default function PublicProfilePage({ params }: PublicProfilePageProps) {
+export default function PublicProfilePage() {
   const [showChatModal, setShowChatModal] = useState(false)
   const [profile, setProfile] = useState<any>(null)
   const [problems, setProblems] = useState<any[]>([])
@@ -81,12 +77,13 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
   const [shouldRedirect, setShouldRedirect] = useState(false)
   const [authorBadges, setAuthorBadges] = useState<Array<{badge_type: 'verified' | 'whale' | 'early'}>>([])
   const router = useRouter()
+  const params = useParams() // Используем useParams вместо props
 
   const supabase = createClient()
 
   useEffect(() => {
     loadData()
-  }, [])
+  }, [params]) // Зависимость от params
 
   useEffect(() => {
     if (shouldRedirect) {
@@ -180,7 +177,7 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
 
   const loadData = async () => {
     try {
-      const { username } = await params
+      const username = params.username as string
       
       console.log('Loading profile for username:', username)
       
@@ -496,7 +493,7 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
                 </Button>
               </Link>
 
-              {user ? (
+              {currentUser ? (
                 <>
                   <Link href="/problems/new">
                     <Button className="gap-2">
@@ -510,11 +507,11 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
                       <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
                         <Avatar className="h-8 w-8">
                           <AvatarImage 
-                            src={userProfile?.avatar_url || ""} 
+                            src={currentUserProfile?.avatar_url || ""} 
                             className="object-cover"
                           />
                           <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
-                            {getInitials(userProfile?.display_name || userProfile?.username)}
+                            {getInitials(currentUserProfile?.display_name || currentUserProfile?.username)}
                           </AvatarFallback>
                         </Avatar>
                       </button>
@@ -528,7 +525,10 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <form action={handleLogout} className="w-full">
+                        <form onSubmit={async (e) => {
+                          e.preventDefault()
+                          await handleLogout()
+                        }} className="w-full">
                           <button type="submit" className="flex items-center gap-2 w-full text-left cursor-pointer">
                             <LogOut className="h-4 w-4" />
                             <span>Sign Out</span>
@@ -563,7 +563,7 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
                 </Button>
               </Link>
 
-              {user ? (
+              {currentUser ? (
                 <>
                   <Link href="/problems/new">
                     <Button size="icon" className="h-9 w-9">
@@ -576,11 +576,11 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
                       <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
                         <Avatar className="h-8 w-8">
                           <AvatarImage 
-                            src={userProfile?.avatar_url || ""} 
+                            src={currentUserProfile?.avatar_url || ""} 
                             className="object-cover"
                           />
                           <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
-                            {getInitials(userProfile?.display_name || userProfile?.username)}
+                            {getInitials(currentUserProfile?.display_name || currentUserProfile?.username)}
                           </AvatarFallback>
                         </Avatar>
                       </button>
@@ -594,7 +594,10 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <form action={handleLogout} className="w-full">
+                        <form onSubmit={async (e) => {
+                          e.preventDefault()
+                          await handleLogout()
+                        }} className="w-full">
                           <button type="submit" className="flex items-center gap-2 w-full text-left cursor-pointer">
                             <LogOut className="h-4 w-4" />
                             <span>Sign Out</span>
