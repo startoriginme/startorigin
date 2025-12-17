@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import { Lightbulb, Plus, LogOut, Calendar, MessageSquare, ArrowBigUp, Edit, User, Check } from "lucide-react"
+import { Lightbulb, Plus, LogOut, User, ArrowLeft, Share2, Download, LogIn, ShoppingBasket, MessageSquareMore } from "lucide-react"
 import { ProblemCard } from "@/components/problem-card"
 import {
   DropdownMenu,
