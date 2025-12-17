@@ -32,6 +32,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${montserrat.variable} ${inter.className}`}>
       <body>
+        {/* Простой индикатор загрузки сверху */}
+        <div className="loading-bar"></div>
+        
         <Suspense fallback={null}>
           <NavigationLoading />
         </Suspense>
