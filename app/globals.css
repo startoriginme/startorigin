@@ -147,10 +147,13 @@
   * {
     @apply border-border outline-ring/50;
   }
+  
+  /* Важное: добавляем padding-top чтобы контент не скрывался под фиксированным хедером */
   body {
     @apply bg-background text-foreground;
     font-family: 'Montserrat', sans-serif;
     position: relative;
+    padding-top: 72px; /* Высота хедера (56px) + доп отступ */
   }
   
   /* Все заголовки Montserrat Black */
@@ -182,6 +185,15 @@
   
   h6 {
     @apply text-base md:text-lg;
+  }
+  
+  /* Фиксируем хедер! Ничего в компонентах менять не нужно */
+  header {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 100 !important;
   }
   
   /* Subtle snow overlay */
