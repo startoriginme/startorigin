@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server"
 import { ProblemsFeed } from "@/components/problems-feed"
 import { Button } from "@/components/ui/button"
-import { Lightbulb, Plus, ArrowRight, LogOut, User, ChevronLeft, ChevronRight, LogIn } from "lucide-react"
+import { Lightbulb, Plus, LogOut, User, ArrowLeft, Share2, Download, LogIn, ShoppingBasket, MessageSquareMore } from "lucide-react"
+
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
