@@ -191,12 +191,6 @@ export default async function HomePage() {
                 </Button>
               </Link>
 
-              {/* Кнопка Pro (размытая) */}
-              <Button variant="ghost" className="gap-2 opacity-50 cursor-not-allowed blur-[1px] hover:opacity-50">
-                <Gem className="h-4 w-4" />
-                Pro
-              </Button>
-
               {user ? (
                 <>
                   <Link href="/problems/new">
