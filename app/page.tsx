@@ -3,7 +3,6 @@ import { ProblemsFeed } from "@/components/problems-feed"
 import { Button } from "@/components/ui/button"
 import { Lightbulb, Plus, ArrowRight, LogOut, User, ChevronLeft, ChevronRight, ExternalLink, MessageCircle } from "lucide-react"
 import Link from "next/link"
-import Image from "next/image"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -169,18 +168,11 @@ export default async function HomePage() {
 
         <div className="container mx-auto px-4 py-4 relative z-10">
           <nav className="flex items-center justify-between">
-            {/* Увеличенная Discord иконка */}
+            {/* Заменено: вместо лампочки и обычного текста - текст капсом с Montserrat Black */}
             <Link href="/" className="flex items-center gap-2 relative hover:opacity-90 transition-opacity">
-              <div className="relative h-16 w-16"> {/* Увеличено с h-8 w-8 до h-16 w-16 */}
-                <Image
-                  src="https://cdn.discordapp.com/icons/1448659723695165442/703beda9ab12ebff8e9a6940e253d3fa.webp?size=256" // Увеличен размер до 256
-                  alt="StartOrigin Logo"
-                  fill
-                  className="rounded-full object-cover"
-                  sizes="64px"
-                  priority
-                />
-              </div>
+              <span className="text-2xl font-black uppercase tracking-tighter font-montserrat text-foreground">
+                STARTORIGIN
+              </span>
             </Link>
             
             <div className="hidden md:flex items-center gap-4">
