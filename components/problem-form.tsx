@@ -78,68 +78,6 @@ const STATUS_OPTIONS = [
   { value: "project", label: "Project", description: "Project seeking collaborators" },
 ]
 
-// BASIC FORBIDDEN PATTERNS
-const FORBIDDEN_PATTERNS = [
-  // RUSSIAN PROFANITY
-  /[хx][уy][ёеийяю]/i,
-  /[пp][i1!][з3z][дd]/i,
-  /[еe][б6][аa@л]/i,
-  /[б6][лl][яa@][дdтt]/i,
-  /[сc][уy][кk][аa@]/i,
-  
-  // ENGLISH PROFANITY
-  /fuck|shit|bitch|asshole|cunt|dick|pussy|whore|slut|motherfucker|bastard/i,
-  
-  // ABBREVIATIONS
-  /wtf|omg|lol|lmfao|rofl|stfu|gtfo|fk|sh[i1]t|b[i1]tch|@ss|d[i1]ck|n[i1]gga|n[i1]gger/i,
-  
-  // DISCRIMINATION
-  /nigga|negro|churka|hach|zhid|pindos|black.*(trash|scum)|white.*(trash|scum)/i,
-  
-  // THREATS
-  /\bkill\b|\bmurder\b|\bstab\b|\bexplode\b|\brape\b|\bbeat\b|\bshoot\b/i,
-  
-  // EXTREMISM
-  /nazi|fascist|islamist|terrorist|radical|extremist/i,
-  
-  // UNACCEPTABLE TOPICS
-  /pedophile|incest|zoophile|necrophile/i,
-  
-  // SPAM
-  /(.)\1{5,}/, // 5+ repeating characters
-  /\b(\w+)\s+\1\s+\1\b/i, // 3+ repeating words
-  /[A-ZА-Я]{10,}/, // 10+ uppercase in a row
-]
-
-// Check for forbidden patterns
-function containsForbiddenPatterns(text: string): { found: boolean; patterns: string[] } {
-  const patterns: string[] = []
-  
-  FORBIDDEN_PATTERNS.forEach((pattern, index) => {
-    if (pattern.test(text)) {
-      patterns.push(`Pattern ${index + 1}`)
-    }
-  })
-  
-  // Check for spam (too many uppercase)
-  const words = text.split(/\s+/)
-  const upperCaseWords = words.filter(word => /^[A-ZА-ЯЁ]{3,}$/.test(word))
-  if (upperCaseWords.length > words.length * 0.3 && words.length > 5) {
-    patterns.push("Too many uppercase words (spam)")
-  }
-  
-  // Check for incoherent text
-  const shortRepeats = text.match(/(\b\w{1,3}\b\s+){5,}/g)
-  if (shortRepeats) {
-    patterns.push("Repetitive short words")
-  }
-  
-  return {
-    found: patterns.length > 0,
-    patterns
-  }
-}
-
 // Add points to user
 async function addPointsToUser(userId: string, points: number) {
   const supabase = createClient()
@@ -206,9 +144,6 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
   const [lookingForCofounder, setLookingForCofounder] = useState(initialData?.looking_for_cofounder || false)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [isModerating, setIsModerating] = useState(false)
-  const [moderationWarning, setModerationWarning] = useState<string | null>(null)
-  const [moderationDetails, setModerationDetails] = useState<string[]>([])
   const [pointsAwarded, setPointsAwarded] = useState(false)
   const [linkDialogOpen, setLinkDialogOpen] = useState(false)
   const [linkUrl, setLinkUrl] = useState("")
@@ -216,20 +151,6 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
   
   const router = useRouter()
   const supabase = createClient()
-
-  // Pre-check content on input
-  const checkContent = (text: string) => {
-    if (text.length < 5) return
-    
-    const patternCheck = containsForbiddenPatterns(text)
-    if (patternCheck.found) {
-      setModerationWarning("Suspicious patterns detected")
-      setModerationDetails(patternCheck.patterns.slice(0, 3))
-    } else {
-      setModerationWarning(null)
-      setModerationDetails([])
-    }
-  }
 
   const handleAddTag = () => {
     if (tagInput.trim() && !tags.includes(tagInput.trim()) && tags.length < 5) {
@@ -313,43 +234,27 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (isLoading || isModerating) return
+    if (isLoading) return
     
-    setIsModerating(true)
     setError(null)
-    setModerationWarning(null)
-    setModerationDetails([])
     setPointsAwarded(false)
 
     // VALIDATION
     if (!title.trim() || !description.trim()) {
       setError("Title and description are required")
-      setIsModerating(false)
       return
     }
 
     if (title.length < 10) {
       setError("Title must be at least 10 characters")
-      setIsModerating(false)
       return
     }
 
     if (description.length < 50) {
       setError("Description must be at least 50 characters")
-      setIsModerating(false)
       return
     }
 
-    // CHECK FOR FORBIDDEN PATTERNS
-    const patternCheck = containsForbiddenPatterns(title + " " + description)
-    if (patternCheck.found) {
-      setError(`Content contains prohibited elements: ${patternCheck.patterns.join(", ")}`)
-      setModerationDetails(patternCheck.patterns)
-      setIsModerating(false)
-      return
-    }
-
-    setIsModerating(false)
     setIsLoading(true)
 
     try {
@@ -364,9 +269,6 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
         looking_for_cofounder: lookingForCofounder,
         author_id: userId,
         updated_at: new Date().toISOString(),
-        moderation_status: "approved",
-        moderation_confidence: 1.0,
-        moderation_issues: [],
       }
 
       let problemId: string | null = null
@@ -421,15 +323,12 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
           setError("Network error. Please check your connection.")
         } else if (error.message.includes("permission denied")) {
           setError("Permission denied. Please ensure you're logged in.")
-        } else if (error.message.includes("status")) {
-          setError("Database error. The 'status' field might not exist.")
         } else {
           setError(error.message)
         }
       } else {
         setError("An unexpected error occurred")
       }
-      setIsModerating(false)
       setIsLoading(false)
     }
   }
@@ -458,14 +357,10 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               id="title"
               placeholder="What problem did you encounter?"
               value={title}
-              onChange={(e) => {
-                setTitle(e.target.value)
-                checkContent(e.target.value)
-              }}
+              onChange={(e) => setTitle(e.target.value)}
               required
               maxLength={200}
-              disabled={isLoading || isModerating}
-              className={moderationWarning ? "border-amber-300" : ""}
+              disabled={isLoading}
             />
             <div className="flex justify-between items-center">
               <p className="text-xs text-muted-foreground">{title.length}/200 characters</p>
@@ -489,7 +384,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
                 <ToggleGroup type="multiple" className="flex-wrap gap-1">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <ToggleGroupItem value="bold" onClick={formatBold} disabled={isLoading || isModerating}>
+                      <ToggleGroupItem value="bold" onClick={formatBold} disabled={isLoading}>
                         <Bold className="h-4 w-4" />
                       </ToggleGroupItem>
                     </TooltipTrigger>
@@ -500,7 +395,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
 
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <ToggleGroupItem value="italic" onClick={formatItalic} disabled={isLoading || isModerating}>
+                      <ToggleGroupItem value="italic" onClick={formatItalic} disabled={isLoading}>
                         <Italic className="h-4 w-4" />
                       </ToggleGroupItem>
                     </TooltipTrigger>
@@ -511,7 +406,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
 
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <ToggleGroupItem value="heading" onClick={formatHeading} disabled={isLoading || isModerating}>
+                      <ToggleGroupItem value="heading" onClick={formatHeading} disabled={isLoading}>
                         <Heading className="h-4 w-4" />
                       </ToggleGroupItem>
                     </TooltipTrigger>
@@ -522,7 +417,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
 
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <ToggleGroupItem value="list" onClick={formatList} disabled={isLoading || isModerating}>
+                      <ToggleGroupItem value="list" onClick={formatList} disabled={isLoading}>
                         <List className="h-4 w-4" />
                       </ToggleGroupItem>
                     </TooltipTrigger>
@@ -533,7 +428,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
 
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <ToggleGroupItem value="quote" onClick={formatQuote} disabled={isLoading || isModerating}>
+                      <ToggleGroupItem value="quote" onClick={formatQuote} disabled={isLoading}>
                         <Quote className="h-4 w-4" />
                       </ToggleGroupItem>
                     </TooltipTrigger>
@@ -544,7 +439,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
 
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <ToggleGroupItem value="code" onClick={formatCode} disabled={isLoading || isModerating}>
+                      <ToggleGroupItem value="code" onClick={formatCode} disabled={isLoading}>
                         <Code className="h-4 w-4" />
                       </ToggleGroupItem>
                     </TooltipTrigger>
@@ -555,7 +450,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
 
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <ToggleGroupItem value="inline-code" onClick={formatInlineCode} disabled={isLoading || isModerating}>
+                      <ToggleGroupItem value="inline-code" onClick={formatInlineCode} disabled={isLoading}>
                         <Type className="h-4 w-4" />
                       </ToggleGroupItem>
                     </TooltipTrigger>
@@ -568,7 +463,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
                     <TooltipTrigger asChild>
                       <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
                         <DialogTrigger asChild>
-                          <ToggleGroupItem value="link" disabled={isLoading || isModerating}>
+                          <ToggleGroupItem value="link" disabled={isLoading}>
                             <LinkIcon className="h-4 w-4" />
                           </ToggleGroupItem>
                         </DialogTrigger>
@@ -622,15 +517,12 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               id="description"
               placeholder="Describe the problem in detail... You can use Markdown for formatting."
               value={description}
-              onChange={(e) => {
-                setDescription(e.target.value)
-                checkContent(e.target.value)
-              }}
+              onChange={(e) => setDescription(e.target.value)}
               required
               rows={8}
               maxLength={2000}
-              disabled={isLoading || isModerating}
-              className={`rounded-t-none focus:ring-2 focus:ring-primary ${moderationWarning ? "border-amber-300" : ""}`}
+              disabled={isLoading}
+              className="rounded-t-none focus:ring-2 focus:ring-primary"
             />
             <div className="flex justify-between items-center">
               <p className="text-xs text-muted-foreground">{description.length}/2000 characters</p>
@@ -646,7 +538,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
             <Select 
               value={status} 
               onValueChange={setStatus} 
-              disabled={isLoading || isModerating}
+              disabled={isLoading}
               required
             >
               <SelectTrigger id="status">
@@ -678,14 +570,14 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               value={contact}
               onChange={(e) => setContact(e.target.value)}
               maxLength={100}
-              disabled={isLoading || isModerating}
+              disabled={isLoading}
             />
             <p className="text-xs text-muted-foreground">How to contact you? (Optional)</p>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="category">Category</Label>
-            <Select value={category} onValueChange={setCategory} disabled={isLoading || isModerating}>
+            <Select value={category} onValueChange={setCategory} disabled={isLoading}>
               <SelectTrigger id="category">
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
@@ -713,13 +605,13 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
                     handleAddTag()
                   }
                 }}
-                disabled={isLoading || isModerating}
+                disabled={isLoading}
               />
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleAddTag}
-                disabled={!tagInput.trim() || tags.length >= 5 || isLoading || isModerating}
+                disabled={!tagInput.trim() || tags.length >= 5 || isLoading}
               >
                 Add
               </Button>
@@ -733,7 +625,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
                       type="button" 
                       onClick={() => handleRemoveTag(tag)} 
                       className="ml-1 hover:text-destructive"
-                      disabled={isLoading || isModerating}
+                      disabled={isLoading}
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -748,7 +640,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               id="cofounder"
               checked={lookingForCofounder}
               onCheckedChange={(checked) => setLookingForCofounder(checked as boolean)}
-              disabled={isLoading || isModerating}
+              disabled={isLoading}
             />
             <Label htmlFor="cofounder" className="text-sm font-normal cursor-pointer">
               I'm looking for a co-founder to solve this problem
@@ -758,27 +650,12 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
           {error && (
             <div className="rounded-md bg-destructive/10 p-3">
               <p className="text-sm text-destructive font-medium">Error: {error}</p>
-              {moderationDetails.length > 0 && (
-                <div className="mt-2">
-                  <p className="text-xs font-medium">Details:</p>
-                  <ul className="text-xs text-muted-foreground list-disc list-inside">
-                    {moderationDetails.slice(0, 5).map((detail, idx) => (
-                      <li key={idx}>{detail}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
             </div>
           )}
 
           <div className="flex gap-4">
-            <Button type="submit" disabled={isLoading || isModerating} className="flex-1">
-              {isModerating ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Checking...
-                </>
-              ) : isLoading ? (
+            <Button type="submit" disabled={isLoading} className="flex-1">
+              {isLoading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   {initialData ? "Updating..." : "Publishing..."}
@@ -794,7 +671,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               type="button" 
               variant="outline" 
               onClick={() => router.back()} 
-              disabled={isLoading || isModerating}
+              disabled={isLoading}
             >
               Cancel
             </Button>
