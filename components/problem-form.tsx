@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { X, Loader2, Bold, Italic, List, Link as LinkIcon, Heading, Quote, Code, Type, AlertTriangle, Shield, Sparkles } from "lucide-react"
+import { X, Loader2, Bold, Italic, List, Link as LinkIcon, Heading, Quote, Code, Type, Sparkles } from "lucide-react"
 import {
   ToggleGroup,
   ToggleGroupItem,
@@ -78,84 +78,57 @@ const STATUS_OPTIONS = [
   { value: "project", label: "Project", description: "Project seeking collaborators" },
 ]
 
-// Gemini API key
-const GEMINI_API_KEY = "AIzaSyAe77eTrIa5FRKDgASOkF-D1PG8F0rzoVY"
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent"
-
-// EXTENDED LIST OF FORBIDDEN WORDS AND PATTERNS
-const EXTENDED_BAD_PATTERNS = [
-  // RUSSIAN PROFANITY AND INSULTS
+// BASIC FORBIDDEN PATTERNS
+const FORBIDDEN_PATTERNS = [
+  // RUSSIAN PROFANITY
   /[хx][уy][ёеийяю]/i,
   /[пp][i1!][з3z][дd]/i,
   /[еe][б6][аa@л]/i,
   /[б6][лl][яa@][дdтt]/i,
   /[сc][уy][кk][аa@]/i,
-  /[гg][аa][нn][дd][оo0][нn]/i,
-  /[пp][i1][дd][оo0][рp]/i,
-  /[мm][уy][дd][аa@][кk]/i,
-  /[дd][оo0][лl][б6][оo0ё][б6]/i,
-  /[шsh][лl][юu][хxh][аa@]/i,
-  /[пp][рr][оo0][сc][тt][иi][тt][уy][тt][кk][аa@]/i,
   
   // ENGLISH PROFANITY
-  /fuck|shit|bitch|asshole|cunt|dick|pussy|whore|slut|motherfucker|bastard|damn|hell/i,
+  /fuck|shit|bitch|asshole|cunt|dick|pussy|whore|slut|motherfucker|bastard/i,
   
-  // ABBREVIATIONS AND EUPHEMISMS (WTF, OMG, etc.)
+  // ABBREVIATIONS
   /wtf|omg|lol|lmfao|rofl|stfu|gtfo|fk|sh[i1]t|b[i1]tch|@ss|d[i1]ck|n[i1]gga|n[i1]gger/i,
-  /(?:what[\s]*the[\s]*fuck|oh[\s]*my[\s]*god|shut[\s]*the[\s]*fuck[\s]*up)/i,
   
-  // BYPASS ATTEMPTS (numbers, symbols)
-  /[хx][*\-_\.][йy]/i,
-  /[пp][*\-_\.][з3z][дd]/i,
-  /[еe][*\-_\.][б6]/i,
-  /[б6][*\-_\.][лl][яa@]/i,
-  /\b[хx][0-9]+[йy]\b/i,
-  /\b[пp][0-9]+[з3z][дd]\b/i,
-  
-  // RACIST AND DISCRIMINATORY EXPRESSIONS
+  // DISCRIMINATION
   /nigga|negro|churka|hach|zhid|pindos|black.*(trash|scum)|white.*(trash|scum)/i,
   
-  // THREATS AND VIOLENCE
+  // THREATS
   /\bkill\b|\bmurder\b|\bstab\b|\bexplode\b|\brape\b|\bbeat\b|\bshoot\b/i,
-  /\bmurder\b|\bterror\b|\bextremism\b/i,
   
   // EXTREMISM
   /nazi|fascist|islamist|terrorist|radical|extremist/i,
   
-  // INAPPROPRIATE TOPICS
+  // UNACCEPTABLE TOPICS
   /pedophile|incest|zoophile|necrophile/i,
   
-  // "BRAINROT" CONTENT AND MEMES
-  /skibidi|gyatt|rizzler|sigma|fanum|tax|🗣️🔥|🔥🔥🔥|💀💀💀/i,
-  /ohio|volume|camera|water|camera.*water/i,
-  
-  // SPAM AND NONSENSE TEXT
+  // SPAM
   /(.)\1{5,}/, // 5+ repeating characters
   /\b(\w+)\s+\1\s+\1\b/i, // 3+ repeating words
   /[A-ZА-Я]{10,}/, // 10+ uppercase in a row
-  /\b[\w\.]+@[\w\.]+\.\w+\b.*\b[\w\.]+@[\w\.]+\.\w+\b/i, // Multiple emails
-  /http[s]?:\/\/.*http[s]?:\/\//i, // Multiple links
 ]
 
 // Check for forbidden patterns
 function containsForbiddenPatterns(text: string): { found: boolean; patterns: string[] } {
   const patterns: string[] = []
   
-  // Check patterns
-  EXTENDED_BAD_PATTERNS.forEach((pattern, index) => {
+  FORBIDDEN_PATTERNS.forEach((pattern, index) => {
     if (pattern.test(text)) {
       patterns.push(`Pattern ${index + 1}`)
     }
   })
   
-  // Spam check (too many uppercase)
+  // Check for spam (too many uppercase)
   const words = text.split(/\s+/)
   const upperCaseWords = words.filter(word => /^[A-ZА-ЯЁ]{3,}$/.test(word))
   if (upperCaseWords.length > words.length * 0.3 && words.length > 5) {
     patterns.push("Too many uppercase words (spam)")
   }
   
-  // Check for nonsense text (many short repetitions)
+  // Check for incoherent text
   const shortRepeats = text.match(/(\b\w{1,3}\b\s+){5,}/g)
   if (shortRepeats) {
     patterns.push("Repetitive short words")
@@ -167,170 +140,19 @@ function containsForbiddenPatterns(text: string): { found: boolean; patterns: st
   }
 }
 
-// ENHANCED AI MODERATION
-async function moderateWithAI(title: string, description: string): Promise<{ 
-  isAllowed: boolean; 
-  reason?: string;
-  confidence?: number;
-  detectedIssues?: string[];
-}> {
-  try {
-    const prompt = `
-You are a strict content moderator for a problem-solving platform. Check the following content against ALL these criteria:
-
-1. PROFANITY: Contains profanity, insults, obscenities?
-2. ABBREVIATIONS: Contains WTF, OMG, STFU, LMAO and similar abbreviations?
-3. FILTER BYPASS: Attempts to bypass filters using symbols (*), numbers, letter replacements?
-4. BRAINROT: Contains nonsense text, spam, repetitions, "skibidi toilet", "gyatt" memes?
-5. DISCRIMINATION: Contains racism, sexism, xenophobia, homophobia?
-6. THREATS: Contains threats, calls to violence, extremism?
-7. SCAMS: Contains offers about earnings, investments, sale of prohibited goods?
-8. SPAM: Contains advertising, links, contact information, calls to go elsewhere?
-9. INAPPROPRIATE TOPICS: Contains pornography, violence, illegal activity?
-
-Return ONLY JSON:
-{
-  "isAllowed": true/false,
-  "reason": "Brief explanation in English if not allowed",
-  "confidence": number from 0 to 1 (confidence in decision),
-  "detectedIssues": ["list of detected problems"]
-}
-
-Content to check:
-
-TITLE: ${title}
-
-DESCRIPTION: ${description}
-    `
-
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: prompt
-              }
-            ]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.1,
-          maxOutputTokens: 1000,
-          topP: 0.8,
-          topK: 40,
-        },
-        safetySettings: [
-          {
-            category: "HARM_CATEGORY_HARASSMENT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          },
-          {
-            category: "HARM_CATEGORY_HATE_SPEECH",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          },
-          {
-            category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          },
-          {
-            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          }
-        ]
-      })
-    })
-
-    if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.status}`)
-    }
-
-    const data = await response.json()
-    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}"
-    
-    // Extract JSON from response
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/)
-    if (jsonMatch) {
-      try {
-        const result = JSON.parse(jsonMatch[0])
-        return {
-          isAllowed: result.isAllowed === true,
-          reason: result.reason || "Content does not comply with platform rules",
-          confidence: result.confidence || 0.5,
-          detectedIssues: result.detectedIssues || []
-        }
-      } catch (e) {
-        console.error("Failed to parse Gemini response:", e)
-        return {
-          isAllowed: false,
-          reason: "Error checking content. Please rephrase your text.",
-          confidence: 0.3,
-          detectedIssues: ["Failed to parse AI response"]
-        }
-      }
-    } else {
-      // If no JSON found, look for keywords in response
-      const lowerResponse = responseText.toLowerCase()
-      const negativeKeywords = ["not allowed", "rejected", "violates", "against", "prohibited"]
-      const isNegative = negativeKeywords.some(keyword => lowerResponse.includes(keyword))
-      
-      return {
-        isAllowed: !isNegative,
-        reason: isNegative ? "Content failed automatic check" : "Check passed",
-        confidence: isNegative ? 0.8 : 0.6,
-        detectedIssues: isNegative ? ["AI detected violations"] : []
-      }
-    }
-  } catch (error) {
-    console.error("AI moderation failed:", error)
-    // If API error, use basic check
-    return moderateWithBasic(title, description)
-  }
-}
-
-// Basic check (fallback)
-function moderateWithBasic(title: string, description: string): { 
-  isAllowed: boolean; 
-  reason?: string;
-  confidence?: number;
-  detectedIssues?: string[];
-} {
-  const fullText = `${title} ${description}`
-  const patternCheck = containsForbiddenPatterns(fullText)
-  
-  if (patternCheck.found) {
-    return {
-      isAllowed: false,
-      reason: "Content contains prohibited words or patterns",
-      confidence: 0.9,
-      detectedIssues: patternCheck.patterns
-    }
-  }
-  
-  return {
-    isAllowed: true,
-    confidence: 0.5,
-    detectedIssues: []
-  }
-}
-
-// Function to add points to user profile
+// Add points to user
 async function addPointsToUser(userId: string, points: number) {
   const supabase = createClient()
   
   try {
-    // First, get current points
+    // Get current points
     const { data: profile, error: fetchError } = await supabase
       .from("profiles")
       .select("points")
       .eq("id", userId)
       .single()
 
-    if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is "not found"
+    if (fetchError && fetchError.code !== 'PGRST116') {
       console.error("Error fetching user points:", fetchError)
       return
     }
@@ -352,7 +174,7 @@ async function addPointsToUser(userId: string, points: number) {
       return
     }
 
-    // Create a transaction record
+    // Create transaction record
     const { error: transactionError } = await supabase
       .from("point_transactions")
       .insert({
@@ -395,7 +217,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
   const router = useRouter()
   const supabase = createClient()
 
-  // PRELIMINARY CHECK ON INPUT
+  // Pre-check content on input
   const checkContent = (text: string) => {
     if (text.length < 5) return
     
@@ -433,7 +255,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
     const newText = description.substring(0, start) + before + textToInsert + after + description.substring(end)
     setDescription(newText)
     
-    // Focus back to textarea
+    // Focus back on textarea
     setTimeout(() => {
       textarea.focus()
       const newCursorPos = start + before.length + textToInsert.length + after.length
@@ -518,7 +340,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
       return
     }
 
-    // BASIC CHECK FOR FORBIDDEN PATTERNS
+    // CHECK FOR FORBIDDEN PATTERNS
     const patternCheck = containsForbiddenPatterns(title + " " + description)
     if (patternCheck.found) {
       setError(`Content contains prohibited elements: ${patternCheck.patterns.join(", ")}`)
@@ -527,26 +349,10 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
       return
     }
 
+    setIsModerating(false)
+    setIsLoading(true)
+
     try {
-      // AI MODERATION
-      const moderationResult = await moderateWithAI(title.trim(), description.trim())
-      
-      if (!moderationResult.isAllowed) {
-        setError(`Content failed moderation: ${moderationResult.reason}`)
-        if (moderationResult.detectedIssues) {
-          setModerationDetails(moderationResult.detectedIssues)
-        }
-        setIsModerating(false)
-        return
-      }
-
-      if (moderationResult.reason && moderationResult.reason.includes("attention")) {
-        setModerationWarning(moderationResult.reason)
-      }
-
-      setIsModerating(false)
-      setIsLoading(true)
-
       // PREPARE DATA FOR DATABASE
       const problemData = {
         title: title.trim(),
@@ -558,9 +364,9 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
         looking_for_cofounder: lookingForCofounder,
         author_id: userId,
         updated_at: new Date().toISOString(),
-        moderation_status: moderationResult.confidence && moderationResult.confidence > 0.8 ? "approved" : "pending_review",
-        moderation_confidence: moderationResult.confidence || 0.5,
-        moderation_issues: moderationResult.detectedIssues || [],
+        moderation_status: "approved",
+        moderation_confidence: 1.0,
+        moderation_issues: [],
       }
 
       let problemId: string | null = null
@@ -597,7 +403,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
         if (data?.id) {
           problemId = data.id
           
-          // AWARD 10 POINTS FOR PUBLISHING A PROBLEM
+          // AWARD 10 POINTS FOR PUBLISHING
           await addPointsToUser(userId, 10)
           setPointsAwarded(true)
           
@@ -636,41 +442,12 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
     <Card>
       <CardContent className="pt-6">
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* STRICT MODERATION BANNER */}
-          <Alert className="bg-blue-50 border-blue-200">
-            <Shield className="h-4 w-4 text-blue-600" />
-            <AlertTitle className="text-blue-800">Strict moderation enabled</AlertTitle>
-            <AlertDescription className="text-blue-700 text-sm">
-              All publications go through enhanced AI check. Prohibited: profanity, abbreviations (WTF, OMG), brainrot content, filter bypass, spam.
-            </AlertDescription>
-          </Alert>
-
-          {moderationWarning && !error && (
-            <Alert className="bg-amber-50 border-amber-200">
-              <AlertTriangle className="h-4 w-4 text-amber-600" />
-              <AlertTitle className="text-amber-800">Warning</AlertTitle>
-              <AlertDescription className="text-amber-700 text-sm">
-                {moderationWarning}
-                {moderationDetails.length > 0 && (
-                  <div className="mt-2">
-                    <p className="font-semibold">Detected:</p>
-                    <ul className="list-disc list-inside text-xs">
-                      {moderationDetails.slice(0, 3).map((issue, idx) => (
-                        <li key={idx}>{issue}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </AlertDescription>
-            </Alert>
-          )}
-
           {pointsAwarded && (
             <Alert className="bg-green-50 border-green-200">
               <Sparkles className="h-4 w-4 text-green-600" />
-              <AlertTitle className="text-green-800">Points Awarded!</AlertTitle>
+              <AlertTitle className="text-green-800">Points awarded!</AlertTitle>
               <AlertDescription className="text-green-700 text-sm">
-                You earned <span className="font-bold">10 points</span> for publishing a problem! Use them to buy customizations in your profile.
+                You received <span className="font-bold">10 points</span> for publishing a problem! Use them for profile customizations.
               </AlertDescription>
             </Alert>
           )}
@@ -679,7 +456,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
             <Label htmlFor="title">Problem Title *</Label>
             <Input
               id="title"
-              placeholder="What problem are you facing?"
+              placeholder="What problem did you encounter?"
               value={title}
               onChange={(e) => {
                 setTitle(e.target.value)
@@ -702,7 +479,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
             <div className="flex items-center justify-between">
               <Label htmlFor="description">Description *</Label>
               <div className="text-xs text-muted-foreground">
-                Supports Markdown formatting
+                Markdown formatting supported
               </div>
             </div>
             
@@ -750,7 +527,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
                       </ToggleGroupItem>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Bullet List</p>
+                      <p>List</p>
                     </TooltipContent>
                   </Tooltip>
 
@@ -772,7 +549,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
                       </ToggleGroupItem>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Code Block</p>
+                      <p>Code block</p>
                     </TooltipContent>
                   </Tooltip>
 
@@ -783,7 +560,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
                       </ToggleGroupItem>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Inline Code</p>
+                      <p>Inline code</p>
                     </TooltipContent>
                   </Tooltip>
 
@@ -799,7 +576,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
                           <DialogHeader>
                             <DialogTitle>Insert Link</DialogTitle>
                             <DialogDescription>
-                              Add a hyperlink to your description
+                              Add a hyperlink to the description
                             </DialogDescription>
                           </DialogHeader>
                           <div className="space-y-4 py-4">
@@ -834,7 +611,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
                       </Dialog>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Insert Link (Ctrl+K)</p>
+                      <p>Insert link (Ctrl+K)</p>
                     </TooltipContent>
                   </Tooltip>
                 </ToggleGroup>
@@ -897,20 +674,20 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
             <Label htmlFor="contact">Contact</Label>
             <Input
               id="contact"
-              placeholder="Telegram, WhatsApp, or Email"
+              placeholder="Telegram, WhatsApp or Email"
               value={contact}
               onChange={(e) => setContact(e.target.value)}
               maxLength={100}
               disabled={isLoading || isModerating}
             />
-            <p className="text-xs text-muted-foreground">How can people reach you? (Optional)</p>
+            <p className="text-xs text-muted-foreground">How to contact you? (Optional)</p>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="category">Category</Label>
             <Select value={category} onValueChange={setCategory} disabled={isLoading || isModerating}>
               <SelectTrigger id="category">
-                <SelectValue placeholder="Select a category" />
+                <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
                 {CATEGORIES.map((cat) => (
@@ -974,7 +751,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               disabled={isLoading || isModerating}
             />
             <Label htmlFor="cofounder" className="text-sm font-normal cursor-pointer">
-              I'm looking for a cofounder to solve this problem
+              I'm looking for a co-founder to solve this problem
             </Label>
           </div>
 
@@ -999,7 +776,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               {isModerating ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Strict content check...
+                  Checking...
                 </>
               ) : isLoading ? (
                 <>
@@ -1023,24 +800,6 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
             </Button>
           </div>
 
-          <div className="rounded-lg border p-4 bg-muted/30">
-            <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
-              <Shield className="h-4 w-4" />
-              Strict Moderation Rules:
-            </h3>
-            <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-              <li><strong>Prohibited profanity and insults</strong> in any language</li>
-              <li><strong>Prohibited abbreviations:</strong> WTF, OMG, STFU, LMAO, ROFL and similar</li>
-              <li><strong>Prohibited "brainrot" content:</strong> skibidi, gyatt, sigma, Ohio memes</li>
-              <li><strong>Prohibited filter bypass attempts:</strong> symbols (*), numbers, letter replacements</li>
-              <li><strong>Prohibited spam:</strong> ALL CAPS, repetitions, nonsense text</li>
-              <li><strong>Prohibited discrimination:</strong> racism, sexism, xenophobia</li>
-              <li><strong>Prohibited threats and calls to violence</strong></li>
-              <li>Content is checked by AI and may be manually removed</li>
-              <li>Violations lead to account ban</li>
-              <li className="font-bold text-green-600">Earn 10 points for every published problem!</li>
-            </ul>
-          </div>
         </form>
       </CardContent>
     </Card>
