@@ -1,45 +1,411 @@
-import type { Metadata } from "next"
-import { Inter, Montserrat } from "next/font/google"
-import "./globals.css"
-import { NavigationLoading } from "@/components/ui/navigation-loading"
-import { Suspense } from "react"
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+@import 'tailwindcss';
+@import 'tw-animate-css';
 
-const inter = Inter({ subsets: ["latin"] })
+@custom-variant dark (&:is(.dark *));
 
-// Добавляем Montserrat шрифт
-const montserrat = Montserrat({
-  subsets: ["latin", "cyrillic"],
-  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
-  variable: "--font-montserrat",
-})
-
-export const metadata: Metadata = {
-  title: "StartOrigin",
-  description: "A platform for innovators to share problems and collaborate on solutions",
-  generator: 'v0.app',
-  icons: {
-    icon: "/lampochka.png",
-    shortcut: "/lightbulb.svg",
-    apple: "/lightbulb.svg",
-  },
+:root {
+  /* СВЕТЛАЯ ТЕМА - ТОЛЬКО СВЕТЛАЯ */
+  --background: oklch(0.98 0.01 220);
+  --foreground: oklch(0.2 0.05 220);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(0.99 0.01 220);
+  --popover-foreground: oklch(0.2 0.05 220);
+  --primary: oklch(0.7 0.2 20);
+  --primary-foreground: oklch(0.98 0.01 220);
+  --secondary: oklch(0.95 0.05 120);
+  --secondary-foreground: oklch(0.2 0.05 120);
+  --muted: oklch(0.96 0.02 220);
+  --muted-foreground: oklch(0.5 0.05 220);
+  --accent: oklch(0.9 0.15 160);
+  --accent-foreground: oklch(0.2 0.05 160);
+  --destructive: oklch(0.7 0.25 360);
+  --destructive-foreground: oklch(0.98 0.01 220);
+  --border: oklch(0.88 0.05 220);
+  --input: oklch(0.95 0.02 220);
+  --ring: oklch(0.7 0.2 20);
+  --chart-1: oklch(0.7 0.2 20);
+  --chart-2: oklch(0.6 0.18 120);
+  --chart-3: oklch(0.65 0.17 240);
+  --chart-4: oklch(0.75 0.19 60);
+  --chart-5: oklch(0.8 0.16 300);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.7 0.2 20);
+  --sidebar-primary-foreground: oklch(0.98 0.01 220);
+  --sidebar-accent: oklch(0.95 0.05 120);
+  --sidebar-accent-foreground: oklch(0.2 0.05 120);
+  --sidebar-border: oklch(0.88 0.05 220);
+  --sidebar-ring: oklch(0.7 0.2 20);
+  
+  /* Christmas colors - более яркие для светлой темы */
+  --christmas-red: oklch(0.6 0.22 360);
+  --christmas-green: oklch(0.55 0.2 140);
+  --christmas-gold: oklch(0.7 0.18 90);
+  --snow: oklch(0.99 0 0);
+  --mint: oklch(0.85 0.12 180);
+  --mint-foreground: oklch(0.2 0.05 180);
 }
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode
-}>) {
-  return (
-    <html lang="en" className={`${montserrat.variable} ${inter.className}`}>
-      <body>
-        {/* Простой индикатор загрузки сверху */}
-        <div className="loading-bar"></div>
-        
-        <Suspense fallback={null}>
-          <NavigationLoading />
-        </Suspense>
-        {children}
-      </body>
-    </html>
-  )
+/* Убираем темную тему полностью */
+/* .dark {
+  --background: oklch(0.12 0.03 220);
+  --foreground: oklch(0.95 0.02 220);
+  --card: oklch(0.15 0.03 220);
+  --card-foreground: oklch(0.95 0.02 220);
+  --popover: oklch(0.15 0.03 220);
+  --popover-foreground: oklch(0.95 0.02 220);
+  --primary: oklch(0.75 0.22 20);
+  --primary-foreground: oklch(0.12 0.03 220);
+  --secondary: oklch(0.25 0.08 120);
+  --secondary-foreground: oklch(0.95 0.02 220);
+  --muted: oklch(0.2 0.04 220);
+  --muted-foreground: oklch(0.7 0.05 220);
+  --accent: oklch(0.3 0.12 160);
+  --accent-foreground: oklch(0.95 0.02 160);
+  --destructive: oklch(0.65 0.22 360);
+  --destructive-foreground: oklch(0.12 0.03 220);
+  --border: oklch(0.25 0.05 220);
+  --input: oklch(0.2 0.04 220);
+  --ring: oklch(0.75 0.22 20);
+  --chart-1: oklch(0.75 0.22 20);
+  --chart-2: oklch(0.65 0.2 120);
+  --chart-3: oklch(0.7 0.19 240);
+  --chart-4: oklch(0.8 0.21 60);
+  --chart-5: oklch(0.85 0.18 300);
+  --sidebar: oklch(0.15 0.03 220);
+  --sidebar-foreground: oklch(0.95 0.02 220);
+  --sidebar-primary: oklch(0.75 0.22 20);
+  --sidebar-primary-foreground: oklch(0.12 0.03 220);
+  --sidebar-accent: oklch(0.25 0.08 120);
+  --sidebar-accent-foreground: oklch(0.95 0.02 120);
+  --sidebar-border: oklch(0.25 0.05 220);
+  --sidebar-ring: oklch(0.75 0.22 20);
+  
+  /* Christmas colors for dark mode - more subtle *
+  --christmas-red: oklch(0.6 0.18 360);
+  --christmas-green: oklch(0.55 0.15 140);
+  --christmas-gold: oklch(0.8 0.18 90);
+  --snow: oklch(0.95 0.01 220);
+  --mint: oklch(0.7 0.15 180);
+  --mint-foreground: oklch(0.95 0.02 180);
+} */
+
+@theme inline {
+  --font-sans: 'Montserrat', sans-serif;
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --font-heading: 'Montserrat', sans-serif; /* Добавляем отдельный шрифт для заголовков */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-mint: var(--mint);
+  --color-mint-foreground: var(--mint-foreground);
+  --color-christmas-red: var(--christmas-red);
+  --color-christmas-green: var(--christmas-green);
+  --color-christmas-gold: var(--christmas-gold);
+  --color-snow: var(--snow);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  
+  /* Minimal animations */
+  --animate-snow-fall: snow-fall 25s linear infinite;
+  --animate-twinkle: twinkle 4s ease-in-out infinite;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Montserrat', sans-serif;
+    position: relative;
+  }
+  
+  /* Все заголовки Montserrat Black */
+  h1, h2, h3, h4, h5, h6, .heading {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 900; /* Black weight */
+    letter-spacing: -0.025em;
+  }
+  
+  h1 {
+    @apply text-4xl md:text-5xl;
+  }
+  
+  h2 {
+    @apply text-3xl md:text-4xl;
+  }
+  
+  h3 {
+    @apply text-2xl md:text-3xl;
+  }
+  
+  h4 {
+    @apply text-xl md:text-2xl;
+  }
+  
+  h5 {
+    @apply text-lg md:text-xl;
+  }
+  
+  h6 {
+    @apply text-base md:text-lg;
+  }
+  
+  /* Subtle snow overlay - светлый вариант */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+    background-image: 
+      radial-gradient(circle at 10% 20%, var(--snow) 0.5px, transparent 0.5px),
+      radial-gradient(circle at 30% 40%, var(--snow) 0.5px, transparent 0.5px),
+      radial-gradient(circle at 50% 60%, var(--snow) 0.5px, transparent 0.5px),
+      radial-gradient(circle at 70% 30%, var(--snow) 0.5px, transparent 0.5px),
+      radial-gradient(circle at 90% 50%, var(--snow) 0.5px, transparent 0.5px);
+    background-size: 300px 300px;
+    opacity: 0.15; /* Больше opacity для светлой темы */
+    animation: snow-fall 25s linear infinite;
+  }
+  
+  /* Keyframes for subtle animations */
+  @keyframes snow-fall {
+    0% {
+      transform: translateY(-100px);
+    }
+    100% {
+      transform: translateY(calc(100vh + 100px));
+    }
+  }
+  
+  @keyframes twinkle {
+    0%, 100% {
+      opacity: 0.7;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+}
+
+@layer components {
+  /* Minimal button hover effects */
+  .btn-hover-mint {
+    @apply transition-colors duration-200;
+  }
+  
+  .btn-hover-mint:hover {
+    background-color: var(--mint) !important;
+    color: var(--mint-foreground) !important;
+    border-color: var(--mint) !important;
+  }
+  
+  /* Minimal Christmas button style */
+  .btn-christmas {
+    @apply transition-colors duration-300;
+    border-color: var(--christmas-green) !important;
+  }
+  
+  .btn-christmas:hover {
+    background-color: var(--christmas-green) !important;
+    color: var(--snow) !important;
+  }
+  
+  /* Minimal Christmas card */
+  .card-christmas {
+    @apply relative;
+    border-top: 3px solid transparent;
+    border-image: linear-gradient(90deg, var(--christmas-red), var(--christmas-gold), var(--christmas-green)) 1;
+  }
+  
+  /* Minimal Christmas input */
+  .input-christmas {
+    @apply transition-colors duration-300;
+  }
+  
+  .input-christmas:focus {
+    border-color: var(--christmas-green) !important;
+    box-shadow: 0 0 0 2px rgba(var(--christmas-green), 0.1);
+  }
+  
+  /* Apply mint hover to all buttons - more subtle */
+  button:not([data-no-mint-hover]):hover,
+  .btn:hover,
+  [type='button']:hover,
+  [type='submit']:hover,
+  [type='reset']:hover {
+    background-color: var(--mint) !important;
+    color: var(--mint-foreground) !important;
+    border-color: var(--mint) !important;
+  }
+}
+
+@layer utilities {
+  /* Christmas color utilities - minimal */
+  .text-christmas-red {
+    color: var(--christmas-red);
+  }
+  
+  .text-christmas-green {
+    color: var(--christmas-green);
+  }
+  
+  .text-christmas-gold {
+    color: var(--christmas-gold);
+  }
+  
+  .bg-christmas-red {
+    background-color: var(--christmas-red);
+  }
+  
+  .bg-christmas-green {
+    background-color: var(--christmas-green);
+  }
+  
+  .bg-christmas-gold {
+    background-color: var(--christmas-gold);
+  }
+  
+  .border-christmas-red {
+    border-color: var(--christmas-red);
+  }
+  
+  .border-christmas-green {
+    border-color: var(--christmas-green);
+  }
+  
+  .border-christmas-gold {
+    border-color: var(--christmas-gold);
+  }
+  
+  /* Minimal snow animation */
+  .animate-snow-fall {
+    animation: var(--animate-snow-fall);
+  }
+  
+  .animate-twinkle {
+    animation: var(--animate-twinkle);
+  }
+  
+  /* Minimal hover effect */
+  .hover-christmas:hover {
+    background-color: var(--christmas-green) !important;
+    color: var(--snow) !important;
+    border-color: var(--christmas-green) !important;
+  }
+  
+  .text-mint {
+    color: var(--mint);
+  }
+  
+  .bg-mint {
+    background-color: var(--mint);
+  }
+  
+  .border-mint {
+    border-color: var(--mint);
+  }
+  
+  /* Утилиты для Montserrat Black */
+  .font-heading {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 900;
+  }
+  
+  .font-black {
+    font-weight: 900;
+  }
+}
+
+/* Add subtle snowflakes */
+#snow-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9998;
+}
+
+.snowflake {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: var(--snow);
+  border-radius: 50%;
+  opacity: 0.6; /* Более видимые снежинки */
+  filter: blur(0.5px);
+}
+
+/* Create minimal snowflakes */
+.snowflake:nth-child(1) { left: 5%; animation: snow-fall 30s linear infinite; }
+.snowflake:nth-child(2) { left: 15%; animation: snow-fall 35s linear infinite 5s; }
+.snowflake:nth-child(3) { left: 25%; animation: snow-fall 40s linear infinite 10s; }
+.snowflake:nth-child(4) { left: 35%; animation: snow-fall 32s linear infinite 2s; }
+.snowflake:nth-child(5) { left: 45%; animation: snow-fall 38s linear infinite 7s; }
+.snowflake:nth-child(6) { left: 55%; animation: snow-fall 33s linear infinite 12s; }
+.snowflake:nth-child(7) { left: 65%; animation: snow-fall 36s linear infinite 3s; }
+.snowflake:nth-child(8) { left: 75%; animation: snow-fall 34s linear infinite 8s; }
+.snowflake:nth-child(9) { left: 85%; animation: snow-fall 37s linear infinite 1s; }
+.snowflake:nth-child(10) { left: 95%; animation: snow-fall 39s linear infinite 6s; }
+
+/* Subtle gradient accents on some elements */
+.gradient-border {
+  border: 1px solid transparent;
+  background: 
+    linear-gradient(var(--background), var(--background)) padding-box,
+    linear-gradient(45deg, var(--christmas-red), var(--christmas-green)) border-box;
+}
+
+/* Remove excessive animations and decorations */
+@media (max-width: 768px) {
+  .snowflake {
+    width: 4px;
+    height: 4px;
+    opacity: 0.5;
+  }
+  
+  body::before {
+    opacity: 0.1;
+  }
 }
