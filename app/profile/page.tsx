@@ -90,6 +90,7 @@ async function getUserCustomizations(userId: string) {
 }
 
 // Функция для обновления очков на основе проблем
+// Функция для обновления очков на основе проблем
 async function updateUserPointsBasedOnProblems(userId: string, problemCount: number) {
   const supabase = await createClient()
   
