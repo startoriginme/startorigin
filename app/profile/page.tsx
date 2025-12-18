@@ -436,4 +436,4 @@ export default async function ProfilePage() {
   )
 }
 
-а вот app/profile/page.tsx
+
