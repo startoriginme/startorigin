@@ -1,0 +1,330 @@
+// components/customization-modal.tsx
+"use client"
+
+import { useState, useEffect } from "react"
+import { createClient } from "@/lib/supabase/client"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Badge } from "@/components/ui/badge"
+import { Paintbrush, Crown, Star, Zap, Gem, Check, Coins, Sparkles, X } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+
+type CustomizationItem = {
+  id: string
+  name: string
+  description: string
+  type: string
+  value: string
+  icon: string | null
+  price: number
+  rarity: string
+}
+
+type UserCustomization = {
+  id: string
+  item_id: string
+  is_active: boolean
+  purchased_at: string
+  customization_items: CustomizationItem
+}
+
+interface CustomizationModalProps {
+  userId: string
+  currentPoints: number
+  activeCustomizations: UserCustomization[]
+}
+
+export default function CustomizationModal({ 
+  userId, 
+  currentPoints,
+  activeCustomizations 
+}: CustomizationModalProps) {
+  const [open, setOpen] = useState(false)
+  const [items, setItems] = useState<CustomizationItem[]>([])
+  const [loading, setLoading] = useState(false)
+  const [purchasingId, setPurchasingId] = useState<string | null>(null)
+  const { toast } = useToast()
+
+  useEffect(() => {
+    if (open) {
+      loadShopItems()
+    }
+  }, [open])
+
+  const loadShopItems = async () => {
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from("customization_items")
+        .select("*")
+        .order("price")
+
+      if (error) throw error
+      setItems(data || [])
+    } catch (error) {
+      console.error("Error loading shop items:", error)
+      toast({
+        title: "Error",
+        description: "Failed to load shop items",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const purchaseItem = async (itemId: string) => {
+    setPurchasingId(itemId)
+    try {
+      const supabase = createClient()
+
+      // Get item info
+      const { data: item } = await supabase
+        .from("customization_items")
+        .select("*")
+        .eq("id", itemId)
+        .single()
+
+      if (!item) throw new Error("Item not found")
+
+      // Check if already owned
+      const isOwned = activeCustomizations.some(c => c.item_id === itemId)
+      if (isOwned) {
+        toast({
+          title: "Already Owned",
+          description: "You already own this item",
+        })
+        return
+      }
+
+      // Check points
+      if (currentPoints < item.price) {
+        toast({
+          title: "Not Enough Points",
+          description: `You need ${item.price - currentPoints} more points`,
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Purchase item
+      const { error: purchaseError } = await supabase
+        .from("user_customizations")
+        .insert({
+          user_id: userId,
+          item_id: itemId,
+          is_active: true
+        })
+
+      if (purchaseError) throw purchaseError
+
+      // Deduct points
+      const { error: pointsError } = await supabase
+        .from("profiles")
+        .update({ points: currentPoints - item.price })
+        .eq("id", userId)
+
+      if (pointsError) throw pointsError
+
+      // Record transaction
+      await supabase
+        .from("point_transactions")
+        .insert({
+          user_id: userId,
+          points: -item.price,
+          type: "spent",
+          description: `Purchased: ${item.name}`,
+        })
+
+      toast({
+        title: "Success!",
+        description: `Purchased ${item.name} for ${item.price} points`,
+      })
+
+      // Refresh page
+      setTimeout(() => window.location.reload(), 1000)
+      
+    } catch (error) {
+      console.error("Error purchasing item:", error)
+      toast({
+        title: "Error",
+        description: "Failed to purchase item",
+        variant: "destructive",
+      })
+    } finally {
+      setPurchasingId(null)
+    }
+  }
+
+  const getIcon = (iconName: string | null) => {
+    switch (iconName) {
+      case 'crown': return <Crown className="h-5 w-5" />
+      case 'star': return <Star className="h-5 w-5" />
+      case 'zap': return <Zap className="h-5 w-5" />
+      case 'gem': return <Gem className="h-5 w-5" />
+      default: return <Sparkles className="h-5 w-5" />
+    }
+  }
+
+  const getRarityColor = (rarity: string) => {
+    switch (rarity) {
+      case 'legendary': return "bg-gradient-to-r from-yellow-500 to-amber-600"
+      case 'epic': return "bg-gradient-to-r from-purple-500 to-pink-500"
+      case 'rare': return "bg-gradient-to-r from-blue-500 to-cyan-500"
+      default: return "bg-gradient-to-r from-gray-500 to-gray-700"
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="gap-2">
+          <Paintbrush className="h-4 w-4" />
+          Customize
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Paintbrush className="h-5 w-5" />
+            Customization Shop
+          </DialogTitle>
+          <DialogDescription>
+            Spend your points to customize your profile
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Points Display */}
+          <div className="flex items-center justify-between p-3 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg border border-amber-200">
+            <div className="flex items-center gap-2">
+              <Coins className="h-5 w-5 text-amber-600" />
+              <span className="font-semibold text-amber-900">Your Points:</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-bold text-amber-700">{currentPoints}</span>
+              <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-300">
+                points
+              </Badge>
+            </div>
+          </div>
+
+          {/* Active Customizations */}
+          {activeCustomizations.length > 0 && (
+            <div>
+              <h3 className="font-semibold mb-2 text-sm text-muted-foreground">Active Customizations</h3>
+              <div className="space-y-2">
+                {activeCustomizations.map((custom) => (
+                  <div key={custom.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="text-amber-500">
+                        {getIcon(custom.customization_items?.icon)}
+                      </div>
+                      <div>
+                        <div className="font-medium">{custom.customization_items?.name}</div>
+                        <div className="text-xs text-muted-foreground">{custom.customization_items?.description}</div>
+                      </div>
+                    </div>
+                    <Badge className="bg-green-100 text-green-700 border-green-300">
+                      <Check className="h-3 w-3 mr-1" />
+                      Active
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Shop Items */}
+          <div>
+            <h3 className="font-semibold mb-2 text-sm text-muted-foreground">Available Items</h3>
+            {items.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Paintbrush className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No items available</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {items.map((item) => {
+                  const isOwned = activeCustomizations.some(c => c.item_id === item.id)
+                  const canAfford = currentPoints >= item.price
+                  
+                  return (
+                    <div key={item.id} className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+                      {/* Item Header */}
+                      <div className={`p-3 ${getRarityColor(item.rarity)} text-white`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            {getIcon(item.icon)}
+                            <span className="font-semibold">{item.name}</span>
+                          </div>
+                          <Badge variant="secondary" className="bg-white/20 text-white border-0">
+                            {item.rarity}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-white/90 mt-1">{item.description}</p>
+                      </div>
+
+                      {/* Item Body */}
+                      <div className="p-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Coins className="h-4 w-4 text-amber-600" />
+                            <span className={`font-bold ${canAfford ? 'text-amber-700' : 'text-red-600'}`}>
+                              {item.price} points
+                            </span>
+                          </div>
+                          
+                          {isOwned ? (
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
+                              <Check className="h-3 w-3 mr-1" />
+                              Owned
+                            </Badge>
+                          ) : (
+                            <Button
+                              size="sm"
+                              onClick={() => purchaseItem(item.id)}
+                              disabled={!canAfford || purchasingId === item.id}
+                              className="gap-2"
+                            >
+                              {purchasingId === item.id ? (
+                                <>
+                                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                  Purchasing...
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles className="h-3 w-3" />
+                                  Purchase
+                                </>
+                              )}
+                            </Button>
+                          )}
+                        </div>
+                        
+                        {!canAfford && !isOwned && (
+                          <p className="text-xs text-red-600 mt-2 text-center">
+                            Need {item.price - currentPoints} more points
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="text-xs text-muted-foreground text-center pt-4 border-t">
+          <p>Earn points by publishing problems. Customizations appear in your profile.</p>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
