@@ -89,6 +89,46 @@ async function getUserCustomizations(userId: string) {
   return customizations || []
 }
 
+// Функция для обновления очков на основе проблем
+async function updateUserPointsBasedOnProblems(userId: string, problemCount: number) {
+  const supabase = await createClient()
+  
+  const calculatedPoints = problemCount * 10
+  
+  try {
+    // Получаем текущие очки из базы
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("points")
+      .eq("id", userId)
+      .single()
+
+    // Если очки уже соответствуют расчетным, ничего не делаем
+    if (profile?.points === calculatedPoints) {
+      return calculatedPoints
+    }
+
+    // Обновляем очки в базе
+    const { error } = await supabase
+      .from("profiles")
+      .update({ 
+        points: calculatedPoints,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", userId)
+
+    if (error) {
+      console.error("Error updating points:", error)
+      return profile?.points || calculatedPoints
+    }
+
+    return calculatedPoints
+  } catch (error) {
+    console.error("Error in updateUserPointsBasedOnProblems:", error)
+    return calculatedPoints
+  }
+}
+
 export default async function ProfilePage() {
   const supabase = await createClient()
 
@@ -100,7 +140,7 @@ export default async function ProfilePage() {
     redirect("/auth/login")
   }
 
-  // Fetch user profile with points
+  // Fetch user profile
   const { data: profile } = await supabase
     .from("profiles")
     .select("*")
@@ -123,10 +163,7 @@ export default async function ProfilePage() {
   // Получаем активные кастомизации
   const activeCustomizations = await getUserCustomizations(user.id)
 
-  // Проверяем, что поле points существует (если нет, используем 0)
-  const userPoints = profile.points || 0
-
-  // Fetch user's problems with profiles data
+  // Fetch user's problems
   const { data: problems } = await supabase
     .from("problems")
     .select(`
@@ -140,6 +177,13 @@ export default async function ProfilePage() {
     `)
     .eq("author_id", user.id)
     .order("created_at", { ascending: false })
+
+  // Рассчитываем очки на основе количества проблем
+  const problemCount = problems?.length || 0
+  const calculatedPoints = problemCount * 10
+  
+  // Обновляем очки пользователя в базе данных
+  const userPoints = await updateUserPointsBasedOnProblems(user.id, problemCount)
 
   const getInitials = (name: string | null) => {
     if (!name) return "U"
@@ -368,9 +412,12 @@ export default async function ProfilePage() {
                     <div className="flex items-center gap-2">
                       <span className="text-2xl font-bold text-amber-700">{userPoints}</span>
                       <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-300">
-                        points
+                        {problemCount} × 10 = {userPoints} points
                       </Badge>
                     </div>
+                    <p className="text-xs text-amber-600 mt-1">
+                      {problemCount} problems × 10 points each
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -478,7 +525,7 @@ export default async function ProfilePage() {
                   {/* Статистика */}
                   <div className="flex justify-center gap-6 pt-4">
                     <div className="text-center">
-                      <div className="text-xl font-bold text-primary">{problems?.length || 0}</div>
+                      <div className="text-xl font-bold text-primary">{problemCount}</div>
                       <div className="text-xs text-muted-foreground">Problems</div>
                     </div>
                     <div className="text-center">
@@ -499,7 +546,7 @@ export default async function ProfilePage() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>My Problems ({problems?.length || 0})</CardTitle>
+                <CardTitle>My Problems ({problemCount})</CardTitle>
                 <Link href="/problems/new">
                   <Button size="sm" className="gap-2">
                     <Plus className="h-4 w-4" />
@@ -532,7 +579,7 @@ export default async function ProfilePage() {
                     </Button>
                   </Link>
                   <p className="text-sm mt-2 text-muted-foreground">
-                    Earn <span className="font-bold text-amber-600">10 points</span> for your first problem!
+                    Each problem gives you <span className="font-bold text-amber-600">10 points</span>!
                   </p>
                 </div>
               )}
