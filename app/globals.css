@@ -376,6 +376,95 @@
   opacity: 0.6; /* Более видимые снежинки */
   filter: blur(0.5px);
 }
+@layer utilities {
+  /* Christmas color utilities - minimal */
+  .text-christmas-red {
+    color: var(--christmas-red);
+  }
+  
+  .text-christmas-green {
+    color: var(--christmas-green);
+  }
+  
+  .text-christmas-gold {
+    color: var(--christmas-gold);
+  }
+  
+  .bg-christmas-red {
+    background-color: var(--christmas-red);
+  }
+  
+  .bg-christmas-green {
+    background-color: var(--christmas-green);
+  }
+  
+  .bg-christmas-gold {
+    background-color: var(--christmas-gold);
+  }
+  
+  .border-christmas-red {
+    border-color: var(--christmas-red);
+  }
+  
+  .border-christmas-green {
+    border-color: var(--christmas-green);
+  }
+  
+  .border-christmas-gold {
+    border-color: var(--christmas-gold);
+  }
+  
+  /* Minimal snow animation */
+  .animate-snow-fall {
+    animation: var(--animate-snow-fall);
+  }
+  
+  .animate-twinkle {
+    animation: var(--animate-twinkle);
+  }
+  
+  /* Minimal hover effect */
+  .hover-christmas:hover {
+    background-color: var(--christmas-green) !important;
+    color: var(--snow) !important;
+    border-color: var(--christmas-green) !important;
+  }
+  
+  .text-mint {
+    color: var(--mint);
+  }
+  
+  .bg-mint {
+    background-color: var(--mint);
+  }
+  
+  .border-mint {
+    border-color: var(--mint);
+  }
+  
+  /* Утилиты для Montserrat Black */
+  .font-heading {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 900;
+  }
+  
+  .font-black {
+    font-weight: 900;
+  }
+  
+  /* Уменьшаем логотип */
+  .text-2xl.font-black.uppercase {
+    font-size: 1.25rem !important; /* text-xl вместо text-2xl */
+    line-height: 1.75rem !important;
+  }
+  
+  @media (min-width: 640px) {
+    .text-2xl.font-black.uppercase {
+      font-size: 1.5rem !important; /* Для десктопа чуть больше */
+      line-height: 2rem !important;
+    }
+  }
+}
 
 /* Create minimal snowflakes */
 .snowflake:nth-child(1) { left: 5%; animation: snow-fall 30s linear infinite; }
