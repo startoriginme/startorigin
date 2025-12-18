@@ -1,11 +1,11 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import { Lightbulb, Plus, LogOut, User, ArrowLeft, Share2, Download, LogIn, ShoppingBasket, MessageSquareMore, Edit, Check } from "lucide-react"
+import { Lightbulb, Plus, LogOut, User, ArrowLeft, Share2, Download, LogIn, ShoppingBasket, MessageSquareMore, Edit, Check, Star, Crown, Sparkles, Paintbrush, Gift, ShoppingCart, Trophy, Zap, Coins, Gem } from "lucide-react"
 import { ProblemCard } from "@/components/problem-card"
 import {
   DropdownMenu,
@@ -14,6 +14,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Progress } from "@/components/ui/progress"
 
 // Карта алиасов пользователей
 const userAliases: Record<string, string[]> = {
@@ -72,6 +74,34 @@ async function getAllUsernamesCombined(mainUsername: string, userId: string): Pr
   }
 }
 
+// Получить активные кастомизации пользователя
+async function getUserCustomizations(userId: string) {
+  const supabase = await createClient()
+  
+  const { data: customizations } = await supabase
+    .from("user_customizations")
+    .select(`
+      *,
+      customization_items (*)
+    `)
+    .eq("user_id", userId)
+    .eq("is_active", true)
+
+  return customizations || []
+}
+
+// Получить доступные предметы в магазине
+async function getShopItems() {
+  const supabase = await createClient()
+  
+  const { data: items } = await supabase
+    .from("customization_items")
+    .select("*")
+    .order("price")
+
+  return items || []
+}
+
 export default async function ProfilePage() {
   const supabase = await createClient()
 
@@ -83,8 +113,12 @@ export default async function ProfilePage() {
     redirect("/auth/login")
   }
 
-  // Fetch user profile
-  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+  // Fetch user profile with points
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single()
 
   if (!profile) {
     redirect("/auth/login")
@@ -98,6 +132,15 @@ export default async function ProfilePage() {
   const allUsernames = profile?.username 
     ? await getAllUsernamesCombined(profile.username, user.id)
     : []
+
+  // Получаем активные кастомизации
+  const activeCustomizations = await getUserCustomizations(user.id)
+
+  // Получаем предметы из магазина
+  const shopItems = await getShopItems()
+
+  // Проверяем, что поле points существует (если нет, используем 0)
+  const userPoints = profile.points || 0
 
   // Fetch user's problems with profiles data
   const { data: problems } = await supabase
@@ -124,6 +167,30 @@ export default async function ProfilePage() {
       .slice(0, 2)
   }
 
+  // Получить цвет рамки аватара из кастомизаций
+  const getAvatarBorder = () => {
+    const borderCustomization = activeCustomizations.find(
+      c => c.customization_items?.type === 'avatar_border'
+    )
+    return borderCustomization?.customization_items?.value || ""
+  }
+
+  // Получить цвет фона профиля
+  const getProfileBackground = () => {
+    const bgCustomization = activeCustomizations.find(
+      c => c.customization_items?.type === 'profile_background'
+    )
+    return bgCustomization?.customization_items?.value || ""
+  }
+
+  // Получить кастомный значок
+  const getCustomBadge = () => {
+    const badgeCustomization = activeCustomizations.find(
+      c => c.customization_items?.type === 'badge'
+    )
+    return badgeCustomization?.customization_items
+  }
+
   // Server action for logout
   async function handleLogout() {
     "use server"
@@ -132,7 +199,71 @@ export default async function ProfilePage() {
     redirect("/auth/login")
   }
 
-    return (
+  // Server action for purchasing an item
+  async function purchaseItem(itemId: string) {
+    "use server"
+    const supabase = await createClient()
+
+    // Получаем данные пользователя
+    const { data: userData } = await supabase.auth.getUser()
+    if (!userData.user) {
+      throw new Error("Not authenticated")
+    }
+
+    // Получаем информацию о предмете
+    const { data: item } = await supabase
+      .from("customization_items")
+      .select("*")
+      .eq("id", itemId)
+      .single()
+
+    if (!item) {
+      throw new Error("Item not found")
+    }
+
+    // Проверяем, достаточно ли очков
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("points")
+      .eq("id", userData.user.id)
+      .single()
+
+    if (!profile || profile.points < item.price) {
+      throw new Error("Not enough points")
+    }
+
+    // Начинаем транзакцию
+    // 1. Вычитаем очки
+    await supabase
+      .from("profiles")
+      .update({ points: profile.points - item.price })
+      .eq("id", userData.user.id)
+
+    // 2. Добавляем запись о покупке
+    await supabase
+      .from("user_customizations")
+      .insert({
+        user_id: userData.user.id,
+        item_id: itemId,
+        purchased_at: new Date().toISOString(),
+        is_active: true
+      })
+
+    // 3. Создаем запись в истории транзакций
+    await supabase
+      .from("point_transactions")
+      .insert({
+        user_id: userData.user.id,
+        points: -item.price,
+        type: "spent",
+        description: `Purchased: ${item.name}`,
+        created_at: new Date().toISOString()
+      })
+
+    revalidatePath("/profile")
+  }
+
+  return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="border-b border-border bg-card relative">
@@ -310,117 +441,384 @@ export default async function ProfilePage() {
           </nav>
         </div>
       </header>
+
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 flex-1">
-        <div className="mx-auto max-w-4xl space-y-6">
-          {/* Profile Card */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Profile</CardTitle>
-                <Link href="/profile/edit">
-                  <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-                    <Edit className="h-4 w-4" />
-                    Edit Profile
-                  </Button>
-                </Link>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col items-center text-center gap-4">
-                {/* Кастомный аватар без сжатия */}
-                <div className="relative">
-                  <div className="h-24 w-24 rounded-full overflow-hidden border-2 border-border bg-muted">
-                    {profile?.avatar_url ? (
-                      <img
-                        src={profile.avatar_url}
-                        alt="Profile avatar"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-muted">
-                        <span className="text-2xl font-semibold text-muted-foreground">
-                          {getInitials(profile?.display_name || profile?.username)}
-                        </span>
-                      </div>
-                    )}
+        <div className="mx-auto max-w-6xl space-y-6">
+          {/* Points Display Card */}
+          <Card className="bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-200">
+            <CardContent className="pt-6">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-full bg-amber-100">
+                    <Coins className="h-8 w-8 text-amber-600" />
                   </div>
-                  {/* Галочка верификации */}
-                  {isVerifiedUser && (
-                    <div className="absolute -bottom-1 -right-1 bg-blue-500 rounded-full p-1 border-2 border-background">
-                      <Check className="h-4 w-4 text-white" />
+                  <div>
+                    <h3 className="text-xl font-bold text-amber-900">Your Points</h3>
+                    <div className="flex items-center gap-2">
+                      <span className="text-3xl font-black text-amber-700">{userPoints}</span>
+                      <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-300">
+                        <Sparkles className="h-3 w-3 mr-1" />
+                        Points
+                      </Badge>
                     </div>
-                  )}
+                    <p className="text-sm text-amber-600 mt-1">
+                      Earn points by publishing problems and being active!
+                    </p>
+                  </div>
                 </div>
-                
                 <div className="space-y-2">
-                  <div className="flex flex-wrap items-center justify-center gap-2">
-                    <h2 className="text-2xl font-bold text-foreground break-words">
-                      {profile?.display_name || profile?.username || "Anonymous"}
-                    </h2>
-                    {isVerifiedUser && (
-                      <div className="text-blue-500 flex-shrink-0" title="Verified">
-                        <Check className="h-5 w-5" />
-                      </div>
-                    )}
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-green-100 text-green-700 hover:bg-green-200 border-green-300">
+                      <Plus className="h-3 w-3 mr-1" />
+                      +10 points per problem
+                    </Badge>
+                    <Link href="/problems/new">
+                      <Button size="sm" className="gap-2 bg-amber-600 hover:bg-amber-700">
+                        <Plus className="h-4 w-4" />
+                        Publish Problem
+                      </Button>
+                    </Link>
                   </div>
-                  
-                  {/* Отображаем все username через запятую */}
-                  {allUsernames.length > 0 && (
-                    <div className="flex flex-wrap items-center justify-center gap-1">
-                      {allUsernames.map((userName, index) => (
-                        <span key={userName} className="text-muted-foreground">
-                          @{userName}
-                          {index < allUsernames.length - 1 && <span>, </span>}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  
-                  <p className="text-sm text-muted-foreground">{user.email}</p>
-                  
-                  {profile?.bio && (
-                    <p className="mt-4 text-foreground max-w-2xl">{profile.bio}</p>
-                  )}
+                  <p className="text-xs text-amber-600 text-center md:text-right">
+                    Spend points on customizations in the shop
+                  </p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* User's Problems */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>My Problems ({problems?.length || 0})</CardTitle>
-                <Link href="/problems/new">
-                  <Button size="sm" className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    New Problem
-                  </Button>
-                </Link>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {problems && problems.length > 0 ? (
-                <div className="space-y-4">
-                  {problems.map((problem) => (
-                    <ProblemCard 
-                      key={problem.id} 
-                      problem={problem} 
-                      userId={user.id} 
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="py-8 text-center text-muted-foreground">
-                  <p className="mb-4">You haven't shared any problems yet.</p>
-                  <Link href="/problems/new">
-                    <Button>Share Your First Problem</Button>
-                  </Link>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          {/* Profile and Customizations */}
+          <Tabs defaultValue="profile" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="profile" className="gap-2">
+                <User className="h-4 w-4" />
+                Profile
+              </TabsTrigger>
+              <TabsTrigger value="customization" className="gap-2">
+                <Paintbrush className="h-4 w-4" />
+                Customization Shop
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Profile Tab */}
+            <TabsContent value="profile" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Profile Information</CardTitle>
+                    <Link href="/profile/edit">
+                      <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+                        <Edit className="h-4 w-4" />
+                        Edit Profile
+                      </Button>
+                    </Link>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col md:flex-row items-start gap-6">
+                    {/* Аватар с кастомизациями */}
+                    <div className="relative">
+                      <div 
+                        className={`h-32 w-32 rounded-full overflow-hidden border-4 bg-muted ${getAvatarBorder()}`}
+                        style={{
+                          borderStyle: getAvatarBorder().includes('gradient') ? 'solid' : undefined
+                        }}
+                      >
+                        {profile?.avatar_url ? (
+                          <img
+                            src={profile.avatar_url}
+                            alt="Profile avatar"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-muted">
+                            <span className="text-3xl font-semibold text-muted-foreground">
+                              {getInitials(profile?.display_name || profile?.username)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      {/* Галочка верификации */}
+                      {isVerifiedUser && (
+                        <div className="absolute -bottom-2 -right-2 bg-blue-500 rounded-full p-2 border-2 border-background">
+                          <Check className="h-5 w-5 text-white" />
+                        </div>
+                      )}
+                      {/* Кастомный значок */}
+                      {getCustomBadge() && (
+                        <div className="absolute -top-2 -left-2">
+                          <Badge className="gap-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0">
+                            {getCustomBadge()?.icon === 'crown' && <Crown className="h-3 w-3" />}
+                            {getCustomBadge()?.icon === 'star' && <Star className="h-3 w-3" />}
+                            {getCustomBadge()?.icon === 'trophy' && <Trophy className="h-3 w-3" />}
+                            {getCustomBadge()?.name}
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Информация профиля */}
+                    <div className="flex-1 space-y-4">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h2 className="text-2xl font-bold text-foreground break-words">
+                            {profile?.display_name || profile?.username || "Anonymous"}
+                          </h2>
+                          {isVerifiedUser && (
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
+                              <Check className="h-3 w-3 mr-1" />
+                              Verified
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        {/* Отображаем все username через запятую */}
+                        {allUsernames.length > 0 && (
+                          <div className="flex flex-wrap items-center gap-1 mt-1">
+                            {allUsernames.map((userName, index) => (
+                              <span key={userName} className="text-muted-foreground">
+                                @{userName}
+                                {index < allUsernames.length - 1 && <span>, </span>}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        
+                        <p className="text-sm text-muted-foreground mt-1">{user.email}</p>
+                      </div>
+                      
+                      {profile?.bio && (
+                        <div className="prose prose-sm max-w-none">
+                          <p className="text-foreground">{profile.bio}</p>
+                        </div>
+                      )}
+
+                      {/* Статистика */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-primary">{problems?.length || 0}</div>
+                          <div className="text-sm text-muted-foreground">Problems</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-green-600">{userPoints}</div>
+                          <div className="text-sm text-muted-foreground">Points</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-purple-600">{activeCustomizations.length}</div>
+                          <div className="text-sm text-muted-foreground">Customizations</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-amber-600">
+                            {Math.floor(userPoints / 10)}
+                          </div>
+                          <div className="text-sm text-muted-foreground">Problems Worth</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* User's Problems */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>My Problems ({problems?.length || 0})</CardTitle>
+                    <Link href="/problems/new">
+                      <Button size="sm" className="gap-2">
+                        <Plus className="h-4 w-4" />
+                        New Problem
+                      </Button>
+                    </Link>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {problems && problems.length > 0 ? (
+                    <div className="space-y-4">
+                      {problems.map((problem) => (
+                        <ProblemCard 
+                          key={problem.id} 
+                          problem={problem} 
+                          userId={user.id} 
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="py-8 text-center text-muted-foreground">
+                      <div className="mb-4 flex justify-center">
+                        <Lightbulb className="h-12 w-12 text-muted-foreground/50" />
+                      </div>
+                      <p className="mb-4">You haven't shared any problems yet.</p>
+                      <Link href="/problems/new">
+                        <Button className="gap-2">
+                          <Plus className="h-4 w-4" />
+                          Share Your First Problem
+                        </Button>
+                      </Link>
+                      <p className="text-sm mt-2 text-muted-foreground">
+                        Earn <span className="font-bold text-amber-600">10 points</span> for your first problem!
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Customization Shop Tab */}
+            <TabsContent value="customization" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Paintbrush className="h-5 w-5" />
+                        Customization Shop
+                      </CardTitle>
+                      <CardDescription>
+                        Spend your points to customize your profile appearance
+                      </CardDescription>
+                    </div>
+                    <Badge variant="outline" className="gap-1">
+                      <Coins className="h-3 w-3" />
+                      {userPoints} points available
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {/* Активные кастомизации */}
+                  {activeCustomizations.length > 0 && (
+                    <div className="mb-8">
+                      <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <Sparkles className="h-4 w-4" />
+                        Active Customizations
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {activeCustomizations.map((custom) => (
+                          <div key={custom.id} className="border rounded-lg p-4 bg-gradient-to-br from-green-50 to-emerald-50">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <h4 className="font-medium text-green-800">{custom.customization_items?.name}</h4>
+                                <p className="text-sm text-green-600">{custom.customization_items?.description}</p>
+                                <div className="flex items-center gap-2 mt-2">
+                                  <Badge variant="outline" className="bg-green-100 text-green-700">
+                                    Active
+                                  </Badge>
+                                  <span className="text-xs text-muted-foreground">
+                                    Purchased: {new Date(custom.purchased_at).toLocaleDateString()}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="text-green-600">
+                                {custom.customization_items?.icon === 'crown' && <Crown className="h-6 w-6" />}
+                                {custom.customization_items?.icon === 'star' && <Star className="h-6 w-6" />}
+                                {custom.customization_items?.icon === 'trophy' && <Trophy className="h-6 w-6" />}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Магазин */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <ShoppingCart className="h-4 w-4" />
+                      Available Items
+                    </h3>
+                    
+                    {shopItems.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <ShoppingCart className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                        <p>No items available in the shop yet.</p>
+                        <p className="text-sm">Check back later for new customizations!</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {shopItems.map((item) => {
+                          const isOwned = activeCustomizations.some(c => c.item_id === item.id)
+                          const canAfford = userPoints >= item.price
+                          
+                          return (
+                            <Card key={item.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                              <CardContent className="p-0">
+                                {/* Превью предмета */}
+                                <div className={`p-6 flex items-center justify-center ${item.type === 'avatar_border' ? 'bg-gradient-to-br from-gray-50 to-gray-100' : 'bg-gradient-to-br from-blue-50 to-indigo-50'}`}>
+                                  <div className="text-center">
+                                    <div className="text-4xl mb-2">
+                                      {item.icon === 'crown' && <Crown className="h-12 w-12 mx-auto text-amber-500" />}
+                                      {item.icon === 'star' && <Star className="h-12 w-12 mx-auto text-yellow-500" />}
+                                      {item.icon === 'trophy' && <Trophy className="h-12 w-12 mx-auto text-purple-500" />}
+                                      {item.icon === 'gem' && <Gem className="h-12 w-12 mx-auto text-blue-500" />}
+                                      {item.icon === 'zap' && <Zap className="h-12 w-12 mx-auto text-green-500" />}
+                                    </div>
+                                    {item.type === 'avatar_border' && (
+                                      <div className="flex justify-center">
+                                        <div className={`h-16 w-16 rounded-full border-4 ${item.value}`}>
+                                          <div className="w-full h-full rounded-full bg-gray-200"></div>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                <div className="p-4">
+                                  <div className="flex items-start justify-between mb-2">
+                                    <div>
+                                      <h4 className="font-bold">{item.name}</h4>
+                                      <p className="text-sm text-muted-foreground">{item.description}</p>
+                                    </div>
+                                    <Badge variant={isOwned ? "default" : "outline"} className={isOwned ? "bg-green-100 text-green-700 border-green-300" : ""}>
+                                      {isOwned ? "Owned" : `${item.price} pts`}
+                                    </Badge>
+                                  </div>
+                                  
+                                  <div className="flex items-center justify-between mt-4">
+                                    <div className="text-xs text-muted-foreground">
+                                      Type: <span className="font-medium">{item.type.replace('_', ' ')}</span>
+                                    </div>
+                                    
+                                    {!isOwned ? (
+                                      <form action={purchaseItem.bind(null, item.id)}>
+                                        <Button 
+                                          type="submit"
+                                          size="sm"
+                                          className="gap-2"
+                                          disabled={!canAfford}
+                                        >
+                                          {canAfford ? (
+                                            <>
+                                              <ShoppingCart className="h-3 w-3" />
+                                              Purchase
+                                            </>
+                                          ) : (
+                                            <>
+                                              <Coins className="h-3 w-3" />
+                                              Need {item.price - userPoints} more
+                                            </>
+                                          )}
+                                        </Button>
+                                      </form>
+                                    ) : (
+                                      <Badge variant="secondary" className="gap-1">
+                                        <Check className="h-3 w-3" />
+                                        Active
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
 
@@ -434,4 +832,10 @@ export default async function ProfilePage() {
       </footer>
     </div>
   )
+}
+
+// Helper function for Next.js revalidation
+function revalidatePath(path: string) {
+  // This would be handled by Next.js server actions
+  // In a real implementation, you'd import from 'next/cache'
 }
