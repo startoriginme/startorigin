@@ -12,8 +12,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Paintbrush, Crown, Star, Zap, Gem, Check, Coins, Sparkles, X, Calculator } from "lucide-react"
+import { Paintbrush, Crown, Star, Zap, Gem, Check, Coins, Sparkles, Calculator } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useRouter } from "next/navigation"
 
 type CustomizationItem = {
   id: string
@@ -50,6 +51,7 @@ export default function CustomizationModal({
   const [loading, setLoading] = useState(false)
   const [purchasingId, setPurchasingId] = useState<string | null>(null)
   const { toast } = useToast()
+  const router = useRouter()
 
   useEffect(() => {
     if (open) {
@@ -85,7 +87,7 @@ export default function CustomizationModal({
     try {
       const supabase = createClient()
 
-      // Get item info
+      // 1. Get item info
       const { data: item } = await supabase
         .from("customization_items")
         .select("*")
@@ -94,7 +96,7 @@ export default function CustomizationModal({
 
       if (!item) throw new Error("Item not found")
 
-      // Check if already owned
+      // 2. Check if already owned
       const isOwned = activeCustomizations.some(c => c.item_id === itemId)
       if (isOwned) {
         toast({
@@ -104,9 +106,8 @@ export default function CustomizationModal({
         return
       }
 
-      // Check points
+      // 3. Check points
       if (currentPoints < item.price) {
-        // Calculate how many more problems needed
         const moreProblemsNeeded = Math.ceil((item.price - currentPoints) / 10)
         toast({
           title: "Not Enough Points",
@@ -116,40 +117,60 @@ export default function CustomizationModal({
         return
       }
 
-      // Purchase item
+      // 4. Calculate new points
+      const newPoints = currentPoints - item.price
+
+      // 5. Start transaction
+      // First, get current problems count to recalculate points later
+      const { data: problems } = await supabase
+        .from("problems")
+        .select("id")
+        .eq("author_id", userId)
+
+      // 6. Create customization record
       const { error: purchaseError } = await supabase
         .from("user_customizations")
         .insert({
           user_id: userId,
           item_id: itemId,
-          is_active: true
+          is_active: true,
+          purchased_at: new Date().toISOString()
         })
 
       if (purchaseError) throw purchaseError
 
-      // Record transaction
-      await supabase
+      // 7. Record transaction
+      const { error: transactionError } = await supabase
         .from("point_transactions")
         .insert({
           user_id: userId,
           points: -item.price,
           type: "spent",
           description: `Purchased: ${item.name}`,
+          created_at: new Date().toISOString()
         })
+
+      if (transactionError) throw transactionError
 
       toast({
         title: "Success!",
         description: `Purchased ${item.name} for ${item.price} points`,
       })
 
-      // Refresh page
-      setTimeout(() => window.location.reload(), 1000)
+      // 8. Close modal and refresh
+      setOpen(false)
+      router.refresh() // Refresh server components
       
-    } catch (error) {
+      // Force reload to show updated points and customizations
+      setTimeout(() => {
+        window.location.reload()
+      }, 500)
+      
+    } catch (error: any) {
       console.error("Error purchasing item:", error)
       toast({
         title: "Error",
-        description: "Failed to purchase item",
+        description: error.message || "Failed to purchase item",
         variant: "destructive",
       })
     } finally {
@@ -242,6 +263,9 @@ export default function CustomizationModal({
                       <div>
                         <div className="font-medium">{custom.customization_items?.name}</div>
                         <div className="text-xs text-muted-foreground">{custom.customization_items?.description}</div>
+                        <div className="text-xs text-muted-foreground">
+                          Type: {custom.customization_items?.type.replace('_', ' ')}
+                        </div>
                       </div>
                     </div>
                     <Badge className="bg-green-100 text-green-700 border-green-300">
@@ -289,6 +313,9 @@ export default function CustomizationModal({
                           </Badge>
                         </div>
                         <p className="text-sm text-white/90 mt-1">{item.description}</p>
+                        <div className="text-xs text-white/70 mt-1">
+                          Type: {item.type.replace('_', ' ')}
+                        </div>
                       </div>
 
                       {/* Item Body */}
@@ -350,6 +377,7 @@ export default function CustomizationModal({
 
         <div className="text-xs text-muted-foreground text-center pt-4 border-t">
           <p>Publish problems to earn more points. Each problem = 10 points.</p>
+          <p className="mt-1">Customizations appear instantly on your profile.</p>
         </div>
       </DialogContent>
     </Dialog>
