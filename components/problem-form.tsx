@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
@@ -13,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { X, Loader2, Bold, Italic, List, Link as LinkIcon, Heading, Quote, Code, Type, AlertTriangle } from "lucide-react"
+import { X, Loader2, Bold, Italic, List, Link as LinkIcon, Heading, Quote, Code, Type, AlertTriangle, Shield, Sparkles } from "lucide-react"
 import {
   ToggleGroup,
   ToggleGroupItem,
@@ -79,32 +78,129 @@ const STATUS_OPTIONS = [
   { value: "project", label: "Project", description: "Project seeking collaborators" },
 ]
 
-// Gemini API ключ
+// Gemini API key
 const GEMINI_API_KEY = "AIzaSyAe77eTrIa5FRKDgASOkF-D1PG8F0rzoVY"
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent"
 
-// Функция для AI-модерации
-async function moderateWithAI(title: string, description: string): Promise<{ isAllowed: boolean; reason?: string }> {
-  try {
-    const prompt = `
-Пожалуйста, проанализируй следующий контент и определи, можно ли его опубликовать на платформе для решения проблем. Оцени по этим критериям:
+// EXTENDED LIST OF FORBIDDEN WORDS AND PATTERNS
+const EXTENDED_BAD_PATTERNS = [
+  // RUSSIAN PROFANITY AND INSULTS
+  /[хx][уy][ёеийяю]/i,
+  /[пp][i1!][з3z][дd]/i,
+  /[еe][б6][аa@л]/i,
+  /[б6][лl][яa@][дdтt]/i,
+  /[сc][уy][кk][аa@]/i,
+  /[гg][аa][нn][дd][оo0][нn]/i,
+  /[пp][i1][дd][оo0][рp]/i,
+  /[мm][уy][дd][аa@][кk]/i,
+  /[дd][оo0][лl][б6][оo0ё][б6]/i,
+  /[шsh][лl][юu][хxh][аa@]/i,
+  /[пp][рr][оo0][сc][тt][иi][тt][уy][тt][кk][аa@]/i,
+  
+  // ENGLISH PROFANITY
+  /fuck|shit|bitch|asshole|cunt|dick|pussy|whore|slut|motherfucker|bastard|damn|hell/i,
+  
+  // ABBREVIATIONS AND EUPHEMISMS (WTF, OMG, etc.)
+  /wtf|omg|lol|lmfao|rofl|stfu|gtfo|fk|sh[i1]t|b[i1]tch|@ss|d[i1]ck|n[i1]gga|n[i1]gger/i,
+  /(?:what[\s]*the[\s]*fuck|oh[\s]*my[\s]*god|shut[\s]*the[\s]*fuck[\s]*up)/i,
+  
+  // BYPASS ATTEMPTS (numbers, symbols)
+  /[хx][*\-_\.][йy]/i,
+  /[пp][*\-_\.][з3z][дd]/i,
+  /[еe][*\-_\.][б6]/i,
+  /[б6][*\-_\.][лl][яa@]/i,
+  /\b[хx][0-9]+[йy]\b/i,
+  /\b[пp][0-9]+[з3z][дd]\b/i,
+  
+  // RACIST AND DISCRIMINATORY EXPRESSIONS
+  /nigga|negro|churka|hach|zhid|pindos|black.*(trash|scum)|white.*(trash|scum)/i,
+  
+  // THREATS AND VIOLENCE
+  /\bkill\b|\bmurder\b|\bstab\b|\bexplode\b|\brape\b|\bbeat\b|\bshoot\b/i,
+  /\bmurder\b|\bterror\b|\bextremism\b/i,
+  
+  // EXTREMISM
+  /nazi|fascist|islamist|terrorist|radical|extremist/i,
+  
+  // INAPPROPRIATE TOPICS
+  /pedophile|incest|zoophile|necrophile/i,
+  
+  // "BRAINROT" CONTENT AND MEMES
+  /skibidi|gyatt|rizzler|sigma|fanum|tax|🗣️🔥|🔥🔥🔥|💀💀💀/i,
+  /ohio|volume|camera|water|camera.*water/i,
+  
+  // SPAM AND NONSENSE TEXT
+  /(.)\1{5,}/, // 5+ repeating characters
+  /\b(\w+)\s+\1\s+\1\b/i, // 3+ repeating words
+  /[A-ZА-Я]{10,}/, // 10+ uppercase in a row
+  /\b[\w\.]+@[\w\.]+\.\w+\b.*\b[\w\.]+@[\w\.]+\.\w+\b/i, // Multiple emails
+  /http[s]?:\/\/.*http[s]?:\/\//i, // Multiple links
+]
 
-1. Содержит ли текст оскорбительные выражения, мат, ругательства или непристойности?
-2. Является ли контент вредоносным, опасным или пропагандирующим насилие?
-3. Содержит ли текст признаки брейнрота (бессмысленный набор слов, спам, повторяющиеся символы)?
-4. Является ли контент законным и соответствующим общепринятым нормам морали?
-
-Ответь ТОЛЬКО в формате JSON:
-{
-  "isAllowed": true/false,
-  "reason": "Краткое объяснение на русском языке, если не разрешено"
+// Check for forbidden patterns
+function containsForbiddenPatterns(text: string): { found: boolean; patterns: string[] } {
+  const patterns: string[] = []
+  
+  // Check patterns
+  EXTENDED_BAD_PATTERNS.forEach((pattern, index) => {
+    if (pattern.test(text)) {
+      patterns.push(`Pattern ${index + 1}`)
+    }
+  })
+  
+  // Spam check (too many uppercase)
+  const words = text.split(/\s+/)
+  const upperCaseWords = words.filter(word => /^[A-ZА-ЯЁ]{3,}$/.test(word))
+  if (upperCaseWords.length > words.length * 0.3 && words.length > 5) {
+    patterns.push("Too many uppercase words (spam)")
+  }
+  
+  // Check for nonsense text (many short repetitions)
+  const shortRepeats = text.match(/(\b\w{1,3}\b\s+){5,}/g)
+  if (shortRepeats) {
+    patterns.push("Repetitive short words")
+  }
+  
+  return {
+    found: patterns.length > 0,
+    patterns
+  }
 }
 
-Контент для проверки:
+// ENHANCED AI MODERATION
+async function moderateWithAI(title: string, description: string): Promise<{ 
+  isAllowed: boolean; 
+  reason?: string;
+  confidence?: number;
+  detectedIssues?: string[];
+}> {
+  try {
+    const prompt = `
+You are a strict content moderator for a problem-solving platform. Check the following content against ALL these criteria:
 
-Заголовок: ${title}
+1. PROFANITY: Contains profanity, insults, obscenities?
+2. ABBREVIATIONS: Contains WTF, OMG, STFU, LMAO and similar abbreviations?
+3. FILTER BYPASS: Attempts to bypass filters using symbols (*), numbers, letter replacements?
+4. BRAINROT: Contains nonsense text, spam, repetitions, "skibidi toilet", "gyatt" memes?
+5. DISCRIMINATION: Contains racism, sexism, xenophobia, homophobia?
+6. THREATS: Contains threats, calls to violence, extremism?
+7. SCAMS: Contains offers about earnings, investments, sale of prohibited goods?
+8. SPAM: Contains advertising, links, contact information, calls to go elsewhere?
+9. INAPPROPRIATE TOPICS: Contains pornography, violence, illegal activity?
 
-Описание: ${description}
+Return ONLY JSON:
+{
+  "isAllowed": true/false,
+  "reason": "Brief explanation in English if not allowed",
+  "confidence": number from 0 to 1 (confidence in decision),
+  "detectedIssues": ["list of detected problems"]
+}
+
+Content to check:
+
+TITLE: ${title}
+
+DESCRIPTION: ${description}
     `
 
     const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
@@ -124,8 +220,28 @@ async function moderateWithAI(title: string, description: string): Promise<{ isA
         ],
         generationConfig: {
           temperature: 0.1,
-          maxOutputTokens: 500,
-        }
+          maxOutputTokens: 1000,
+          topP: 0.8,
+          topK: 40,
+        },
+        safetySettings: [
+          {
+            category: "HARM_CATEGORY_HARASSMENT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_HATE_SPEECH",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          }
+        ]
       })
     })
 
@@ -136,63 +252,125 @@ async function moderateWithAI(title: string, description: string): Promise<{ isA
     const data = await response.json()
     const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}"
     
-    // Извлекаем JSON из ответа
+    // Extract JSON from response
     const jsonMatch = responseText.match(/\{[\s\S]*\}/)
     if (jsonMatch) {
       try {
         const result = JSON.parse(jsonMatch[0])
         return {
           isAllowed: result.isAllowed === true,
-          reason: result.reason || "Контент не соответствует правилам платформы"
+          reason: result.reason || "Content does not comply with platform rules",
+          confidence: result.confidence || 0.5,
+          detectedIssues: result.detectedIssues || []
         }
       } catch (e) {
         console.error("Failed to parse Gemini response:", e)
         return {
           isAllowed: false,
-          reason: "Ошибка при проверке контента. Пожалуйста, переформулируйте текст."
+          reason: "Error checking content. Please rephrase your text.",
+          confidence: 0.3,
+          detectedIssues: ["Failed to parse AI response"]
         }
       }
     } else {
-      // Если не нашли JSON, проверяем по ключевым словам в ответе
+      // If no JSON found, look for keywords in response
       const lowerResponse = responseText.toLowerCase()
-      if (lowerResponse.includes("not allowed") || 
-          lowerResponse.includes("отказано") || 
-          lowerResponse.includes("запрещено") ||
-          lowerResponse.includes("rejected")) {
-        return {
-          isAllowed: false,
-          reason: "Контент не прошел автоматическую проверку"
-        }
+      const negativeKeywords = ["not allowed", "rejected", "violates", "against", "prohibited"]
+      const isNegative = negativeKeywords.some(keyword => lowerResponse.includes(keyword))
+      
+      return {
+        isAllowed: !isNegative,
+        reason: isNegative ? "Content failed automatic check" : "Check passed",
+        confidence: isNegative ? 0.8 : 0.6,
+        detectedIssues: isNegative ? ["AI detected violations"] : []
       }
-      return { isAllowed: true }
     }
   } catch (error) {
     console.error("AI moderation failed:", error)
-    // В случае ошибки API пропускаем модерацию, но предупреждаем пользователя
-    return {
-      isAllowed: true,
-      reason: "Система проверки временно недоступна. Публикуя контент, вы подтверждаете, что он соответствует правилам платформы."
-    }
+    // If API error, use basic check
+    return moderateWithBasic(title, description)
   }
 }
 
-// Базовая проверка на плохие слова (дополнительная защита)
-const BAD_WORDS = [
-  // Русский мат (частично)
-  'бля', 'блять', 'пизд', 'хуй', 'хуя', 'еба', 'ебал',
-  // Английские плохие слова
-  'fuck', 'shit', 'asshole', 'bitch', 'cunt', 'dick', 'pussy',
-  // Другие непристойности
-  'nigger', 'nigga', 'chink', 'kike', 'retard',
-  // Brainrot шаблоны
-  'skibidi', 'gyatt', 'rizzler', 'sigma', '🗣️🔥', '🗣️', '🔥🔥🔥',
-  // Спам шаблоны
-  '!!!!!!!!', '?????', '$$$$$', '&&&&&', '******'
-]
+// Basic check (fallback)
+function moderateWithBasic(title: string, description: string): { 
+  isAllowed: boolean; 
+  reason?: string;
+  confidence?: number;
+  detectedIssues?: string[];
+} {
+  const fullText = `${title} ${description}`
+  const patternCheck = containsForbiddenPatterns(fullText)
+  
+  if (patternCheck.found) {
+    return {
+      isAllowed: false,
+      reason: "Content contains prohibited words or patterns",
+      confidence: 0.9,
+      detectedIssues: patternCheck.patterns
+    }
+  }
+  
+  return {
+    isAllowed: true,
+    confidence: 0.5,
+    detectedIssues: []
+  }
+}
 
-function containsBadWords(text: string): boolean {
-  const lowerText = text.toLowerCase()
-  return BAD_WORDS.some(word => lowerText.includes(word))
+// Function to add points to user profile
+async function addPointsToUser(userId: string, points: number) {
+  const supabase = createClient()
+  
+  try {
+    // First, get current points
+    const { data: profile, error: fetchError } = await supabase
+      .from("profiles")
+      .select("points")
+      .eq("id", userId)
+      .single()
+
+    if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is "not found"
+      console.error("Error fetching user points:", fetchError)
+      return
+    }
+
+    const currentPoints = profile?.points || 0
+    const newPoints = currentPoints + points
+
+    // Update points in profiles table
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .update({ 
+        points: newPoints,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", userId)
+
+    if (updateError) {
+      console.error("Error updating points:", updateError)
+      return
+    }
+
+    // Create a transaction record
+    const { error: transactionError } = await supabase
+      .from("point_transactions")
+      .insert({
+        user_id: userId,
+        points: points,
+        type: "earned",
+        description: "Published a problem",
+        created_at: new Date().toISOString()
+      })
+
+    if (transactionError) {
+      console.error("Error creating transaction record:", transactionError)
+    }
+
+    console.log(`Added ${points} points to user ${userId}. Total: ${newPoints}`)
+  } catch (error) {
+    console.error("Error in addPointsToUser:", error)
+  }
 }
 
 export function ProblemForm({ userId, initialData }: ProblemFormProps) {
@@ -208,12 +386,28 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [isModerating, setIsModerating] = useState(false)
   const [moderationWarning, setModerationWarning] = useState<string | null>(null)
+  const [moderationDetails, setModerationDetails] = useState<string[]>([])
+  const [pointsAwarded, setPointsAwarded] = useState(false)
   const [linkDialogOpen, setLinkDialogOpen] = useState(false)
   const [linkUrl, setLinkUrl] = useState("")
   const [linkText, setLinkText] = useState("")
   
   const router = useRouter()
   const supabase = createClient()
+
+  // PRELIMINARY CHECK ON INPUT
+  const checkContent = (text: string) => {
+    if (text.length < 5) return
+    
+    const patternCheck = containsForbiddenPatterns(text)
+    if (patternCheck.found) {
+      setModerationWarning("Suspicious patterns detected")
+      setModerationDetails(patternCheck.patterns.slice(0, 3))
+    } else {
+      setModerationWarning(null)
+      setModerationDetails([])
+    }
+  }
 
   const handleAddTag = () => {
     if (tagInput.trim() && !tags.includes(tagInput.trim()) && tags.length < 5) {
@@ -226,7 +420,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
     setTags(tags.filter((tag) => tag !== tagToRemove))
   }
 
-  // Функции форматирования текста
+  // Text formatting functions
   const insertTextAtCursor = (before: string, after: string = "", defaultText: string = "") => {
     const textarea = document.getElementById("description") as HTMLTextAreaElement
     if (!textarea) return
@@ -239,7 +433,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
     const newText = description.substring(0, start) + before + textToInsert + after + description.substring(end)
     setDescription(newText)
     
-    // Фокус обратно на textarea
+    // Focus back to textarea
     setTimeout(() => {
       textarea.focus()
       const newCursorPos = start + before.length + textToInsert.length + after.length
@@ -288,7 +482,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
     const markdownLink = `[${linkText.trim()}](${linkUrl.trim()})`
     insertTextAtCursor("", "", markdownLink)
     
-    // Сбросить значения
+    // Reset values
     setLinkUrl("")
     setLinkText("")
     setLinkDialogOpen(false)
@@ -302,38 +496,58 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
     setIsModerating(true)
     setError(null)
     setModerationWarning(null)
+    setModerationDetails([])
+    setPointsAwarded(false)
 
-    // Валидация
+    // VALIDATION
     if (!title.trim() || !description.trim()) {
       setError("Title and description are required")
       setIsModerating(false)
       return
     }
 
-    // Базовая проверка на плохие слова
-    if (containsBadWords(title) || containsBadWords(description)) {
-      setError("Ваш контент содержит недопустимые слова или выражения. Пожалуйста, переформулируйте текст.")
+    if (title.length < 10) {
+      setError("Title must be at least 10 characters")
+      setIsModerating(false)
+      return
+    }
+
+    if (description.length < 50) {
+      setError("Description must be at least 50 characters")
+      setIsModerating(false)
+      return
+    }
+
+    // BASIC CHECK FOR FORBIDDEN PATTERNS
+    const patternCheck = containsForbiddenPatterns(title + " " + description)
+    if (patternCheck.found) {
+      setError(`Content contains prohibited elements: ${patternCheck.patterns.join(", ")}`)
+      setModerationDetails(patternCheck.patterns)
       setIsModerating(false)
       return
     }
 
     try {
-      // AI-модерация
+      // AI MODERATION
       const moderationResult = await moderateWithAI(title.trim(), description.trim())
       
       if (!moderationResult.isAllowed) {
-        setError(`Контент не прошел модерацию: ${moderationResult.reason}`)
+        setError(`Content failed moderation: ${moderationResult.reason}`)
+        if (moderationResult.detectedIssues) {
+          setModerationDetails(moderationResult.detectedIssues)
+        }
         setIsModerating(false)
         return
       }
 
-      if (moderationResult.reason) {
+      if (moderationResult.reason && moderationResult.reason.includes("attention")) {
         setModerationWarning(moderationResult.reason)
       }
 
       setIsModerating(false)
       setIsLoading(true)
 
+      // PREPARE DATA FOR DATABASE
       const problemData = {
         title: title.trim(),
         description: description.trim(),
@@ -344,7 +558,12 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
         looking_for_cofounder: lookingForCofounder,
         author_id: userId,
         updated_at: new Date().toISOString(),
+        moderation_status: moderationResult.confidence && moderationResult.confidence > 0.8 ? "approved" : "pending_review",
+        moderation_confidence: moderationResult.confidence || 0.5,
+        moderation_issues: moderationResult.detectedIssues || [],
       }
+
+      let problemId: string | null = null
 
       if (initialData) {
         // Update existing problem
@@ -359,6 +578,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
           throw new Error(`Failed to update: ${updateError.message}`)
         }
         
+        problemId = initialData.id
         router.push(`/problems/${initialData.id}`)
         router.refresh()
       } else {
@@ -375,6 +595,12 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
         }
         
         if (data?.id) {
+          problemId = data.id
+          
+          // AWARD 10 POINTS FOR PUBLISHING A PROBLEM
+          await addPointsToUser(userId, 10)
+          setPointsAwarded(true)
+          
           router.push(`/problems/${data.id}`)
           router.refresh()
         } else {
@@ -384,7 +610,6 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
     } catch (error: unknown) {
       console.error("Form submission error:", error)
       
-      // Более информативные сообщения об ошибках
       if (error instanceof Error) {
         if (error.message.includes("Failed to fetch")) {
           setError("Network error. Please check your connection.")
@@ -411,12 +636,41 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
     <Card>
       <CardContent className="pt-6">
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* STRICT MODERATION BANNER */}
+          <Alert className="bg-blue-50 border-blue-200">
+            <Shield className="h-4 w-4 text-blue-600" />
+            <AlertTitle className="text-blue-800">Strict moderation enabled</AlertTitle>
+            <AlertDescription className="text-blue-700 text-sm">
+              All publications go through enhanced AI check. Prohibited: profanity, abbreviations (WTF, OMG), brainrot content, filter bypass, spam.
+            </AlertDescription>
+          </Alert>
+
           {moderationWarning && !error && (
             <Alert className="bg-amber-50 border-amber-200">
               <AlertTriangle className="h-4 w-4 text-amber-600" />
-              <AlertTitle className="text-amber-800">Внимание</AlertTitle>
+              <AlertTitle className="text-amber-800">Warning</AlertTitle>
               <AlertDescription className="text-amber-700 text-sm">
                 {moderationWarning}
+                {moderationDetails.length > 0 && (
+                  <div className="mt-2">
+                    <p className="font-semibold">Detected:</p>
+                    <ul className="list-disc list-inside text-xs">
+                      {moderationDetails.slice(0, 3).map((issue, idx) => (
+                        <li key={idx}>{issue}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {pointsAwarded && (
+            <Alert className="bg-green-50 border-green-200">
+              <Sparkles className="h-4 w-4 text-green-600" />
+              <AlertTitle className="text-green-800">Points Awarded!</AlertTitle>
+              <AlertDescription className="text-green-700 text-sm">
+                You earned <span className="font-bold">10 points</span> for publishing a problem! Use them to buy customizations in your profile.
               </AlertDescription>
             </Alert>
           )}
@@ -427,12 +681,21 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               id="title"
               placeholder="What problem are you facing?"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => {
+                setTitle(e.target.value)
+                checkContent(e.target.value)
+              }}
               required
               maxLength={200}
               disabled={isLoading || isModerating}
+              className={moderationWarning ? "border-amber-300" : ""}
             />
-            <p className="text-xs text-muted-foreground">{title.length}/200 characters</p>
+            <div className="flex justify-between items-center">
+              <p className="text-xs text-muted-foreground">{title.length}/200 characters</p>
+              {title.length < 10 && title.length > 0 && (
+                <p className="text-xs text-amber-600">Minimum 10 characters</p>
+              )}
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -443,7 +706,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               </div>
             </div>
             
-            {/* Панель инструментов форматирования */}
+            {/* Formatting toolbar */}
             <TooltipProvider>
               <div className="flex items-center gap-1 p-2 border rounded-t-lg bg-muted/50">
                 <ToggleGroup type="multiple" className="flex-wrap gap-1">
@@ -582,32 +845,25 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               id="description"
               placeholder="Describe the problem in detail... You can use Markdown for formatting."
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                setDescription(e.target.value)
+                checkContent(e.target.value)
+              }}
               required
               rows={8}
               maxLength={2000}
               disabled={isLoading || isModerating}
-              className="rounded-t-none focus:ring-2 focus:ring-primary"
+              className={`rounded-t-none focus:ring-2 focus:ring-primary ${moderationWarning ? "border-amber-300" : ""}`}
             />
             <div className="flex justify-between items-center">
               <p className="text-xs text-muted-foreground">{description.length}/2000 characters</p>
-              <div className="text-xs text-muted-foreground">
-                <span className="inline-flex items-center gap-1">
-                  <Bold className="h-3 w-3" /> **bold**
-                </span>
-                <span className="mx-2">•</span>
-                <span className="inline-flex items-center gap-1">
-                  <Italic className="h-3 w-3" /> *italic*
-                </span>
-                <span className="mx-2">•</span>
-                <span className="inline-flex items-center gap-1">
-                  <LinkIcon className="h-3 w-3" /> [text](url)
-                </span>
-              </div>
+              {description.length < 50 && description.length > 0 && (
+                <p className="text-xs text-amber-600">Minimum 50 characters</p>
+              )}
             </div>
           </div>
 
-          {/* Status field - теперь всегда виден */}
+          {/* Status field */}
           <div className="space-y-2">
             <Label htmlFor="status">Status *</Label>
             <Select 
@@ -725,9 +981,16 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
           {error && (
             <div className="rounded-md bg-destructive/10 p-3">
               <p className="text-sm text-destructive font-medium">Error: {error}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Please check if the database has the required columns and RLS policies.
-              </p>
+              {moderationDetails.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-xs font-medium">Details:</p>
+                  <ul className="text-xs text-muted-foreground list-disc list-inside">
+                    {moderationDetails.slice(0, 5).map((detail, idx) => (
+                      <li key={idx}>{detail}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
 
@@ -736,7 +999,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               {isModerating ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Проверка контента...
+                  Strict content check...
                 </>
               ) : isLoading ? (
                 <>
@@ -744,7 +1007,10 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
                   {initialData ? "Updating..." : "Publishing..."}
                 </>
               ) : (
-                initialData ? "Update Problem" : "Publish Problem"
+                <>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  {initialData ? "Update Problem" : "Publish Problem (+10 points)"}
+                </>
               )}
             </Button>
             <Button 
@@ -757,9 +1023,23 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
             </Button>
           </div>
 
-          <div className="text-xs text-muted-foreground text-center">
-            <p>Все публикации проходят автоматическую проверку на соответствие правилам платформы.</p>
-            <p>Запрещены: мат, оскорбления, спам, брейнрот и непристойный контент.</p>
+          <div className="rounded-lg border p-4 bg-muted/30">
+            <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              Strict Moderation Rules:
+            </h3>
+            <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+              <li><strong>Prohibited profanity and insults</strong> in any language</li>
+              <li><strong>Prohibited abbreviations:</strong> WTF, OMG, STFU, LMAO, ROFL and similar</li>
+              <li><strong>Prohibited "brainrot" content:</strong> skibidi, gyatt, sigma, Ohio memes</li>
+              <li><strong>Prohibited filter bypass attempts:</strong> symbols (*), numbers, letter replacements</li>
+              <li><strong>Prohibited spam:</strong> ALL CAPS, repetitions, nonsense text</li>
+              <li><strong>Prohibited discrimination:</strong> racism, sexism, xenophobia</li>
+              <li><strong>Prohibited threats and calls to violence</strong></li>
+              <li>Content is checked by AI and may be manually removed</li>
+              <li>Violations lead to account ban</li>
+              <li className="font-bold text-green-600">Earn 10 points for every published problem!</li>
+            </ul>
           </div>
         </form>
       </CardContent>
