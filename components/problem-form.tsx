@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { X, Loader2, Bold, Italic, List, Link as LinkIcon, Heading, Quote, Code, Type } from "lucide-react"
+import { X, Loader2, Bold, Italic, List, Link as LinkIcon, Heading, Quote, Code, Type, AlertTriangle } from "lucide-react"
 import {
   ToggleGroup,
   ToggleGroupItem,
@@ -32,6 +32,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert"
 
 type ProblemFormProps = {
   userId: string
@@ -74,6 +79,122 @@ const STATUS_OPTIONS = [
   { value: "project", label: "Project", description: "Project seeking collaborators" },
 ]
 
+// Gemini API ключ
+const GEMINI_API_KEY = "AIzaSyAe77eTrIa5FRKDgASOkF-D1PG8F0rzoVY"
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent"
+
+// Функция для AI-модерации
+async function moderateWithAI(title: string, description: string): Promise<{ isAllowed: boolean; reason?: string }> {
+  try {
+    const prompt = `
+Пожалуйста, проанализируй следующий контент и определи, можно ли его опубликовать на платформе для решения проблем. Оцени по этим критериям:
+
+1. Содержит ли текст оскорбительные выражения, мат, ругательства или непристойности?
+2. Является ли контент вредоносным, опасным или пропагандирующим насилие?
+3. Содержит ли текст признаки брейнрота (бессмысленный набор слов, спам, повторяющиеся символы)?
+4. Является ли контент законным и соответствующим общепринятым нормам морали?
+
+Ответь ТОЛЬКО в формате JSON:
+{
+  "isAllowed": true/false,
+  "reason": "Краткое объяснение на русском языке, если не разрешено"
+}
+
+Контент для проверки:
+
+Заголовок: ${title}
+
+Описание: ${description}
+    `
+
+    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                text: prompt
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 500,
+        }
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error(`Gemini API error: ${response.status}`)
+    }
+
+    const data = await response.json()
+    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}"
+    
+    // Извлекаем JSON из ответа
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/)
+    if (jsonMatch) {
+      try {
+        const result = JSON.parse(jsonMatch[0])
+        return {
+          isAllowed: result.isAllowed === true,
+          reason: result.reason || "Контент не соответствует правилам платформы"
+        }
+      } catch (e) {
+        console.error("Failed to parse Gemini response:", e)
+        return {
+          isAllowed: false,
+          reason: "Ошибка при проверке контента. Пожалуйста, переформулируйте текст."
+        }
+      }
+    } else {
+      // Если не нашли JSON, проверяем по ключевым словам в ответе
+      const lowerResponse = responseText.toLowerCase()
+      if (lowerResponse.includes("not allowed") || 
+          lowerResponse.includes("отказано") || 
+          lowerResponse.includes("запрещено") ||
+          lowerResponse.includes("rejected")) {
+        return {
+          isAllowed: false,
+          reason: "Контент не прошел автоматическую проверку"
+        }
+      }
+      return { isAllowed: true }
+    }
+  } catch (error) {
+    console.error("AI moderation failed:", error)
+    // В случае ошибки API пропускаем модерацию, но предупреждаем пользователя
+    return {
+      isAllowed: true,
+      reason: "Система проверки временно недоступна. Публикуя контент, вы подтверждаете, что он соответствует правилам платформы."
+    }
+  }
+}
+
+// Базовая проверка на плохие слова (дополнительная защита)
+const BAD_WORDS = [
+  // Русский мат (частично)
+  'бля', 'блять', 'пизд', 'хуй', 'хуя', 'еба', 'ебал',
+  // Английские плохие слова
+  'fuck', 'shit', 'asshole', 'bitch', 'cunt', 'dick', 'pussy',
+  // Другие непристойности
+  'nigger', 'nigga', 'chink', 'kike', 'retard',
+  // Brainrot шаблоны
+  'skibidi', 'gyatt', 'rizzler', 'sigma', '🗣️🔥', '🗣️', '🔥🔥🔥',
+  // Спам шаблоны
+  '!!!!!!!!', '?????', '$$$$$', '&&&&&', '******'
+]
+
+function containsBadWords(text: string): boolean {
+  const lowerText = text.toLowerCase()
+  return BAD_WORDS.some(word => lowerText.includes(word))
+}
+
 export function ProblemForm({ userId, initialData }: ProblemFormProps) {
   const [title, setTitle] = useState(initialData?.title || "")
   const [description, setDescription] = useState(initialData?.description || "")
@@ -85,6 +206,8 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
   const [lookingForCofounder, setLookingForCofounder] = useState(initialData?.looking_for_cofounder || false)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isModerating, setIsModerating] = useState(false)
+  const [moderationWarning, setModerationWarning] = useState<string | null>(null)
   const [linkDialogOpen, setLinkDialogOpen] = useState(false)
   const [linkUrl, setLinkUrl] = useState("")
   const [linkText, setLinkText] = useState("")
@@ -174,19 +297,43 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (isLoading) return
+    if (isLoading || isModerating) return
     
-    setIsLoading(true)
+    setIsModerating(true)
     setError(null)
+    setModerationWarning(null)
 
     // Валидация
     if (!title.trim() || !description.trim()) {
       setError("Title and description are required")
-      setIsLoading(false)
+      setIsModerating(false)
+      return
+    }
+
+    // Базовая проверка на плохие слова
+    if (containsBadWords(title) || containsBadWords(description)) {
+      setError("Ваш контент содержит недопустимые слова или выражения. Пожалуйста, переформулируйте текст.")
+      setIsModerating(false)
       return
     }
 
     try {
+      // AI-модерация
+      const moderationResult = await moderateWithAI(title.trim(), description.trim())
+      
+      if (!moderationResult.isAllowed) {
+        setError(`Контент не прошел модерацию: ${moderationResult.reason}`)
+        setIsModerating(false)
+        return
+      }
+
+      if (moderationResult.reason) {
+        setModerationWarning(moderationResult.reason)
+      }
+
+      setIsModerating(false)
+      setIsLoading(true)
+
       const problemData = {
         title: title.trim(),
         description: description.trim(),
@@ -251,6 +398,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
       } else {
         setError("An unexpected error occurred")
       }
+      setIsModerating(false)
       setIsLoading(false)
     }
   }
@@ -263,6 +411,16 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
     <Card>
       <CardContent className="pt-6">
         <form onSubmit={handleSubmit} className="space-y-6">
+          {moderationWarning && !error && (
+            <Alert className="bg-amber-50 border-amber-200">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertTitle className="text-amber-800">Внимание</AlertTitle>
+              <AlertDescription className="text-amber-700 text-sm">
+                {moderationWarning}
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="title">Problem Title *</Label>
             <Input
@@ -272,7 +430,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               onChange={(e) => setTitle(e.target.value)}
               required
               maxLength={200}
-              disabled={isLoading}
+              disabled={isLoading || isModerating}
             />
             <p className="text-xs text-muted-foreground">{title.length}/200 characters</p>
           </div>
@@ -291,7 +449,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
                 <ToggleGroup type="multiple" className="flex-wrap gap-1">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <ToggleGroupItem value="bold" onClick={formatBold} disabled={isLoading}>
+                      <ToggleGroupItem value="bold" onClick={formatBold} disabled={isLoading || isModerating}>
                         <Bold className="h-4 w-4" />
                       </ToggleGroupItem>
                     </TooltipTrigger>
@@ -302,7 +460,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
 
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <ToggleGroupItem value="italic" onClick={formatItalic} disabled={isLoading}>
+                      <ToggleGroupItem value="italic" onClick={formatItalic} disabled={isLoading || isModerating}>
                         <Italic className="h-4 w-4" />
                       </ToggleGroupItem>
                     </TooltipTrigger>
@@ -313,7 +471,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
 
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <ToggleGroupItem value="heading" onClick={formatHeading} disabled={isLoading}>
+                      <ToggleGroupItem value="heading" onClick={formatHeading} disabled={isLoading || isModerating}>
                         <Heading className="h-4 w-4" />
                       </ToggleGroupItem>
                     </TooltipTrigger>
@@ -324,7 +482,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
 
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <ToggleGroupItem value="list" onClick={formatList} disabled={isLoading}>
+                      <ToggleGroupItem value="list" onClick={formatList} disabled={isLoading || isModerating}>
                         <List className="h-4 w-4" />
                       </ToggleGroupItem>
                     </TooltipTrigger>
@@ -335,7 +493,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
 
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <ToggleGroupItem value="quote" onClick={formatQuote} disabled={isLoading}>
+                      <ToggleGroupItem value="quote" onClick={formatQuote} disabled={isLoading || isModerating}>
                         <Quote className="h-4 w-4" />
                       </ToggleGroupItem>
                     </TooltipTrigger>
@@ -346,7 +504,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
 
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <ToggleGroupItem value="code" onClick={formatCode} disabled={isLoading}>
+                      <ToggleGroupItem value="code" onClick={formatCode} disabled={isLoading || isModerating}>
                         <Code className="h-4 w-4" />
                       </ToggleGroupItem>
                     </TooltipTrigger>
@@ -357,7 +515,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
 
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <ToggleGroupItem value="inline-code" onClick={formatInlineCode} disabled={isLoading}>
+                      <ToggleGroupItem value="inline-code" onClick={formatInlineCode} disabled={isLoading || isModerating}>
                         <Type className="h-4 w-4" />
                       </ToggleGroupItem>
                     </TooltipTrigger>
@@ -370,7 +528,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
                     <TooltipTrigger asChild>
                       <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
                         <DialogTrigger asChild>
-                          <ToggleGroupItem value="link" disabled={isLoading}>
+                          <ToggleGroupItem value="link" disabled={isLoading || isModerating}>
                             <LinkIcon className="h-4 w-4" />
                           </ToggleGroupItem>
                         </DialogTrigger>
@@ -428,7 +586,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               required
               rows={8}
               maxLength={2000}
-              disabled={isLoading}
+              disabled={isLoading || isModerating}
               className="rounded-t-none focus:ring-2 focus:ring-primary"
             />
             <div className="flex justify-between items-center">
@@ -455,7 +613,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
             <Select 
               value={status} 
               onValueChange={setStatus} 
-              disabled={isLoading}
+              disabled={isLoading || isModerating}
               required
             >
               <SelectTrigger id="status">
@@ -487,14 +645,14 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               value={contact}
               onChange={(e) => setContact(e.target.value)}
               maxLength={100}
-              disabled={isLoading}
+              disabled={isLoading || isModerating}
             />
             <p className="text-xs text-muted-foreground">How can people reach you? (Optional)</p>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="category">Category</Label>
-            <Select value={category} onValueChange={setCategory} disabled={isLoading}>
+            <Select value={category} onValueChange={setCategory} disabled={isLoading || isModerating}>
               <SelectTrigger id="category">
                 <SelectValue placeholder="Select a category" />
               </SelectTrigger>
@@ -522,13 +680,13 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
                     handleAddTag()
                   }
                 }}
-                disabled={isLoading}
+                disabled={isLoading || isModerating}
               />
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleAddTag}
-                disabled={!tagInput.trim() || tags.length >= 5 || isLoading}
+                disabled={!tagInput.trim() || tags.length >= 5 || isLoading || isModerating}
               >
                 Add
               </Button>
@@ -542,7 +700,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
                       type="button" 
                       onClick={() => handleRemoveTag(tag)} 
                       className="ml-1 hover:text-destructive"
-                      disabled={isLoading}
+                      disabled={isLoading || isModerating}
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -557,7 +715,7 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               id="cofounder"
               checked={lookingForCofounder}
               onCheckedChange={(checked) => setLookingForCofounder(checked as boolean)}
-              disabled={isLoading}
+              disabled={isLoading || isModerating}
             />
             <Label htmlFor="cofounder" className="text-sm font-normal cursor-pointer">
               I'm looking for a cofounder to solve this problem
@@ -574,8 +732,13 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
           )}
 
           <div className="flex gap-4">
-            <Button type="submit" disabled={isLoading} className="flex-1">
-              {isLoading ? (
+            <Button type="submit" disabled={isLoading || isModerating} className="flex-1">
+              {isModerating ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Проверка контента...
+                </>
+              ) : isLoading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   {initialData ? "Updating..." : "Publishing..."}
@@ -588,10 +751,15 @@ export function ProblemForm({ userId, initialData }: ProblemFormProps) {
               type="button" 
               variant="outline" 
               onClick={() => router.back()} 
-              disabled={isLoading}
+              disabled={isLoading || isModerating}
             >
               Cancel
             </Button>
+          </div>
+
+          <div className="text-xs text-muted-foreground text-center">
+            <p>Все публикации проходят автоматическую проверку на соответствие правилам платформы.</p>
+            <p>Запрещены: мат, оскорбления, спам, брейнрот и непристойный контент.</p>
           </div>
         </form>
       </CardContent>
