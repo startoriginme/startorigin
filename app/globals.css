@@ -5,50 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(0.12 0.03 220);
-  --foreground: oklch(0.95 0.02 220);
-  --card: oklch(0.15 0.03 220);
-  --card-foreground: oklch(0.95 0.02 220);
-  --popover: oklch(0.15 0.03 220);
-  --popover-foreground: oklch(0.95 0.02 220);
-  --primary: oklch(0.75 0.22 20);
-  --primary-foreground: oklch(0.12 0.03 220);
-  --secondary: oklch(0.25 0.08 120);
-  --secondary-foreground: oklch(0.95 0.02 220);
-  --muted: oklch(0.2 0.04 220);
-  --muted-foreground: oklch(0.7 0.05 220);
-  --accent: oklch(0.3 0.12 160);
-  --accent-foreground: oklch(0.95 0.02 160);
-  --destructive: oklch(0.65 0.22 360);
-  --destructive-foreground: oklch(0.12 0.03 220);
-  --border: oklch(0.25 0.05 220);
-  --input: oklch(0.2 0.04 220);
-  --ring: oklch(0.75 0.22 20);
-  --chart-1: oklch(0.75 0.22 20);
-  --chart-2: oklch(0.65 0.2 120);
-  --chart-3: oklch(0.7 0.19 240);
-  --chart-4: oklch(0.8 0.21 60);
-  --chart-5: oklch(0.85 0.18 300);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.15 0.03 220);
-  --sidebar-foreground: oklch(0.95 0.02 220);
-  --sidebar-primary: oklch(0.75 0.22 20);
-  --sidebar-primary-foreground: oklch(0.12 0.03 220);
-  --sidebar-accent: oklch(0.25 0.08 120);
-  --sidebar-accent-foreground: oklch(0.95 0.02 120);
-  --sidebar-border: oklch(0.25 0.05 220);
-  --sidebar-ring: oklch(0.75 0.22 20);
-  
-  /* Christmas colors for dark mode - more subtle */
-  --christmas-red: oklch(0.6 0.18 360);
-  --christmas-green: oklch(0.55 0.15 140);
-  --christmas-gold: oklch(0.8 0.18 90);
-  --snow: oklch(0.95 0.01 220);
-  --mint: oklch(0.7 0.15 180);
-  --mint-foreground: oklch(0.95 0.02 180);
-}
-
-.light {
+  /* СВЕТЛАЯ ТЕМА - ТОЛЬКО СВЕТЛАЯ */
   --background: oklch(0.98 0.01 220);
   --foreground: oklch(0.2 0.05 220);
   --card: oklch(1 0 0);
@@ -73,6 +30,7 @@
   --chart-3: oklch(0.65 0.17 240);
   --chart-4: oklch(0.75 0.19 60);
   --chart-5: oklch(0.8 0.16 300);
+  --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.7 0.2 20);
@@ -82,14 +40,58 @@
   --sidebar-border: oklch(0.88 0.05 220);
   --sidebar-ring: oklch(0.7 0.2 20);
   
-  /* Christmas colors - more subtle */
-  --christmas-red: oklch(0.7 0.18 360);
-  --christmas-green: oklch(0.65 0.15 140);
-  --christmas-gold: oklch(0.75 0.16 90);
+  /* Christmas colors - более яркие для светлой темы */
+  --christmas-red: oklch(0.6 0.22 360);
+  --christmas-green: oklch(0.55 0.2 140);
+  --christmas-gold: oklch(0.7 0.18 90);
   --snow: oklch(0.99 0 0);
-  --mint: oklch(0.85 0.1 180);
+  --mint: oklch(0.85 0.12 180);
   --mint-foreground: oklch(0.2 0.05 180);
 }
+
+/* Убираем темную тему полностью */
+/* .dark {
+  --background: oklch(0.12 0.03 220);
+  --foreground: oklch(0.95 0.02 220);
+  --card: oklch(0.15 0.03 220);
+  --card-foreground: oklch(0.95 0.02 220);
+  --popover: oklch(0.15 0.03 220);
+  --popover-foreground: oklch(0.95 0.02 220);
+  --primary: oklch(0.75 0.22 20);
+  --primary-foreground: oklch(0.12 0.03 220);
+  --secondary: oklch(0.25 0.08 120);
+  --secondary-foreground: oklch(0.95 0.02 220);
+  --muted: oklch(0.2 0.04 220);
+  --muted-foreground: oklch(0.7 0.05 220);
+  --accent: oklch(0.3 0.12 160);
+  --accent-foreground: oklch(0.95 0.02 160);
+  --destructive: oklch(0.65 0.22 360);
+  --destructive-foreground: oklch(0.12 0.03 220);
+  --border: oklch(0.25 0.05 220);
+  --input: oklch(0.2 0.04 220);
+  --ring: oklch(0.75 0.22 20);
+  --chart-1: oklch(0.75 0.22 20);
+  --chart-2: oklch(0.65 0.2 120);
+  --chart-3: oklch(0.7 0.19 240);
+  --chart-4: oklch(0.8 0.21 60);
+  --chart-5: oklch(0.85 0.18 300);
+  --sidebar: oklch(0.15 0.03 220);
+  --sidebar-foreground: oklch(0.95 0.02 220);
+  --sidebar-primary: oklch(0.75 0.22 20);
+  --sidebar-primary-foreground: oklch(0.12 0.03 220);
+  --sidebar-accent: oklch(0.25 0.08 120);
+  --sidebar-accent-foreground: oklch(0.95 0.02 120);
+  --sidebar-border: oklch(0.25 0.05 220);
+  --sidebar-ring: oklch(0.75 0.22 20);
+  
+  /* Christmas colors for dark mode - more subtle *
+  --christmas-red: oklch(0.6 0.18 360);
+  --christmas-green: oklch(0.55 0.15 140);
+  --christmas-gold: oklch(0.8 0.18 90);
+  --snow: oklch(0.95 0.01 220);
+  --mint: oklch(0.7 0.15 180);
+  --mint-foreground: oklch(0.95 0.02 180);
+} */
 
 @theme inline {
   --font-sans: 'Montserrat', sans-serif;
@@ -184,7 +186,7 @@
     @apply text-base md:text-lg;
   }
   
-  /* Subtle snow overlay */
+  /* Subtle snow overlay - светлый вариант */
   body::before {
     content: '';
     position: fixed;
@@ -201,7 +203,7 @@
       radial-gradient(circle at 70% 30%, var(--snow) 0.5px, transparent 0.5px),
       radial-gradient(circle at 90% 50%, var(--snow) 0.5px, transparent 0.5px);
     background-size: 300px 300px;
-    opacity: 0.05;
+    opacity: 0.15; /* Больше opacity для светлой темы */
     animation: snow-fall 25s linear infinite;
   }
   
@@ -371,7 +373,7 @@
   height: 6px;
   background: var(--snow);
   border-radius: 50%;
-  opacity: 0.4;
+  opacity: 0.6; /* Более видимые снежинки */
   filter: blur(0.5px);
 }
 
@@ -400,10 +402,10 @@
   .snowflake {
     width: 4px;
     height: 4px;
-    opacity: 0.3;
+    opacity: 0.5;
   }
   
   body::before {
-    opacity: 0.03;
+    opacity: 0.1;
   }
-}  
+}
