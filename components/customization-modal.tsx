@@ -1,4 +1,3 @@
-// components/customization-modal.tsx
 "use client"
 
 import { useState, useEffect } from "react"
@@ -13,7 +12,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Paintbrush, Crown, Star, Zap, Gem, Check, Coins, Sparkles, X } from "lucide-react"
+import { Paintbrush, Crown, Star, Zap, Gem, Check, Coins, Sparkles, X, Calculator } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 type CustomizationItem = {
@@ -60,6 +59,7 @@ export default function CustomizationModal({
 
   const loadShopItems = async () => {
     try {
+      setLoading(true)
       const supabase = createClient()
       const { data, error } = await supabase
         .from("customization_items")
@@ -75,6 +75,8 @@ export default function CustomizationModal({
         description: "Failed to load shop items",
         variant: "destructive",
       })
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -104,9 +106,11 @@ export default function CustomizationModal({
 
       // Check points
       if (currentPoints < item.price) {
+        // Calculate how many more problems needed
+        const moreProblemsNeeded = Math.ceil((item.price - currentPoints) / 10)
         toast({
           title: "Not Enough Points",
-          description: `You need ${item.price - currentPoints} more points`,
+          description: `You need ${item.price - currentPoints} more points (${moreProblemsNeeded} more problems)`,
           variant: "destructive",
         })
         return
@@ -122,14 +126,6 @@ export default function CustomizationModal({
         })
 
       if (purchaseError) throw purchaseError
-
-      // Deduct points
-      const { error: pointsError } = await supabase
-        .from("profiles")
-        .update({ points: currentPoints - item.price })
-        .eq("id", userId)
-
-      if (pointsError) throw pointsError
 
       // Record transaction
       await supabase
@@ -173,10 +169,10 @@ export default function CustomizationModal({
 
   const getRarityColor = (rarity: string) => {
     switch (rarity) {
-      case 'legendary': return "bg-gradient-to-r from-yellow-500 to-amber-600"
-      case 'epic': return "bg-gradient-to-r from-purple-500 to-pink-500"
-      case 'rare': return "bg-gradient-to-r from-blue-500 to-cyan-500"
-      default: return "bg-gradient-to-r from-gray-500 to-gray-700"
+      case 'legendary': return "from-yellow-500 to-amber-600"
+      case 'epic': return "from-purple-500 to-pink-500"
+      case 'rare': return "from-blue-500 to-cyan-500"
+      default: return "from-gray-500 to-gray-700"
     }
   }
 
@@ -195,7 +191,7 @@ export default function CustomizationModal({
             Customization Shop
           </DialogTitle>
           <DialogDescription>
-            Spend your points to customize your profile
+            Spend your points to customize your profile. Points = Problems × 10
           </DialogDescription>
         </DialogHeader>
 
@@ -204,7 +200,10 @@ export default function CustomizationModal({
           <div className="flex items-center justify-between p-3 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg border border-amber-200">
             <div className="flex items-center gap-2">
               <Coins className="h-5 w-5 text-amber-600" />
-              <span className="font-semibold text-amber-900">Your Points:</span>
+              <div>
+                <span className="font-semibold text-amber-900">Your Points:</span>
+                <p className="text-xs text-amber-600">Problems × 10</p>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-2xl font-bold text-amber-700">{currentPoints}</span>
@@ -212,6 +211,19 @@ export default function CustomizationModal({
                 points
               </Badge>
             </div>
+          </div>
+
+          {/* Points Explanation */}
+          <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="flex items-center gap-2 mb-2">
+              <Calculator className="h-4 w-4 text-blue-600" />
+              <span className="font-medium text-blue-800">How Points Work</span>
+            </div>
+            <p className="text-sm text-blue-700">
+              You get <span className="font-bold">10 points for each problem</span> you publish.
+              <br />
+              <span className="text-xs">Current points: {currentPoints} = {currentPoints / 10} problems × 10</span>
+            </p>
           </div>
 
           {/* Active Customizations */}
@@ -222,8 +234,10 @@ export default function CustomizationModal({
                 {activeCustomizations.map((custom) => (
                   <div key={custom.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex items-center gap-3">
-                      <div className="text-amber-500">
-                        {getIcon(custom.customization_items?.icon)}
+                      <div className={`bg-gradient-to-r ${getRarityColor(custom.customization_items?.rarity)} p-2 rounded-lg`}>
+                        <div className="text-white">
+                          {getIcon(custom.customization_items?.icon)}
+                        </div>
                       </div>
                       <div>
                         <div className="font-medium">{custom.customization_items?.name}</div>
@@ -242,8 +256,14 @@ export default function CustomizationModal({
 
           {/* Shop Items */}
           <div>
-            <h3 className="font-semibold mb-2 text-sm text-muted-foreground">Available Items</h3>
-            {items.length === 0 ? (
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-semibold text-sm text-muted-foreground">Available Items</h3>
+              {loading && (
+                <div className="text-xs text-muted-foreground">Loading...</div>
+              )}
+            </div>
+            
+            {items.length === 0 && !loading ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Paintbrush className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No items available</p>
@@ -253,11 +273,12 @@ export default function CustomizationModal({
                 {items.map((item) => {
                   const isOwned = activeCustomizations.some(c => c.item_id === item.id)
                   const canAfford = currentPoints >= item.price
+                  const moreProblemsNeeded = Math.ceil((item.price - currentPoints) / 10)
                   
                   return (
                     <div key={item.id} className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow">
                       {/* Item Header */}
-                      <div className={`p-3 ${getRarityColor(item.rarity)} text-white`}>
+                      <div className={`p-3 bg-gradient-to-r ${getRarityColor(item.rarity)} text-white`}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             {getIcon(item.icon)}
@@ -272,7 +293,7 @@ export default function CustomizationModal({
 
                       {/* Item Body */}
                       <div className="p-3">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
                             <Coins className="h-4 w-4 text-amber-600" />
                             <span className={`font-bold ${canAfford ? 'text-amber-700' : 'text-red-600'}`}>
@@ -307,11 +328,17 @@ export default function CustomizationModal({
                           )}
                         </div>
                         
-                        {!canAfford && !isOwned && (
-                          <p className="text-xs text-red-600 mt-2 text-center">
-                            Need {item.price - currentPoints} more points
-                          </p>
-                        )}
+                        {/* Price Breakdown */}
+                        <div className="text-xs text-muted-foreground">
+                          {canAfford ? (
+                            <span>Costs {item.price / 10} problems worth of points</span>
+                          ) : (
+                            <div className="text-red-600">
+                              <div>Need {item.price - currentPoints} more points</div>
+                              <div>Publish {moreProblemsNeeded} more problem{moreProblemsNeeded !== 1 ? 's' : ''}</div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )
@@ -322,7 +349,7 @@ export default function CustomizationModal({
         </div>
 
         <div className="text-xs text-muted-foreground text-center pt-4 border-t">
-          <p>Earn points by publishing problems. Customizations appear in your profile.</p>
+          <p>Publish problems to earn more points. Each problem = 10 points.</p>
         </div>
       </DialogContent>
     </Dialog>
