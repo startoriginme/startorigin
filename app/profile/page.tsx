@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import { Lightbulb, Plus, LogOut, User, ShoppingBasket, MessageSquareMore, Edit, Check, Sparkles, Paintbrush, Crown, Star, Zap, Coins, Shield } from "lucide-react"
+import { Lightbulb, Plus, LogOut, User, ArrowLeft, Share2, Download, LogIn, ShoppingBasket, MessageSquareMore, Edit, Check } from "lucide-react"
 import { ProblemCard } from "@/components/problem-card"
 import {
   DropdownMenu,
@@ -14,7 +14,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import CustomizationModal from "@/components/customization-modal"
 
 // Карта алиасов пользователей
 const userAliases: Record<string, string[]> = {
@@ -73,63 +72,6 @@ async function getAllUsernamesCombined(mainUsername: string, userId: string): Pr
   }
 }
 
-// Получить активные кастомизации пользователя
-async function getUserCustomizations(userId: string) {
-  const supabase = await createClient()
-  
-  const { data: customizations } = await supabase
-    .from("user_customizations")
-    .select(`
-      *,
-      customization_items (*)
-    `)
-    .eq("user_id", userId)
-    .eq("is_active", true)
-
-  return customizations || []
-}
-
-// Функция для обновления очков на основе проблем
-// Функция для обновления очков на основе проблем
-async function updateUserPointsBasedOnProblems(userId: string, problemCount: number) {
-  const supabase = await createClient()
-  
-  const calculatedPoints = problemCount * 10
-  
-  try {
-    // Получаем текущие очки из базы
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("points")
-      .eq("id", userId)
-      .single()
-
-    // Если очки уже соответствуют расчетным, ничего не делаем
-    if (profile?.points === calculatedPoints) {
-      return calculatedPoints
-    }
-
-    // Обновляем очки в базе
-    const { error } = await supabase
-      .from("profiles")
-      .update({ 
-        points: calculatedPoints,
-        updated_at: new Date().toISOString()
-      })
-      .eq("id", userId)
-
-    if (error) {
-      console.error("Error updating points:", error)
-      return profile?.points || calculatedPoints
-    }
-
-    return calculatedPoints
-  } catch (error) {
-    console.error("Error in updateUserPointsBasedOnProblems:", error)
-    return calculatedPoints
-  }
-}
-
 export default async function ProfilePage() {
   const supabase = await createClient()
 
@@ -142,11 +84,7 @@ export default async function ProfilePage() {
   }
 
   // Fetch user profile
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single()
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
 
   if (!profile) {
     redirect("/auth/login")
@@ -161,10 +99,7 @@ export default async function ProfilePage() {
     ? await getAllUsernamesCombined(profile.username, user.id)
     : []
 
-  // Получаем активные кастомизации
-  const activeCustomizations = await getUserCustomizations(user.id)
-
-  // Fetch user's problems
+  // Fetch user's problems with profiles data
   const { data: problems } = await supabase
     .from("problems")
     .select(`
@@ -179,13 +114,6 @@ export default async function ProfilePage() {
     .eq("author_id", user.id)
     .order("created_at", { ascending: false })
 
-  // Рассчитываем очки на основе количества проблем
-  const problemCount = problems?.length || 0
-  const calculatedPoints = problemCount * 10
-  
-  // Обновляем очки пользователя в базе данных
-  const userPoints = await updateUserPointsBasedOnProblems(user.id, problemCount)
-
   const getInitials = (name: string | null) => {
     if (!name) return "U"
     return name
@@ -196,22 +124,6 @@ export default async function ProfilePage() {
       .slice(0, 2)
   }
 
-  // Получить цвет рамки аватара из кастомизаций
-  const getAvatarBorder = () => {
-    const borderCustomization = activeCustomizations.find(
-      c => c.customization_items?.type === 'avatar_border'
-    )
-    return borderCustomization?.customization_items?.value || ""
-  }
-
-  // Получить кастомный значок
-  const getCustomBadge = () => {
-    const badgeCustomization = activeCustomizations.find(
-      c => c.customization_items?.type === 'badge'
-    )
-    return badgeCustomization?.customization_items
-  }
-
   // Server action for logout
   async function handleLogout() {
     "use server"
@@ -220,7 +132,7 @@ export default async function ProfilePage() {
     redirect("/auth/login")
   }
 
-  return (
+    return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="border-b border-border bg-card relative">
@@ -398,65 +310,27 @@ export default async function ProfilePage() {
           </nav>
         </div>
       </header>
-
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 flex-1">
         <div className="mx-auto max-w-4xl space-y-6">
-          {/* Points Display - Minimal */}
-          <Card className="bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-200">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Coins className="h-6 w-6 text-amber-600" />
-                  <div>
-                    <h3 className="font-semibold text-amber-900">Your Points</h3>
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl font-bold text-amber-700">{userPoints}</span>
-                      <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-300">
-                        {problemCount} × 10 = {userPoints} points
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-amber-600 mt-1">
-                      {problemCount} problems × 10 points each
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CustomizationModal 
-                    userId={user.id} 
-                    currentPoints={userPoints}
-                    activeCustomizations={activeCustomizations}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Profile Card */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Profile</CardTitle>
-                <div className="flex items-center gap-2">
-                  <Link href="/profile/edit">
-                    <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-                      <Edit className="h-4 w-4" />
-                      Edit
-                    </Button>
-                  </Link>
-                </div>
+                <Link href="/profile/edit">
+                  <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+                    <Edit className="h-4 w-4" />
+                    Edit Profile
+                  </Button>
+                </Link>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col items-center text-center gap-6">
-                {/* Аватар с кастомизациями */}
+              <div className="flex flex-col items-center text-center gap-4">
+                {/* Кастомный аватар без сжатия */}
                 <div className="relative">
-                  <div 
-                    className={`h-32 w-32 rounded-full overflow-hidden border-4 bg-muted ${getAvatarBorder()}`}
-                    style={{
-                      borderStyle: getAvatarBorder().includes('gradient') ? 'solid' : undefined
-                    }}
-                  >
+                  <div className="h-24 w-24 rounded-full overflow-hidden border-2 border-border bg-muted">
                     {profile?.avatar_url ? (
                       <img
                         src={profile.avatar_url}
@@ -465,43 +339,29 @@ export default async function ProfilePage() {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-muted">
-                        <span className="text-3xl font-semibold text-muted-foreground">
+                        <span className="text-2xl font-semibold text-muted-foreground">
                           {getInitials(profile?.display_name || profile?.username)}
                         </span>
                       </div>
                     )}
                   </div>
-                  
                   {/* Галочка верификации */}
                   {isVerifiedUser && (
-                    <div className="absolute -bottom-2 -right-2 bg-blue-500 rounded-full p-2 border-2 border-background">
-                      <Check className="h-5 w-5 text-white" />
-                    </div>
-                  )}
-                  
-                  {/* Кастомный значок */}
-                  {getCustomBadge() && (
-                    <div className="absolute -top-2 -left-2">
-                      <Badge className="gap-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0">
-                        {getCustomBadge()?.icon === 'crown' && <Crown className="h-3 w-3" />}
-                        {getCustomBadge()?.icon === 'star' && <Star className="h-3 w-3" />}
-                        {getCustomBadge()?.icon === 'zap' && <Zap className="h-3 w-3" />}
-                        {getCustomBadge()?.name}
-                      </Badge>
+                    <div className="absolute -bottom-1 -right-1 bg-blue-500 rounded-full p-1 border-2 border-background">
+                      <Check className="h-4 w-4 text-white" />
                     </div>
                   )}
                 </div>
                 
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <div className="flex flex-wrap items-center justify-center gap-2">
                     <h2 className="text-2xl font-bold text-foreground break-words">
                       {profile?.display_name || profile?.username || "Anonymous"}
                     </h2>
                     {isVerifiedUser && (
-                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
-                        <Check className="h-3 w-3 mr-1" />
-                        Verified
-                      </Badge>
+                      <div className="text-blue-500 flex-shrink-0" title="Verified">
+                        <Check className="h-5 w-5" />
+                      </div>
                     )}
                   </div>
                   
@@ -522,22 +382,6 @@ export default async function ProfilePage() {
                   {profile?.bio && (
                     <p className="mt-4 text-foreground max-w-2xl">{profile.bio}</p>
                   )}
-                  
-                  {/* Статистика */}
-                  <div className="flex justify-center gap-6 pt-4">
-                    <div className="text-center">
-                      <div className="text-xl font-bold text-primary">{problemCount}</div>
-                      <div className="text-xs text-muted-foreground">Problems</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-xl font-bold text-green-600">{userPoints}</div>
-                      <div className="text-xs text-muted-foreground">Points</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-xl font-bold text-purple-600">{activeCustomizations.length}</div>
-                      <div className="text-xs text-muted-foreground">Customizations</div>
-                    </div>
-                  </div>
                 </div>
               </div>
             </CardContent>
@@ -547,7 +391,7 @@ export default async function ProfilePage() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>My Problems ({problemCount})</CardTitle>
+                <CardTitle>My Problems ({problems?.length || 0})</CardTitle>
                 <Link href="/problems/new">
                   <Button size="sm" className="gap-2">
                     <Plus className="h-4 w-4" />
@@ -569,19 +413,10 @@ export default async function ProfilePage() {
                 </div>
               ) : (
                 <div className="py-8 text-center text-muted-foreground">
-                  <div className="mb-4 flex justify-center">
-                    <Lightbulb className="h-12 w-12 text-muted-foreground/50" />
-                  </div>
                   <p className="mb-4">You haven't shared any problems yet.</p>
                   <Link href="/problems/new">
-                    <Button className="gap-2">
-                      <Plus className="h-4 w-4" />
-                      Share Your First Problem
-                    </Button>
+                    <Button>Share Your First Problem</Button>
                   </Link>
-                  <p className="text-sm mt-2 text-muted-foreground">
-                    Each problem gives you <span className="font-bold text-amber-600">10 points</span>!
-                  </p>
                 </div>
               )}
             </CardContent>
@@ -600,3 +435,5 @@ export default async function ProfilePage() {
     </div>
   )
 }
+
+а вот app/profile/page.tsx
