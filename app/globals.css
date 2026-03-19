@@ -210,7 +210,7 @@
 }
 
 @layer components {
-  /* Glass card component */
+  /* Glass card component - теперь определен правильно */
   .glass-card {
     background: var(--glass-background);
     backdrop-filter: var(--glass-blur) var(--glass-saturate);
@@ -273,7 +273,11 @@
   
   /* Minimal button hover effects (now with glass) */
   .btn-hover-mint {
-    @apply transition-all duration-200 glass-card;
+    @apply transition-all duration-200;
+    background: var(--glass-background);
+    backdrop-filter: var(--glass-blur) var(--glass-saturate);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
   }
   
   .btn-hover-mint:hover {
@@ -284,7 +288,11 @@
   
   /* Minimal Christmas button style (updated with glass) */
   .btn-christmas {
-    @apply transition-all duration-300 glass-card;
+    @apply transition-all duration-300;
+    background: var(--glass-background);
+    backdrop-filter: var(--glass-blur) var(--glass-saturate);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
     border-color: var(--christmas-green) !important;
   }
   
@@ -296,7 +304,12 @@
   
   /* Minimal Christmas card (now with glass) */
   .card-christmas {
-    @apply relative glass-card;
+    position: relative;
+    background: var(--glass-background);
+    backdrop-filter: var(--glass-blur) var(--glass-saturate);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    border-radius: var(--radius-xl);
     border-top: 3px solid transparent;
     border-image: linear-gradient(90deg, var(--christmas-red), var(--christmas-gold), var(--christmas-green)) 1;
   }
@@ -307,12 +320,15 @@
     background: oklch(1 0 0 / 0.1);
     backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    padding: 0.5rem 1rem;
   }
   
   .input-christmas:focus {
     border-color: var(--christmas-green) !important;
     background: oklch(1 0 0 / 0.2);
     box-shadow: 0 0 0 3px oklch(0.55 0.1 140 / 0.2);
+    outline: none;
   }
   
   /* Apply glass hover to all buttons */
